@@ -596,8 +596,6 @@ async function loraImagesCache() {
 
         for (const [lora, loraData] of Object.entries(loras)) {
 
-            image = fs.readFileSync(loraData.image)
-
             // ensure directories exist:
             if (!fs.existsSync(`.\\loraimages\\${category}`)) {
                 fs.mkdirSync(`.\\loraimages\\${category}`, { recursive: true })
