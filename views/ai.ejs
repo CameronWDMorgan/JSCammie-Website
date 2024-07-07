@@ -406,6 +406,69 @@
 </head>
 <body>
 
+    <style>
+        .loadingGradient {
+            /* animate the gradient spinning: */
+            background-color: var(--background-colour);
+            /* Create a linear gradient at 45 degrees from pink to blue */
+            background-image: linear-gradient(45deg, var(--bg-colour-1), var(--bg-colour-2));
+            /* Repeat the gradient */
+            background-repeat: repeat
+        }
+        .loadingBarGradient {
+            /* Create a linear gradient at 45 degrees from pink to blue */
+            background-image: linear-gradient(-45deg, rgb(73, 103, 255), rgb(255, 132, 234));
+            /* Repeat the gradient */
+            background-repeat: repeat
+        }
+    </style>
+
+    <!-- add a loading screen that covers the whole page until all content is loaded, include a loading bar: -->
+    <!-- loading screen div -->
+    <div class="loadingGradient" id="loadingScreen" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; display: flex; justify-content: center; align-items: center; z-index: 1000; transition: opacity 1s;">
+        <!-- center of screen loading bar -->
+        <div style="width: 40%; padding: 20px; border-radius: 10px; display: flex; flex-direction: column; align-items: center;">
+            <h2>Loading...</h2>
+            <div style="width: 100%; background-color: #00000015; border-radius: 10px;">
+                <div class="loadingBarGradient" id="loadingBar" style="width: 0%; height: 20px; border-radius: 10px;"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- loading screen script -->
+    <script>
+        // remove the loading screen when the page is fully loaded:
+        window.addEventListener('load', function() {
+            // get the loading screen element:
+            const loadingScreen = document.getElementById('loadingScreen');
+            // fade out the loading screen:
+            loadingScreen.style.opacity = 0;
+        });
+
+        // loading bar:
+        let loadingBar = document.getElementById('loadingBar');
+        document.onreadystatechange = function () {
+            if (document.readyState == "interactive") {
+                loadingBar.style.width = '50%';
+            }
+            if (document.readyState == "complete") {
+                loadingBar.style.width = '100%';
+            }
+        }
+
+        // spin the loading gradient
+        let loadingGradient = document.getElementsByClassName('loadingGradient')[0];
+        let loadingGradientDeg = 0;
+        setInterval(() => {
+            loadingGradient.style.backgroundImage = `linear-gradient(${loadingGradientDeg}deg, var(--bg-colour-1), var(--bg-colour-2))`;
+            loadingGradientDeg += 1;
+        }, 100);
+
+
+        
+    </script>
+
     <script>
         let loraDataKeys = ['style', 'effect', 'concept', 'clothing', 'character', 'pose', 'background']
     </script>
