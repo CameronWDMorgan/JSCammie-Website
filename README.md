@@ -32,9 +32,8 @@ To get started with the repo, do the following;
 
 1. Fork the Repository.
 2. Find an issue that you can work on
-3. Create a new branch named patch-# *Do plus 1 comparing to the most recent patch number.*
-4. Make a pull request for your changes.
-5. Await a contributor to test and impliment the PR.
+3. Make a pull request for your changes.
+4. Await a contributor to test and impliment the PR.
 
 ### Prerequisites
 
