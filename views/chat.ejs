@@ -1,0 +1,87 @@
+<!-- setup basic html template with metadata etc: -->
+<html>
+<head>
+    <title>Projects | JSCammie.com</title>
+    <link rel='stylesheet' href='/style.css'/>
+    
+
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-K3KJJKS1R4"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-K3KJJKS1R4');
+    </script>
+
+</head>
+<body>
+
+    <!-- get partials/_navigation: -->
+    <%- include('../partials/_navigation') %>
+
+    <div class="center-fully-no-flex" style="margin-bottom: 3rem;">
+        <%- include('../partials/_bannerAdvert') %>
+    </div>
+
+    <div class="round-frosted page-content mw50-dynamic" style="padding: 40px; justify-content: center;">
+
+        <div id="response">
+            <p>Placeholder</p>
+        </div>
+        
+        <form id="chatForm">
+            <input type="text" id="messageInput" placeholder="Message"/>
+            <button type="submit">Send</button>
+        </form>
+
+        <script>
+            document.getElementById('chatForm').addEventListener('submit', async function(e) {
+                e.preventDefault(); // Prevent the default form submission behavior
+            
+                const messageContent = document.getElementById('messageInput').value;
+            
+                // Ensure you construct the body to match the expected format by the Flask application
+                const requestBody = {
+                    messages: [{ content: messageContent }] // This matches the expected format in your Flask app
+                };
+            
+                try {
+                    // Send the request to your Node.js backend
+                    const response = await fetch('/chat', {
+                        method: 'POST',
+                        body: JSON.stringify(requestBody),
+                        headers: { 'Content-Type': 'application/json' },
+                    });
+            
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+            
+                    const json = await response.json();
+            
+                    // Assuming 'json' contains a field 'response' with the reply message
+                    // Update the DOM element to display the response
+                    document.getElementById('response').innerHTML = `<p>${json.response}</p>`;
+            
+                    // Optionally, clear the input field after sending the message
+                    document.getElementById('messageInput').value = '';
+                } catch (error) {
+                    console.error('Error sending chat message:', error);
+                    // Handle error feedback to the user here
+                }
+            });
+        </script>            
+        
+
+        
+
+    </div>
+
+    <!-- get partials/_footer: -->
+    <%- include('../partials/_footer') %>
+    
+</body>
+</html>

@@ -1,0 +1,251 @@
+<link rel='stylesheet' href='/style.css' />
+
+<script id="aclib" type="text/javascript" src="//acscdn.com/script/aclib.js"></script>
+
+<style>
+    .topNavBar {
+        background-color: var(--background-colour);
+        color: #fff;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        height: 60px;
+        width: 100%;
+        position: relative;
+        z-index: 100;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-top: 0px;
+        transition: background-color 1s;
+    }
+
+    .navContainer {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-wrap: wrap;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 15px;
+    }
+
+    .navLink {
+        color: white;
+        text-decoration: none;
+        font-size: 18px;
+        padding: 5px 10px;
+        margin: 0 2px;
+        border-radius: 4px;
+    }
+
+    .navLink:hover {
+        background-color: var(--highlight-colour);
+    }
+
+    .vertical-line {
+        display: none; /* Optional: hide vertical lines */
+    }
+
+    @media screen and (max-width: 900px) {
+        .navLink {
+            font-size: 14px; /* Adjust font size for smaller screens */
+            padding: 4px 8px; /* Adjust padding for smaller screens */
+        }
+        .topNavBar {
+            height: 50px; /* Adjusted for smaller screens */
+        }
+    }
+
+    @media screen and (max-width: 600px) {
+        .navLink {
+            margin: 0; /* Remove margin for smaller screens */
+        }
+    }
+
+    #darkModeButton {
+        background-color: transparent;
+        color: white;
+        border: 4px solid rgba(0, 0, 0, 0);
+        font-size: 18px;
+        padding: 12px;
+        margin: 0 5px;
+        /* transition border and background-colour: */
+        transition: border 1s, background-color 1s;
+    }
+
+    @media screen and (max-width: 900px) {
+        #darkModeButton {
+            font-size: 14px; /* Adjust font size for smaller screens */
+            padding: 1px
+        }
+        
+    }
+
+    #darkModeButton:hover {
+        border: 4px solid var(--highlight-colour);
+        transition: border 1s, background-color 1s;
+    }
+</style>
+
+<style>
+    .hamburgerContainer {
+        display: none;
+    }
+
+    .hamburgerMenu {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-around;
+        width: 30px;
+        height: 30px;
+        cursor: pointer;
+    }
+
+    .hamburgerLine {
+        width: 100%;
+        height: 3px;
+        background-color: white;
+    }
+
+    .sideMenu {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 0;
+        background-color: var(--background-colour);
+        overflow-x: hidden;
+        transition: 0.5s;
+        z-index: 99;
+    }
+
+    .sideMenu.show {
+        width: 250px;
+    }
+
+    .sideLink {
+        display: block;
+        color: white;
+        padding: 16px;
+        text-decoration: none;
+        transition: 0.3s;
+    }
+
+    .sideLink:hover {
+        background-color: var(--highlight-colour);
+    }
+
+    .sideLink:active {
+        background-color: var(--highlight-colour);
+    }
+
+    @media screen and (max-width: 900px) {
+        .hamburgerContainer {
+            display: block;
+        }
+
+        .sideMenu {
+            width: 200px;
+        }
+
+        .sideLink {
+            padding: 12px;
+        }
+    }
+
+    @media screen and (max-width: 600px) {
+        .sideMenu {
+            width: 150px;
+        }
+
+        .sideLink {
+            padding: 8px;
+        }
+    }
+</style>
+
+<nav class="topNavBar">
+    <div class="navContainer">
+        <a href="/home" class="navLink">🏠</a>
+        <a href="/projects" class="navLink">Projects</a>
+        <a href="/" class="navLink">Generate</a>
+        <a href="https://ko-fi.com/jscammie" class="navLink">Donate</a>
+        <% if (session.loggedIn) { %>
+            <a href="/logout" class="navLink">Logout</a>
+        <% } else { %>
+            <a href="/login" class="navLink">Login</a>
+        <% } %>
+        <a href="https://discord.gg/AvbQuRmh7t" class="navLink">Discord</a>
+        <!-- darkmode button & emoji that toggles, also make it stuck to the right: -->
+        <button id="darkModeButton" class="navLink" style="margin-left: auto;">
+            <span id="darkModeIcon">🌙</span>
+        </button>
+    </div>
+</nav>
+
+<div class="center-fully-no-flex round-frosted" style="padding: 4px; border: none !important; border-radius: 0px !important;">
+    <p>Checkout the contests on <a href="https://discord.gg/AvbQuRmh7t">Discord</a> to win a FastPass! </p>
+</div>
+
+<!-- script to enable darkmode, change how a button looks with emoji on the navigation -->
+<script>
+    const darkModeButton = document.getElementById('darkModeButton');
+    const darkModeIcon = document.getElementById('darkModeIcon');
+
+    function toggleDarkMode(darkmodeStatus) {
+        console.log(darkmodeStatus + " darkmodeStatus")
+        if (darkmodeStatus == "false") {
+            document.body.classList.remove('dark');
+            document.getElementsByClassName('topNavBar')[0].classList.remove('dark');
+            darkModeIcon.textContent = '☀️';
+        } if (darkmodeStatus == "true") {
+            document.body.classList.add('dark');
+            document.getElementsByClassName('topNavBar')[0].classList.add('dark');
+            darkModeIcon.textContent = '🌙';
+        }
+    }
+
+
+
+    darkModeButton.addEventListener('click', () => {
+        fetch('/toggle-darkmode', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    darkmode: true
+                })
+            });
+        if (document.body.classList.contains('dark')) {
+            toggleDarkMode("false")
+        } else {
+            toggleDarkMode("true")
+        }
+    });
+
+</script>
+
+<% if (session.darkmode == true) { %>
+    <span hidden id="isDarkMode">true</span>
+<% } if (session.darkmode == false) { %>
+    <span hidden id="isDarkMode">false</span>
+<% } %>
+
+<script>
+    
+    document.addEventListener('DOMContentLoaded', (event) => {
+        // Temporarily disable transitions
+        document.body.classList.add('no-transition');
+        document.getElementsByClassName('topNavBar')[0].classList.add('no-transition');
+
+        const isDarkMode = document.getElementById('isDarkMode').textContent
+        toggleDarkMode(isDarkMode); // Assuming toggleDarkMode is a function that correctly toggles the dark mode.
+
+        // Use setTimeout to delay the removal of 'no-transition', allowing changes to apply without transition
+        setTimeout(() => {
+            document.body.classList.remove('no-transition');
+            document.getElementsByClassName('topNavBar')[0].classList.remove('no-transition');
+        }, 50); // 50 milliseconds is usually enough, but this can be adjusted as needed
+    });
+
+</script>

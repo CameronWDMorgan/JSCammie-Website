@@ -1,0 +1,98 @@
+<!-- setup basic html template with metadata etc: -->
+<html>
+<head>
+    <title>Projects | JSCammie.com</title>
+    <link rel='stylesheet' href='/style.css'/>
+    
+
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-K3KJJKS1R4"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-K3KJJKS1R4');
+    </script>
+
+</head>
+
+
+<style>
+    .projects {
+        display: flex;
+        justify-content: space-around;
+        flex-wrap: wrap;
+    }
+
+    .project {
+        flex-basis: 30%; /* Adjusts the width of each column */
+        margin: 10px;
+        box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2); /* Optional: Adds a shadow effect */
+        border-radius: 10px; /* Optional: Rounds the corners */
+        overflow: hidden; /* Ensures the image fits within the borders */
+    }
+
+    .project-image {
+        width: 100%;
+        height: auto;
+        object-fit: cover;
+    }
+
+    details {
+        padding: 10px;
+    }
+
+    details summary {
+        font-weight: bold;
+        cursor: pointer;
+    }
+</style>
+
+
+<body>
+
+    <!-- get partials/_navigation: -->
+    <%- include('../partials/_navigation') %>
+
+    <div class="center-fully-no-flex" style="margin-bottom: 3rem;">
+        <%- include('../partials/_bannerAdvert') %>
+    </div>
+
+    <div class="round-frosted page-content mw50-dynamic" style="padding: 40px; justify-content: center;">
+        <h1>Projects</h1>
+        <div class="projects">
+            <div class="project">
+                <a href="/ai">
+                    <div style="color: rgb(0, 0, 0); width: 400px; height: 1px;" class="project-image"></div>
+                    <h2>AI Image Generator</h2>
+                </a>
+                <details>
+                    <summary>Description</summary>
+                    <p>This project is an AI image generator running Stable Diffusion 1.5 w/ support for Loras, txt2Img, Img2Img, inpainting, save slots & open pose!</p>
+                </details>
+            </div>
+
+            <div class="project">
+                <a href="/metadata">
+                    <!-- <img alt="Metadata" class="project-image"/> -->
+                    <div style="color: rgb(0, 0, 0); width: 400px; height: 1px;" class="project-image"></div>
+                    <h2>Metadata</h2>
+                </a>
+                <details>
+                    <summary>Description</summary>
+                    <p>This project show the metadata of uploaded images</p>
+                </details>
+            </div>
+
+            <!-- Add more projects here -->
+        </div>
+
+    </div>
+
+    <!-- get partials/_footer: -->
+    <%- include('../partials/_footer') %>
+    
+</body>
+</html>

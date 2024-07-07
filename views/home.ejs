@@ -1,0 +1,44 @@
+<!-- setup basic html template with metadata etc: -->
+<html>
+<head>
+    <title>Home | JSCammie.com</title>
+    <link rel='stylesheet' href='/style.css'/>
+    
+
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-K3KJJKS1R4"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-K3KJJKS1R4');
+    </script>
+    
+</head>
+<body>
+
+    <!-- get partials/_navigation: -->
+    <%- include('../partials/_navigation') %>
+
+    <div class="center-fully-no-flex" style="margin-bottom: 3rem;">
+        <%- include('../partials/_bannerAdvert') %>
+    </div>
+
+    <div class="round-frosted page-content mw50-dynamic" style="padding: 40px; justify-content: center;">
+        <h1>Homepage</h1>
+
+        <p>Welcome to my site, enjoy the AI Image Generator!</p>
+
+        <h2>Click <a href="/ai">here</a> to get started generating images!</h2>
+
+        <h2>Click <a href="/projects">here</a> to see my other projects on the website!</h2>
+
+    </div>
+
+    <!-- get partials/_footer: -->
+    <%- include('../partials/_footer') %>
+    
+</body>
+</html>

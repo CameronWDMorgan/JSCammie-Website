@@ -1,0 +1,108 @@
+<!-- setup basic html template with metadata etc: -->
+<html>
+<head>
+    <title>Projects | JSCammie.com</title>
+    <link rel='stylesheet' href='/style.css'/>
+    
+
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-K3KJJKS1R4"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-K3KJJKS1R4');
+    </script>
+
+    <style>
+        .upload-container {
+        background-color: rgba(255, 255, 255, 0.1);
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+
+    #imageInput {
+        border: 2px solid #007bff;
+        border-radius: 4px;
+        padding: 10px;
+        margin-bottom: 10px;
+        width: calc(100% - 24px);
+    }
+
+    button {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 10px 20px;
+        cursor: pointer;
+        font-size: 16px;
+    }
+
+    button:hover {
+        background-color: #0056b3;
+    }
+
+    #metadataDisplay {
+        margin-top: 15px;
+        text-align: left;
+    }
+    </style>
+
+</head>
+<body>
+
+    <!-- get partials/_navigation: -->
+    <%- include('../partials/_navigation') %>
+
+    <div class="center-fully-no-flex" style="margin-bottom: 3rem;">
+        <%- include('../partials/_bannerAdvert') %>
+    </div>
+
+    <div class="round-frosted page-content mw50-dynamic" style="padding: 40px; justify-content: center;">
+
+        <div class="upload-container">
+            <input type="file" id="imageInput" accept="image/*">
+            <button onclick="uploadImage()">Upload</button>
+            <div id="metadataDisplay"></div>
+        </div>
+        
+        <script>
+            function uploadImage() {
+                const input = document.getElementById('imageInput');
+                const file = input.files[0];
+                const reader = new FileReader();
+        
+                reader.onload = function(event) {
+                    const dataUrl = event.target.result;
+        
+                    fetch('/get-metadata', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ image: dataUrl })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        document.getElementById('metadataDisplay').innerHTML = data.html;
+                    })
+                    .catch(error => console.error('Error:', error));
+                };
+        
+                reader.readAsDataURL(file);
+            }
+        </script>
+        
+
+    </div>
+
+    <!-- get partials/_footer: -->
+    <%- include('../partials/_footer') %>
+    
+</body>
+</html>

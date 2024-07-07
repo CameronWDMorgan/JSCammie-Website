@@ -1,0 +1,59 @@
+<!-- set the tab title to be $100 - ... : -->
+<title>$100 - Heaven & Hell Contest</title>
+<meta property="og:title" content="$100 - Heaven & Hell Contest | JSCammie.com" />
+
+<h2>$100 - Heaven & Hell Contest</h2>
+<p>Rating: SFW & NSFW</p>
+<p>Prize Pool: $100</p>
+<p>Start Date: 24-02-2024</p>
+<p>End Date: 31-03-2024</p>
+<p>Prompt: Heaven & Hell</p>
+<p>Allowed Loras: ALL</p>
+<p>Allowed Models: ALL</p>
+<p>Allowed Features: ALL</p>
+<br>
+<p>Prize Pool Splits:</p>
+<ul>
+    <li>1st Place: $50</li>
+    <li>2nd Place: $20</li>
+    <li>3rd Place: $10</li>
+    <li>4th Place: $10</li>
+    <li>5th Place: $10</li>
+</ul>
+
+<div>
+    <label for="entry">Entry:</label>
+    <input type="file" id="entry" name="entry" accept="image/*,video/*">
+    <button onclick="submitEntry()">Submit</button>
+</div>
+
+<div id="result"></div>
+
+<script>
+    function submitEntry() {
+        const input = document.getElementById('entry');
+        const file = input.files[0];
+        const reader = new FileReader();
+
+        reader.onload = function(event) {
+            const dataUrl = event.target.result;
+
+            fetch('/contest/submit/1', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ image: dataUrl })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('result').innerHTML = data.html;
+            })
+            .catch(error => console.error('Error:', error));
+        };
+
+        reader.readAsDataURL(file);
+    }
+
+</script>
+

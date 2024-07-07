@@ -1,0 +1,3554 @@
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Free PDXL/SDXL/SD1.5 Stable Diffusion AI Image Generator | JSCammie.com</title>
+    <meta name="description" content="Free PDXL/SDXL and SD 1.5 Stable Diffusion Generator | Generate free images SFW & NSFW with multiple models, loras & more!">
+    <meta name="keywords" content="inpainting, img2img, txt2img, stable diffusion, ai image generator, sdxl ai image generator, openpose, ai free online, sfw, nsfw, sdxl, sd1.5, loras, lora, embeddings, ">
+    <meta name="author" content="JSCammie">
+
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-K3KJJKS1R4"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-K3KJJKS1R4');
+    </script>
+
+    <link rel="stylesheet" href="../style.css">
+
+    <style>
+
+
+    .container {
+        display: flex;
+        flex-direction: column;
+        /* same width for both: */
+        width: 100%;
+        flex-grow: 1;
+        flex-shrink: 1;
+        justify-content: center;
+        flex-basis: 0%;
+    }
+
+    .flex-under-div {
+        margin: 20px;
+        width: auto;
+    }
+
+    .flex-div {
+        width: auto;
+    }
+
+    @media (min-width: 1081px) {
+        .container {
+            flex-direction: row;
+        }
+
+        .flex-under-div {
+            margin-top: 20px;
+            margin: 0px;
+            width: 50%;
+        }
+
+        .flex-div {
+            width: 50%;
+        }
+    }
+
+
+
+        li{
+            list-style-type:square;
+        }
+        .form-control {
+            margin-bottom: 1rem;
+        }
+        .form-control label,
+        .form-control input,
+        .form-control textarea,
+        .form-control {
+            display: block;
+        }
+        .form-control input[type="text"],
+        .form-control input[type="range"],
+        .form-control textarea,
+        .form-control button {
+            width: 100%;
+            margin-top: 0.5rem;
+            resize: none;
+        }
+        .form-control textarea{
+            font-size: 20;
+        }
+        .form-control span {
+            margin-top: 0.5rem;
+            font-weight: bold;
+        }
+
+        /* add onto the styling for the inline-slider range, with outlines and purple colours */
+        .form-control.inline-slider {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .form-control.inline-slider label {
+            margin-right: 1rem; /* Adjust as needed */
+        }
+        .form-control.inline-slider input[type="range"] {
+            width: 100%;
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            border: transparent;
+            border-radius: 4px;
+            box-sizing: border-box;
+            color: white;
+            background-color: #ffffff15;
+            font-size: 16px;
+            outline: none;
+            -webkit-appearance: none; /* Removes default styling */
+        }
+        /* slider thumb trail and white outline */
+        .form-control.inline-slider input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; /* Removes default styling */
+            width: 1rem; /* Adjust as needed */
+            height: 1rem; /* Adjust as needed */
+            background-color: #c259ff; /* Adjust as needed */
+            border-radius: 50%;
+            cursor: pointer;
+            transform: translateY(-0.25rem);
+            box-shadow: 0 0 0 0.075rem #ffffff; /* Adjust as needed */
+        }
+        .form-control.inline-slider input[type="range"]::-moz-range-thumb {
+            width: 1rem; /* Adjust as needed */
+            height: 1rem; /* Adjust as needed */
+            background-color: #c259ff; /* Adjust as needed */
+            border-radius: 50%;
+            cursor: pointer;
+            transform: translateY(-0.25rem);
+            box-shadow: 0 0 0 0.075rem #ffffff; /* Adjust as needed */
+        }
+        .form-control.inline-slider input[type="range"]::-ms-thumb {
+            width: 1rem; /* Adjust as needed */
+            height: 1rem; /* Adjust as needed */
+            background-color: #c259ff; /* Adjust as needed */
+            border-radius: 50%;
+            cursor: pointer;
+            transform: translateY(-0.25rem);
+            box-shadow: 0 0 0 0.075rem #ffffff; /* Adjust as needed */
+        }
+
+
+        .form-control.inline-slider input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 0.5rem; /* Adjust as needed */
+            background-color: #ffffff15; /* Adjust as needed */
+            border-radius: 4px;
+        }
+        .form-control.inline-slider input[type="range"]::-moz-range-track {
+            width: 100%;
+            height: 0.5rem; /* Adjust as needed */
+            background-color: #ffffff15; /* Adjust as needed */
+            border-radius: 4px;
+        }
+        .form-control.inline-slider input[type="range"]::-ms-track {
+            width: 100%;
+            height: 0.5rem; /* Adjust as needed */
+            background-color: #ffffff15; /* Adjust as needed */
+            border-radius: 4px;
+        }
+        .form-control.inline-slider input[type="range"]::-ms-fill-lower {
+            background-color: #ffffff15; /* Adjust as needed */
+            border-radius: 4px;
+        }
+        .form-control.inline-slider input[type="range"]::-ms-fill-upper {
+            background-color: #ffffff15; /* Adjust as needed */
+            border-radius: 4px;
+        }
+        .form-control.inline-slider input[type="range"]::-ms-tooltip {
+            display: none; /* Removes default styling */
+        }
+        .form-control.inline-slider .range-value {
+            min-width: 3rem; /* Ensures that the value doesn't collapse */
+            text-align: center;
+        }
+        
+
+        /* custom styling for the select dropdowns, both for select and select multiple, transitions */
+        .form-control select {
+            width: 100%;
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            border: transparent;
+            border-radius: 4px;
+            box-sizing: border-box;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.103);
+            font-size: 16px;
+            outline: none;
+        }
+        /* for single select dropdowns */
+        .form-control select option {
+            color: rgb(255, 255, 255);
+            background-color: rgba(0, 0, 0, 0.815);
+            padding: 4px;
+        }
+        .form-control select option:checked {
+            color: white;
+            background-color: rgba(165, 68, 255, 0.473);
+        }
+        .form-control select option:hover {
+            color: white;
+            background-color: rgba(165, 68, 255, 0.507);
+        }
+        /* for multiple select dropdowns */
+        .form-control select[multiple] {
+            height: 16rem;
+        }
+        .form-control select[multiple] option {
+            color: rgb(255, 255, 255);
+            background-color: rgba(0, 0, 0, 0.103);
+            padding: 0px !important;
+        }
+        .form-control select[multiple] option:checked {
+            color: white;
+            background-color: rgb(165, 68, 255);
+        }
+        .form-control select[multiple] option:hover {
+            color: white;
+            background-color: rgb(165, 68, 255);
+        }
+
+
+
+
+        /* Additional styling for dropdown arrow */
+        .form-control select::after {
+            content: '\25BC';  /* Unicode character for down arrow */
+            position: absolute;
+            top: 0.8rem;
+            right: 1rem;
+            font-size: 14px;
+            pointer-events: none;
+            color: white;
+            background-color: #00000015;
+        }
+
+
+        .form-control select[multiple] option:checked {
+            color: white;
+            background-color: rgb(165, 68, 255);
+        }
+
+        .range-value {
+            min-width: 3rem; /* Ensures that the value doesn't collapse */
+            text-align: center;
+        }
+        /* generator form max-width based on screen size 750px: */
+        @media screen and (max-width: 750px) {
+            #generatorForm {
+                max-width: 600px;
+            }
+        }
+        @media screen and (min-width: 750px) {
+            #generatorForm {
+                max-width: 900px;
+            }
+        }
+        #generatorForm {
+            margin: auto;
+        }
+        .range-value {
+            text-align: center;
+        }
+        #generateButton {
+            background-color: #4caf4f95; /* Green */
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            transition: transform 0.7s, background-color 0.3s; /* Adjust time as needed */
+            transform: scale(1) rotate(0deg); /* Default state */
+            transform-origin: center; /* Ensures the scaling happens from the center */
+        }
+
+        #generateButton:hover {
+            transform: scale(1.08) rotate(1deg); 
+            background-color: #4CAF50; /* Green */
+        }
+        #generateButton:active {
+            transform: scale(1.1);
+            background-color: #ffe600; /* Red */
+        }
+        #generateButton.generating {
+            background-color: #ff0000; /* Red */
+            cursor:not-allowed;
+        }
+        #generateButton.generating:hover {
+            transform: scale(0.7) rotate(-1deg); 
+        }
+        img#generatedImage {
+            display: block; /* added display block to remove bottom margin of image */
+            margin-top: 2rem;
+        }
+        .instructions ul {
+            text-align: left;
+        }
+        .center-content {
+            text-align: center;
+        }
+        /* This will ensure your custom highlight styling has precedence */
+        .ui-menu-item-wrapper{
+            border-radius: 1px;
+            border-color: rgba(0, 0, 0, 0.279);
+            border-style: solid;
+            width: fit-content;
+        }
+        .custom-highlight {
+            background-color: rgba(229, 255, 0, 0.25) !important; /* Example color, use !important to ensure override */
+            text-decoration: solid !important;
+            border-color: gold !important;
+            width: fit-content;
+        }
+
+        /* add transitions to the autocomplete-open that appears when it gets removed or added to autocomplete-space */
+
+        .autocomplete-space {
+            margin-top: 0px !important; /* Adjust this value based on your needs */
+        }
+
+        .imagesContainer {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(40%, 1fr));
+            grid-template-rows: auto auto;
+            grid-column-gap: 20px;
+            grid-row-gap: 20px;
+        }
+
+        .imagesContainer img {
+            width: 100% !important;
+            height: auto !important; /* Maintains aspect ratio */
+            object-fit: contain; /* Maintains aspect ratio without stretching the image */
+        }
+
+        .loraCardGrid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(20%, 1fr));
+            grid-template-rows: auto;
+        }
+
+        .loraContainer {
+            /* remove scrollbar: */
+            scrollbar-width: none;
+        }
+
+        /* .form-control { */
+            /* display: flex; */
+            /* flex-direction: column; */
+            /* gap: 10px; Provides space between label and select box */
+        /* } */
+
+
+        #imageOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7); /* Dim background */
+            display: flex;
+            justify-content: center; /* Centers horizontally */
+            align-items: center;     /* Centers vertically */
+            z-index: 1000; /* Ensure it's above other elements */
+        }
+
+        #overlayImage {
+            max-width: 80%;
+            max-height: 80%;
+            object-fit: contain; /* Adds support for maintaining aspect ratio */
+        }
+
+        /* add on hover styling, animations, etc to all the summaries in the doc */
+        summary {
+            cursor: pointer;
+            transition: transform 0.7s, background-color 0.3s;
+            transform: scale(1) rotate(0deg); /* Default state */
+            transform-origin: center; /* Ensures the scaling happens from the center */
+            padding: 8px;
+        }
+        summary:hover {
+            transform: scale(1.08) rotate(1deg); 
+            background-color: #a200ff4f; /* Red */
+        }
+
+        .autocomplete-open {
+            margin-top: 130px !important; /* Adjust this value based on your needs */
+        }
+
+        .ui-helper-hidden-accessible {
+            display: none !important;
+        }
+
+
+    </style>
+
+    <!-- Google tag (gtag.js) -->
+
+
+</head>
+<body>
+
+    <script>
+        let loraDataKeys = ['style', 'effect', 'concept', 'clothing', 'character', 'pose', 'background']
+    </script>
+
+    <%- include('../partials/_navigation') %>
+
+    <div class="center-fully-no-flex" style="margin-bottom: 3rem;">
+        <%- include('../partials/_bannerAdvert') %>
+    </div>
+
+    <div class="container round-frosted page-content mw75-dynamic" style="margin-bottom: 12rem;">
+        
+        <div class="flex-div" style="padding: 40px; padding-bottom: 0px; justify-content: center;">
+
+            <h2>Welcome to the AI Image Generator!</h2>
+
+            <details>
+                <summary style="color: yellow;">Click Here for information on how to use it!</summary>
+
+                    <details> <summary>Prompt</summary>
+                        <p>Enter a descriptive and clear text prompt that outlines what you want to generate. Be as specific as possible to get the best results & be sure to use the autocomplete dropdown!</p>
+                    </details>
+
+                    <details> <summary>Negative Prompt</summary>
+                        <p>Enter a descriptive and clear text prompt that outlines what you want to avoid generating. Be as specific as possible to get the best results & be sure to use the autocomplete dropdown!</p>
+                    </details>
+
+                    <details> <summary>Model</summary>
+                        <p>Select the model you want to use, the default is the furry model which can generate, anime human, anime and furry images, also realistic images too!</p>
+                    </details>
+
+                    <details> <summary>Aspect Ratio</summary>
+                        <p>Change the aspect ratio of the image from a square, to portrait or landscape!</p>
+                    </details>
+
+                    <details> <summary>Lora's</summary>
+                        <p>Select the Lora(s) you want to use to alter the image! Useful to apply specific styles, backgrounds & more!</p>
+                    </details>
+
+                    <details> <summary>Steps</summary>
+                        <p>This controls the number of steps the diffusion process will take. A higher number of steps can result in more detailed images but may take longer to generate.</p>
+                    </details>
+
+                    <details> <summary>Quantity</summary>
+                        <p>This controls the number of images the image API should generate, the more the slower!</p>
+                    </details>
+
+                    <details> <summary>img2img</summary>
+                        <p>This enables the img2img process, this will generate an image from an uploaded image. This can be used to generate images of specific characters or poses!</p>
+                    </details>
+
+                    <details> <summary>img2img Strength</summary>
+                        <p>This controls the strength of the img2img process, a higher number will result in a more accurate image but may result in a less accurate image.</p>
+                    </details>
+
+                    <details> <summary>Inpainting</summary>
+                        <p>This enables the inpainting process where you can paint over an image to remove or add elements to/from it!</p>
+                    </details>
+
+                    <details> <summary>Inpainting "Use Original Model"</summary>
+                        <p>This enables the inpainting process to use the model selected in the model dropdown, otherwise it will use an inpainting specific model!</p>
+                    </details>
+
+                    <details> <summary>CFG</summary>
+                        <p>This controls the amount of control the AI has over the image, a higher number will result in more control but may result in a less accurate image.</p>
+                    </details>
+
+                    <details> <summary>Seed</summary>
+                        <p>This controls the seed used for the image generation, a seed of -1 will generate a random seed.</p>
+                    </details>
+
+                    <details> <summary>Generate Image</summary>
+                        <p>Click this button to generate your image!</p>
+                    </details>
+
+            </details>
+
+            <!-- style the save slot buttons, with on hover effects -->
+            <style>
+                .saveSlotButton.Load {
+                    background-color: #4c68af95; /* Green */
+                    border: none;
+                    color: white;
+                    padding: 15px 32px;
+                    text-align: center;
+                    text-decoration: none;
+                    display: inline-block;
+                    font-size: 16px;
+                    margin: 4px 2px;
+                    cursor: pointer;
+                    transition: transform 0.7s, background-color 0.3s; /* Adjust time as needed */
+                    transform: scale(1) rotate(0deg); /* Default state */
+                    transform-origin: center; /* Ensures the scaling happens from the center */
+                }
+                .saveSlotButton.Load:hover {
+                    transform: scale(1.08) rotate(1deg); 
+                    background-color: #4c6aaf; /* Green */
+                }
+
+
+                .saveSlotButton.Delete {
+                    background-color: #ff000095; /* Red */
+                    border: none;
+                    color: white;
+                    padding: 15px 32px;
+                    text-align: center;
+                    text-decoration: none;
+                    display: inline-block;
+                    font-size: 16px;
+                    margin: 4px 2px;
+                    cursor: pointer;
+                    transition: transform 0.7s, background-color 0.3s; /* Adjust time as needed */
+                    transform: scale(1) rotate(0deg); /* Default state */
+                    transform-origin: center; /* Ensures the scaling happens from the center */
+                }
+                .saveSlotButton.Delete:hover {
+                    transform: scale(1.08) rotate(1deg); 
+                    background-color: #ff0000; /* Red */
+                }
+
+
+                .saveSlotButton.Update {
+                    background-color: #2fa72d95; /* Red */
+                    border: none;
+                    color: white;
+                    padding: 15px 32px;
+                    text-align: center;
+                    text-decoration: none;
+                    display: inline-block;
+                    font-size: 16px;
+                    margin: 4px 2px;
+                    cursor: pointer;
+                    transition: transform 0.7s, background-color 0.3s; /* Adjust time as needed */
+                    transform: scale(1) rotate(0deg); /* Default state */
+                    transform-origin: center; /* Ensures the scaling happens from the center */
+                }
+                .saveSlotButton.Update:hover {
+                    transform: scale(1.08) rotate(1deg); 
+                    background-color: #5dbe40; /* Red */
+                }
+
+                .createSaveSlotButton {
+                    background-color: #4caf4f95; /* Green */
+                    border: none;
+                    color: white;
+                    padding: 15px 32px;
+                    text-align: center;
+                    text-decoration: none;
+                    display: inline-block;
+                    font-size: 16px;
+                    margin: 4px 2px;
+                    cursor: pointer;
+                    transition: transform 0.7s, background-color 0.3s; /* Adjust time as needed */
+                    transform: scale(1) rotate(0deg); /* Default state */
+                    transform-origin: center; /* Ensures the scaling happens from the center */
+                }
+                .createSaveSlotButton:hover {
+                    transform: scale(1.08) rotate(1deg); 
+                    background-color: #4CAF50; /* Green */
+                }
+                .createSaveSlotButton:active {
+                    transform: scale(1.1);
+                    background-color: #ffe600; /* Red */
+                }
+                .createSaveSlotButton[disabled] {
+                    background-color: #60606095; /* Green */
+                    border: none;
+                    color: white;
+                    padding: 15px 32px;
+                    text-align: center;
+                    text-decoration: none;
+                    display: inline-block;
+                    font-size: 16px;
+                    margin: 4px 2px;
+                    cursor: not-allowed;
+                    transition: transform 0.7s, background-color 0.3s; /* Adjust time as needed */
+                    transform: scale(1) rotate(0deg); /* Default state */
+                    transform-origin: center; /* Ensures the scaling happens from the center */
+                }
+
+
+
+            </style>
+
+            <details>
+                <% if (aiSaveSlots) { %>
+                <summary>Save Slots (<%=aiSaveSlots.length%>)</summary>
+                <% } else { %>
+                <summary>Save Slots (0)</summary>
+                <% } %>
+                <div class="form-control">
+                    <!-- Display Existing Save Slots -->
+                    <% if (aiSaveSlots && aiSaveSlots.length > 0) { %>
+                        <% timeSaveSlotsMS = new Date().getTime() %>
+                        <div id="saveSlotMasterDiv"></div>
+                        <script>
+                            // fetch the users save slots from /ai-saves-get and display them:
+                            window.refreshSaveSlots = window.refreshSaveSlots || async function() {
+                                await fetch('/ai-saves-get')
+                                .then(response => response.json())
+                                .then(data => {
+                                    // check if there are any save slots:
+                                    if (!data.aiSaveSlots) {
+                                        return;
+                                    }
+                                    // Handle loaded data
+                                    console.log(data);
+                                    // get the save slots from the data:
+                                    const saveSlots = data.aiSaveSlots;
+                                    // make a div inside of saveSlotMasterDiv with a details for each save slot, with the summary being the name of the save slot:
+                                    const saveSlotMasterDiv = document.getElementById('saveSlotMasterDiv');
+                                    finalHtml = ''
+                                    saveSlots.forEach(saveSlot => {
+                                        // made the div id the saveSlot id so it can be used to load the save slot:
+                                        
+                                        finalHtml += `<div id="saveSlot-${saveSlot.saveSlotId}">
+                                            <details>
+                                            <summary>${saveSlot.name}</summary>
+                                            <input id="saveSlot-${saveSlot.saveSlotId}-prompt" type="hidden" value="${saveSlot.prompt}"></input> 
+                                            <input id="saveSlot-${saveSlot.saveSlotId}-negativeprompt" type="hidden" value="${saveSlot.negativeprompt}"></input>
+                                            <input id="saveSlot-${saveSlot.saveSlotId}-aspectRatio" type="hidden" value="${saveSlot.aspectRatio}"></input>
+                                            <input id="saveSlot-${saveSlot.saveSlotId}-model" type="hidden" value="${saveSlot.model}"></input>
+                                            <input id="saveSlot-${saveSlot.saveSlotId}-loras" type="hidden" value="${saveSlot.loras}"></input>
+                                            <input id="saveSlot-${saveSlot.saveSlotId}-lora_strengths" type="hidden" value="${saveSlot.lora_strengths}"></input>
+                                            <input id="saveSlot-${saveSlot.saveSlotId}-steps" type="hidden" value="${saveSlot.steps}"></input>
+                                            <input id="saveSlot-${saveSlot.saveSlotId}-quantity" type="hidden" value="${saveSlot.quantity}"></input>
+                                            <input id="saveSlot-${saveSlot.saveSlotId}-cfg" type="hidden" value="${saveSlot.cfg}"></input>
+                                            <input id="saveSlot-${saveSlot.saveSlotId}-seed" type="hidden" value="${saveSlot.seed}"></input>
+
+
+                                            <p>Prompt: ${saveSlot.prompt}</p>
+                                            <p>Negative Prompt: ${saveSlot.negativeprompt}</p>
+                                            <p>Aspect Ratio: ${saveSlot.aspectRatio}</p>
+                                            <p>Model: ${saveSlot.model}</p>
+                                            <p>Lora's: ${saveSlot.loras}</p>
+                                            <p>Lora Strengths: ${saveSlot.lora_strengths}</p>
+                                            <p>Steps: ${saveSlot.steps}</p>
+                                            <p>Quantity: ${saveSlot.quantity}</p>
+                                            <p>CFG: ${saveSlot.cfg}</p>
+                                            <p>Seed: ${saveSlot.seed}</p>
+                                            </details>
+                                            <a style="display: flex; justify-content: space-between;">
+                                                <button class="saveSlotButton Load" type="button" onclick="loadSlot('${saveSlot.saveSlotId}')">Load 💾</button>
+                                                <button class="saveSlotButton Delete" type="button" onclick="deleteSlot('${saveSlot.saveSlotId}')">Delete 🗑️</button>
+                                                <button class="saveSlotButton Update" type="button" onclick="updateSlot('${saveSlot.saveSlotId}')">Update ⬆️</button>
+                                            </a>
+                                            </div>
+
+                                            <br>
+                                            </div>
+                                            `  
+                                    })
+                                    finalHtml += ''
+                                    saveSlotMasterDiv.innerHTML = finalHtml;
+                                    
+                                });
+                            }
+
+                            refreshSaveSlots();
+
+                            
+                            
+                        </script>
+                        <% timeSaveSlotsAfterMS = new Date().getTime() %>
+                        <% timeSaveSlotsMS = timeSaveSlotsAfterMS - timeSaveSlotsMS %>
+                        <p>Save Slots Loaded in <%=timeSaveSlotsMS%>ms</p>
+                    <% } %>
+
+                    <!-- Form to Create a New Save Slot -->
+
+                    <!-- if user is logged in let them use the form, else show a grayed out version with text ontop -->
+                    <% if (session.loggedIn) { %>
+                        <form id="createSlotForm">
+                            <input type="text" id="saveSlotName" name="name" placeholder="Slot Name">
+                            <button class="createSaveSlotButton" type="submit">Create Slot</button>
+                        </form>
+                    <% } else { %>
+                        <form id="createSlotForm">
+                            <input type="text" id="saveSlotName" name="name" placeholder="Slot Name" disabled>
+                            <button class="createSaveSlotButton" type="submit" disabled>Create Slot</button>
+                        </form>
+                        <!-- center the <p>: -->
+                        <style>
+                            .disabledSaveSlots {
+                                text-align: center;
+                            }
+                        </style>
+                        <p class="disabledSaveSlots" >You must be logged in to create a save slot!</p>
+                    <% } %>
+
+
+                    <script>
+                        // JavaScript to handle form submission and slot loading
+
+                        document.getElementById('createSlotForm').addEventListener('submit', function(event) {
+                            event.preventDefault();
+
+                            slotName = document.getElementById('saveSlotName').value
+
+                            if (!confirm(`Are you sure you want to create the slot: "${slotName}"?`)) {
+                                return; // Exit the function if the user clicks 'Cancel'
+                            }
+
+                            let loras = ''
+                            const loraSelectionContainers = document.getElementsByClassName('loraSelection');
+
+                            for (let i = 0; i < loraSelectionContainers.length; i++) {
+                                const loraSelection = loraSelectionContainers[i];
+                                // Get all checkboxes within the current loraSelection container
+                                const checkboxes = loraSelection.querySelectorAll('input[type="checkbox"]:checked');
+                                
+                                // Loop through the checked checkboxes and add their value (assuming value is used as ID) to the loras string
+                                checkboxes.forEach(checkbox => {
+                                    loras += checkbox.value + ', ';
+                                });
+                            }
+
+                            // Remove the trailing comma and space from the loras string
+                            loras = loras.slice(0, -2);
+
+                            let savedata = {
+                                name: document.getElementById('saveSlotName').value,
+                                prompt: document.getElementById('prompt').value,
+                                negativeprompt: document.getElementById('negativeprompt').value,
+                                aspectRatio: document.getElementById('aspectRatio').value,
+                                model: document.getElementById('model').value,
+                                loras: loras,
+                                lora_strengths: [],
+                                steps: document.getElementById('steps').value,
+                                quantity: document.getElementById('quantity').value,
+                                cfg: document.getElementById('cfguidance').value,
+                                seed: document.getElementById('seed').value
+                            }
+
+                            // get all loraSelectionsSummarys to get the lora strength from them:
+                            document.querySelectorAll('#loraSelectionsSummary .lora-details input[type="range"]').forEach(slider => {
+                                savedata.lora_strengths.push(slider.value)
+                            })
+
+                            // Send a request to the server to create a new slot
+                            fetch('/ai-save-create', {
+                                method: 'POST',
+                                body: JSON.stringify(savedata),
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                }
+                            }).then(response => response.json())
+                            .then(data => {
+                                // Handle response
+                                console.log(data);
+                                refreshSaveSlots()
+                            });
+                        });
+
+                        function updateSlot(slotId) {
+                            // add a popup asking for confirmation to update the slot:
+                            slotName = document.getElementById(`saveSlot-${slotId}`).getElementsByTagName('summary')[0].innerText
+
+                            if (!confirm(`Are you sure you want to update the slot: "${slotName}"?`)) {
+                                return; // Exit the function if the user clicks 'Cancel'
+                            }
+
+                            event.preventDefault();
+
+                            let loras = ''
+                            const loraSelectionContainers = document.getElementsByClassName('loraSelection');
+
+                            for (let i = 0; i < loraSelectionContainers.length; i++) {
+                                const loraSelection = loraSelectionContainers[i];
+                                // Get all checkboxes within the current loraSelection container
+                                const checkboxes = loraSelection.querySelectorAll('input[type="checkbox"]:checked');
+                                
+                                // Loop through the checked checkboxes and add their value (assuming value is used as ID) to the loras string
+                                checkboxes.forEach(checkbox => {
+                                    loras += checkbox.value + ', ';
+                                });
+                            }
+
+                            let savedata = {
+                                saveSlotId: slotId,
+                                prompt: document.getElementById('prompt').value,
+                                negativeprompt: document.getElementById('negativeprompt').value,
+                                aspectRatio: document.getElementById('aspectRatio').value,
+                                model: document.getElementById('model').value,
+                                loras: loras,
+                                lora_strengths: [],
+                                steps: document.getElementById('steps').value,
+                                quantity: document.getElementById('quantity').value,
+                                cfg: document.getElementById('cfguidance').value,
+                                seed: document.getElementById('seed').value
+                            }
+
+                            // get all loraSelectionsSummarys to get the lora strength from them:
+                            document.querySelectorAll('#loraSelectionsSummary .lora-details input[type="range"]').forEach(slider => {
+                                savedata.lora_strengths.push(slider.value)
+                            })
+
+                            console.log(`Lora Strengths: ${lora_strengths}`)
+
+                            fetch('/ai-save-update', {
+                                method: 'POST',
+                                body: JSON.stringify(savedata),
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                }
+                            }).then(response => response.json())
+                            .then(data => {
+                                // Handle response
+                                console.log(data);
+                                alert('Updated Save Slot!')
+                                refreshSaveSlots()
+                            });
+                        }
+
+                        function exportAIData() {
+                            // Export the AI data to a file
+                            console.log('Exporting AI Data');
+
+                            // Get the AI data from the form
+                            let aiData = {
+                                prompt: document.getElementById('prompt').value,
+                                negativeprompt: document.getElementById('negativeprompt').value,
+                                aspectRatio: document.getElementById('aspectRatio').value,
+                                model: document.getElementById('model').value,
+                                loras: [],
+                                lora_strengths: [],
+                                steps: document.getElementById('steps').value,
+                                quantity: document.getElementById('quantity').value,
+                                cfg: document.getElementById('cfguidance').value,
+                                seed: document.getElementById('seed').value,
+                            }
+
+                            // Get the selected Loras:
+                            let loraSelectionContainers = document.getElementsByClassName('loraSelection');
+
+                            // get all loraSelectionsSummarys to get the lora strength from them:
+                            document.querySelectorAll('#loraSelectionsSummary .lora-details input[type="range"]').forEach(slider => {
+                                aiData.lora_strengths.push(slider.value)
+                            })
+
+                            for (let i = 0; i < loraSelectionContainers.length; i++) {
+                                const loraSelection = loraSelectionContainers[i];
+                                // Get all checkboxes within the current loraSelection container
+                                const checkboxes = loraSelection.querySelectorAll('input[type="checkbox"]:checked');
+                                
+                                // Loop through the checked checkboxes and add their value (assuming value is used as ID) to the loras string
+                                checkboxes.forEach(checkbox => {
+                                    aiData.loras.push(checkbox.value);
+                                });
+                            }
+
+                            console.log(`Exported AI Data:`);
+                            console.log(aiData);
+
+                            // export it to a yaml file:
+                            let yamlData = {
+                                "prompt": aiData.prompt,
+                                "negativeprompt": aiData.negativeprompt,
+                                "aspectRatio": aiData.aspectRatio,
+                                "model": aiData.model,
+                                "loras": aiData.loras,
+                                "lora_strengths": aiData.lora_strengths,
+                                "steps": aiData.steps,
+                                "quantity": aiData.quantity,
+                                "cfg": aiData.cfg,
+                                "seed": aiData.seed
+                            }
+
+                            // save it to a file and download it without jsyaml:
+                            let yamlString = `prompt: ${aiData.prompt}\nnegativeprompt: ${aiData.negativeprompt}\naspectRatio: ${aiData.aspectRatio}\nmodel: ${aiData.model}\nloras: ${aiData.loras}\nlora_strengths: ${aiData.lora_strengths}\nsteps: ${aiData.steps}\nquantity: ${aiData.quantity}\ncfg: ${aiData.cfg}\nseed: ${aiData.seed}`
+                            let blob = new Blob([yamlString], {type: 'text/yaml'});
+                            let url = URL.createObjectURL(blob);
+                            let a = document.createElement('a');
+                            a.href = url;
+                            a.download = `${aiData.model}.aidata`;
+                            document.body.appendChild(a);
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                            document.body.removeChild(a);
+
+
+                        }
+
+
+
+                        function importAiData(data) {
+                            if (!confirm(`Are you sure you want to load this data?\n${data}`)) {
+                                return; // Exit the function if the user cancels the action
+                            }
+
+                            console.log('Importing AI Data...');
+
+                            // Split data lines and then extract values after colon and trim spaces
+                            let yamlData = data.split('\n').map(line => line.includes(':') ? line.split(':')[1].trim() : '');
+
+                            let aiData = {
+                                prompt: yamlData[0],
+                                negativeprompt: yamlData[1],
+                                aspectRatio: yamlData[2],
+                                model: yamlData[3],
+                                loras: yamlData[4] ? yamlData[4].split(',').map(s => s.trim()) : [],
+                                lora_strengths: yamlData[5] ? yamlData[5].split(',').map(s => s.trim()) : [],
+                                steps: yamlData[6],
+                                quantity: yamlData[7],
+                                cfg: yamlData[8],
+                                seed: yamlData[9]
+                            };
+
+                            console.log(aiData);
+
+                            function setValueSafely(elementId, value) {
+                                const element = document.getElementById(elementId);
+                                if (element) {
+                                    element.value = value;
+                                } else {
+                                    console.warn(`Element with ID '${elementId}' not found.`);
+                                }
+                            }
+
+                            // check if the value is undefined or null, if so then dont change it:
+                            function setValueSafelyIfNotUndefinedOrNull(elementId, value) {
+                                if (value !== undefined && value !== null) {
+                                    setValueSafely(elementId, value);
+                                }
+                            }
+
+                            // Set the values in the form
+                            setValueSafelyIfNotUndefinedOrNull('prompt', aiData.prompt);
+                            setValueSafelyIfNotUndefinedOrNull('negativeprompt', aiData.negativeprompt);
+                            setValueSafelyIfNotUndefinedOrNull('aspectRatio', aiData.aspectRatio);
+                            setValueSafelyIfNotUndefinedOrNull('model', aiData.model);
+                            setValueSafelyIfNotUndefinedOrNull('steps', aiData.steps);
+                            setValueSafelyIfNotUndefinedOrNull('quantity', aiData.quantity);
+                            setValueSafelyIfNotUndefinedOrNull('cfguidance', aiData.cfg);
+                            setValueSafelyIfNotUndefinedOrNull('seed', aiData.seed);
+
+                            // refresh prompt negpromt on input stuff:
+                            document.getElementById('prompt').dispatchEvent(new Event('change'));
+                            document.getElementById('negativeprompt').dispatchEvent(new Event('change'));
+
+                            // fire the change event for the model select box and the aspect ratio select box:
+                            document.getElementById('model').dispatchEvent(new Event('change'));
+                            document.getElementById('aspectRatio').dispatchEvent(new Event('change'));
+
+                            // set all the loras to unchecked:
+                            document.querySelectorAll('.loraSelection input[type="checkbox"]').forEach(checkbox => {
+                                checkbox.checked = false;
+                                checkbox.dispatchEvent(new Event('change')); // Fire the change event if needed
+                            });
+
+                            aiData.loras.forEach(loraId => {
+                                const loraCheckbox = document.querySelector(`input[type="checkbox"][value="${loraId}"]`);
+                                if (loraCheckbox) {
+                                    loraCheckbox.checked = true;
+                                    loraCheckbox.dispatchEvent(new Event('change')); // Fire the change event if needed
+                                } else {
+                                    console.warn(`Checkbox with value '${loraId}' not found.`);
+                                }
+                            });
+
+                            aiData.lora_strengths.forEach((strength, index) => {
+                                const loraId = aiData.loras[index];
+                                const slider = document.getElementById(`strength-${loraId}`);
+                                const display = document.getElementById(`strength-${loraId}-value`);
+
+                                if (slider && display) {
+                                    slider.value = strength;
+                                    display.innerText = strength;
+                                    slider.dispatchEvent(new Event('input')); // Fire the input event to update UI
+                                } else {
+                                    console.warn(`Slider or display element for Lora ID '${loraId}' not found.`);
+                                }
+                            });
+                        }
+
+
+
+
+                        function loadSlot(slotId) {
+
+                            slotName = document.getElementById(`saveSlot-${slotId}`).getElementsByTagName('summary')[0].innerText
+
+                            if (!confirm(`Are you sure you want to load the slot: "${slotName}"?`)) {
+                                return; // Exit the function if the user clicks 'Cancel'
+                            }
+
+                            // load the slot with the given slotId
+                            console.log(slotId)
+                            let saveData = document.getElementById(`saveSlot-${slotId}`)
+
+                            // set the generator form values to the save slot values:
+                            // get the save slot details:
+                            const saveSlotDetails = saveData.getElementsByTagName('details')[0];
+                            const saveSlotDetailsParagraphs = saveSlotDetails.getElementsByTagName('p');
+
+                            console.log(slotId)
+
+                            // selectedLoras is document
+
+                            const saveSlotPrompt = document.getElementById(`saveSlot-${slotId}-prompt`).value
+                            const saveSlotNegativePrompt = document.getElementById(`saveSlot-${slotId}-negativeprompt`).value
+                            const saveSlotAspectRatio = document.getElementById(`saveSlot-${slotId}-aspectRatio`).value
+                            const saveSlotModel = document.getElementById(`saveSlot-${slotId}-model`).value
+                            const saveSlotLoras = document.getElementById(`saveSlot-${slotId}-loras`).value
+                            const saveSlotSteps = document.getElementById(`saveSlot-${slotId}-steps`).value
+                            const saveSlotQuantity = document.getElementById(`saveSlot-${slotId}-quantity`).value
+                            const saveSlotCFG = document.getElementById(`saveSlot-${slotId}-cfg`).value
+                            const saveSlotSeed = document.getElementById(`saveSlot-${slotId}-seed`).value
+
+                            let saveSlotLoraStrengths = []
+
+                            // const saveSlotLoraStrengths = document.getElementById(`saveSlot-${slotId}-lora_strengths`).value || [];
+                            if (document.getElementById(`saveSlot-${slotId}-lora_strengths`)) {
+                                saveSlotLoraStrengths = document.getElementById(`saveSlot-${slotId}-lora_strengths`).value
+                            }
+
+                            // set the generator form values to the save slot values:
+                            document.getElementById('prompt').value = saveSlotPrompt;
+                            document.getElementById('negativeprompt').value = saveSlotNegativePrompt;
+                            document.getElementById('aspectRatio').value = saveSlotAspectRatio;
+                            document.getElementById('model').value = saveSlotModel;
+                            // Assuming saveSlotLoras is a string of comma-separated Lora IDs
+                            const saveSlotLorasArray = saveSlotLoras.split(', ');
+
+                            // check the checkboxes for the loras in the save slot:
+                            saveSlotLorasArray.forEach(loraId => {
+                                const loraCheckbox = document.querySelector(`input[type="checkbox"][value="${loraId}"]`);
+                                if (loraCheckbox) {
+                                    loraCheckbox.checked = true;
+                                    loraCheckbox.dispatchEvent(new Event('change')); // Fire the change event if needed
+                                } else {
+                                    console.warn(`Checkbox with value '${loraId}' not found.`);
+                                }
+                            });
+
+                            saveSlotLoraStrengths = saveSlotLoraStrengths.split(', ')
+
+                            saveSlotLoraStrengths.forEach((strength, index) => {
+                                const loraId = saveSlotLorasArray[index];
+                                const slider = document.getElementById(`strength-${loraId}`);
+                                const display = document.getElementById(`strength-${loraId}-value`);
+
+                                if (slider && display) {
+                                    slider.value = strength;
+                                    display.innerText = strength;
+                                    slider.dispatchEvent(new Event('input')); // Fire the input event to update UI
+                                } else {
+                                    console.warn(`Slider or display element for Lora ID '${loraId}' not found.`);
+                                }
+                            });
+
+                            document.getElementById('steps').value = saveSlotSteps;
+                            document.getElementById('quantity').value = saveSlotQuantity;
+                            document.getElementById('cfguidance').value = saveSlotCFG;
+                            document.getElementById('seed').value = saveSlotSeed;
+
+                            // refresh prompt negpromt on input stuff:
+                            document.getElementById('prompt').dispatchEvent(new Event('change'));
+                            document.getElementById('negativeprompt').dispatchEvent(new Event('change'));
+
+                            // fire the change event for the model select box and the aspect ratio select box:
+                            document.getElementById('model').dispatchEvent(new Event('change'));
+                            document.getElementById('aspectRatio').dispatchEvent(new Event('change'));
+                            
+                            // wait a seconds then trigger the saveLoadTextAreaHeight function to update the height of the textarea:
+                            setTimeout(() => {
+                                saveLoadTextAreaHeight();
+                            }, 1000)
+                            
+                        }
+
+                        function deleteSlot(slotId) {
+                            event.preventDefault();
+
+                            slotName = document.getElementById(`saveSlot-${slotId}`).getElementsByTagName('summary')[0].innerText
+
+                            if (!confirm(`Are you sure you want to DELETE the slot: "${slotName}"?`)) {
+                                return; // Exit the function if the user clicks 'Cancel'
+                            }
+
+                            // delete the slot with the given slotId
+                            console.log(slotId)
+                            fetch('/ai-save-delete', {
+                                method: 'POST',
+                                body: JSON.stringify({saveSlotId: slotId}),
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                }
+                            }).then(response => response.json())
+                            .then(data => {
+                                // Handle response
+                                console.log(data);
+                                refreshSaveSlots()
+                            });
+                        }
+
+                    </script>
+
+
+
+
+
+
+
+                    
+                </div>
+            </details>
+            
+
+            <!-- ejs template if statement, if session.lastRequestSD !== null or undefined then: -->
+            <% if (session.lastRequestSD === null || session.lastRequestSD === undefined) { %>
+                
+                
+            <% } else { %>
+                <!-- session.lastRequestSD span object to read later: -->
+                <span id="lastRequestSD" style="display: none;">
+                    <%- JSON.stringify(session.lastRequestSD) %>
+                </span>
+                
+                
+
+
+
+
+
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        // Assuming lastRequestSD contains all necessary data as JSON
+                        let lastRequestSD = JSON.parse(document.getElementById('lastRequestSD').textContent || '{}');
+
+                        console.log(lastRequestSD)
+
+                        // Set form values to the last request values
+                        document.getElementById('prompt').value = lastRequestSD.prompt || '';
+                        document.getElementById('negativeprompt').value = lastRequestSD.negativeprompt || '';
+                        document.getElementById('aspectRatio').value = lastRequestSD.aspectRatio || '';
+                        document.getElementById('model').value = lastRequestSD.model || '';
+                        document.getElementById('steps').value = lastRequestSD.steps || '15';
+                        document.getElementById('quantity').value = lastRequestSD.quantity || '4';
+                        document.getElementById('cfguidance').value = lastRequestSD.cfguidance || '7.5';
+                        document.getElementById('seed').value = lastRequestSD.seed || '-1';
+                        document.getElementById('scheduler').value = lastRequestSD.scheduler || "eulera";
+
+                        // refresh prompt negpromt on input stuff:
+                        document.getElementById('prompt').dispatchEvent(new Event('change'));
+                        document.getElementById('negativeprompt').dispatchEvent(new Event('change'));
+
+                        // fire the change event for the model select box and the aspect ratio select box:
+                        document.getElementById('model').dispatchEvent(new Event('change'));
+                        document.getElementById('aspectRatio').dispatchEvent(new Event('change'));
+
+                        let nsfwlorawarning = lastRequestSD.nsfwlorawarning || false;
+                        if (nsfwlorawarning === false) {
+                            document.getElementById('nsfwlorawarning').style.display = 'block'
+                        } else {
+                            document.getElementById('nsfwlorawarning').style.display = 'none'
+                        }
+
+                        let autocompleteenabled = lastRequestSD.autocompleteenabled || false;
+                        if (autocompleteenabled === true) {
+                            document.getElementById('autocompleteCheckbox').checked = true;
+                        } else {
+                            document.getElementById('autocompleteCheckbox').checked = false;
+                        }
+
+                        let strengthenabled = lastRequestSD.strengthenabled || false;
+                        if (strengthenabled === true) {
+                            document.getElementById('strengthArrowkeysCheckbox').checked = true;
+                        } else {
+                            document.getElementById('strengthArrowkeysCheckbox').checked = false;
+                        }
+
+                        // Load favorites and visually update the favorite buttons
+                        let savedFavoritedIds = lastRequestSD.favoriteLoras || [];
+                        // Iterate over all favorite buttons and mark them if they match saved favorites
+                        document.querySelectorAll('.favorite-btn').forEach(button => {
+                            // Extract the Lora ID from the button's onclick attribute
+                            let match = button.getAttribute('onclick').match(/toggleFavorite\(event, '([^']+)'\)/);
+                            if (match && match[1] && savedFavoritedIds.includes(match[1])) {
+                                button.classList.add('favorite'); // Add the favorite class
+                                favorites[match[1]] = true; // Ensure this Lora ID is marked as a favorite
+                            }
+                        });
+
+                        // Sort Lorans per category based on favorites
+                        loraDataKeys.forEach(category => sortLoras(category));
+
+                        // Load cached Lorans and check corresponding checkboxes
+                        let lorasCached = lastRequestSD.loras || [];
+                        lorasCached.forEach(loraId => {
+                            let checkbox = document.querySelector(`input[type="checkbox"][value="${loraId}"]`);
+                            if (checkbox) {
+                                checkbox.checked = true; // Check the checkbox for the cached Lora
+                                checkbox.dispatchEvent(new Event('change'));
+                            }
+                        });
+                    });
+                </script>
+                
+            <% } %>
+
+
+            <style>
+                /* Common styles for buttons */
+                .button {
+                    background-color: #4caf4f95; /* Light green with opacity */
+                    color: white;
+                    padding: 15px 32px;
+                    text-align: center;
+                    font-size: 16px;
+                    border: none !important;
+                    border-radius: 10px;
+                    cursor: pointer;
+                    display: inline-block;
+                    margin: 4px 2px;
+                    transition: background-color 0.3s, transform 0.7s !important;
+                    transform-origin: center;
+                }
+
+                /* Hover effect for export button */
+                .exportaidatabutton:hover {
+                    background-color: #4CAF50; /* Slightly darker green */
+                    transform: scale(1.08) rotate(1deg);
+                }
+        
+                /* Hover effect for import label */
+                .importaidatalabel:hover {
+                    background-color: #4CAF50; /* Slightly darker green */
+                    transform: scale(1.08) rotate(1deg);
+                }
+        
+                /* Active effect for export button */
+                .exportaidatabutton:active {
+                    background-color: #ffe600; /* Yellow */
+                    transform: scale(1.1);
+                }
+        
+                /* Hide the file input field visually but remain accessible */
+                .importaidatainput {
+                    display: none;
+                }
+            </style>
+            <div style="flex: auto;">
+                <button class="button exportaidatabutton" type="button" onclick="exportAIData()">Export AI Data</button>
+                <label for="importAiData" class="button importaidatalabel">Import AI Data:</label>
+                <input id="importAiData" class="importaidatainput" type="file">
+            </div>
+            
+            <script>
+                // get the user to upload a yaml file and then import it:
+                document.getElementById('importAiData').addEventListener('change', function(event) {
+                    const file = event.target.files[0];
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const text = e.target.result;
+                        importAiData(text);
+                    }
+                    reader.readAsText(file);
+                });
+
+                // reset the input value to allow the same file to be uploaded again:
+                document.getElementById('importAiData').addEventListener('click', function(event) {
+                    this.value = null;
+                });
+
+            </script>
+
+            <form id="generatorForm">
+
+                <style>
+                    textarea {
+                        overflow: hidden;
+                    }
+
+                </style>
+
+                <details open>
+                    
+                    <summary>Prompt & Negative Prompt</summary>
+
+                        <!-- have a autocompleteCheckbox and a strengthArrowkeysCheckbox in a flex box side by side: -->
+
+                        <div class="form-control settings-container">
+                            <div class="setting" hidden style="display: none;">
+                                <label for="strengthArrowkeysCheckbox">Disable Strength Arrowkeys:</label>
+                                <input type="checkbox" id="strengthArrowkeysCheckbox">
+                            </div>
+                            <div class="setting">
+                                <label for="autocompleteCheckbox">Disable Autocomplete:</label>
+                                <input type="checkbox" id="autocompleteCheckbox">
+                            </div>
+                        </div>
+                        
+
+                        <style>
+                            .wordCountGreen {
+                                color: green;
+                            }
+                            .wordCountYellow {
+                                color: yellow;
+                            }
+                            .wordCountRed {
+                                color: red;
+                            }
+                        </style>
+
+                        <div style="position: relative;" id="autocomplete-div"></div>
+
+                        <div class="form-control">
+                            <a for="prompt">Prompt: <a id="promptWordCount">(70)</a></a>
+                            <br>
+                            <textarea id="prompt" name="prompt" rows="2" required></textarea>
+                        </div>
+
+                        <script>
+                            function enhancePromptFetch() {
+                                event.preventDefault();
+                                // get the prompt value:
+                                const prompt = document.getElementById('prompt').value;
+                                // set the status to loading:
+                                document.getElementById('enhancePromptStatus').innerHTML = 'Enhancing Prompt...';
+                                // set the button to disabled:
+                                document.getElementById('enhancePrompt').disabled = true;
+                                // fetch the enhanced prompt from /enhance-prompt:
+                                fetch('/enhance_prompt', {
+                                    method: 'POST',
+                                    body: JSON.stringify({prompt: prompt}),
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    }
+                                }).then(response => response.json())
+                                .then(data => {
+                                    // Handle response
+                                    console.log(data);
+                                    // set the status to none:
+                                    document.getElementById('enhancePromptStatus').innerHTML = '';
+                                    // set the button to enabled:
+                                    document.getElementById('enhancePrompt').disabled = false;
+                                    // set the prompt value to the enhanced prompt:
+                                    document.getElementById('prompt').value = data.enhanced_prompt;
+                                    document.getElementById('prompt').dispatchEvent(new Event('input'));
+                                    document.getElementById('prompt').dispatchEvent(new Event('change'));
+                                });
+                            }
+                        </script>
+
+                        <style>
+                            #enhancePrompt {
+                                background-color: #4caf4f95; /* Green */
+                                border: none;
+                                color: white;
+                                padding: 15px 32px;
+                                text-align: center;
+                                text-decoration: none;
+                                display: inline-block;
+                                font-size: 16px;
+                                margin: 4px 2px;
+                                cursor: pointer;
+                                transition: transform 0.7s, background-color 0.3s; /* Adjust time as needed */
+                                transform: scale(1) rotate(0deg); /* Default state */
+                                transform-origin: center; /* Ensures the scaling happens from the center */
+                            }
+
+                            #enhancePrompt:hover {
+                                transform: scale(1.08) rotate(1deg); 
+                                background-color: #4CAF50; /* Green */
+                            }
+
+                            #enhancePrompt:active {
+                                transform: scale(1.1);
+                                background-color: #ffe600; /* Red */
+                            }
+
+                            #enhancePrompt[disabled] {
+                                background-color: #ff880095; /* Green */
+                                border: none;
+                                color: white;
+                                padding: 15px 32px;
+                                text-align: center;
+                                text-decoration: none;
+                                display: inline-block;
+                                font-size: 16px;
+                                margin: 4px 2px;
+                                cursor: not-allowed;
+                                transition: transform 0.7s, background-color 0.3s; /* Adjust time as needed */
+                                transform: scale(1) rotate(0deg); /* Default state */
+                                transform-origin: center; /* Ensures the scaling happens from the center */
+                            }
+                        </style>
+
+                        <div class="form-control" hidden style="display: none;">
+                            <button type="button" id="enhancePrompt" onclick="enhancePromptFetch()">(experimental) Enhance w/ AI</button>
+                            <p id="enhancePromptStatus"></p>
+                        </div>
+
+                        <div class="form-control">
+                            <a for="negativeprompt">Negative Prompt: <a id="negativePromptWordCount">(70)</a></a>
+                            <textarea id="negativeprompt" name="negativeprompt" rows="2">nsfw, monochrome, black and white, worst quality, low quality, watermark, signature, bad anatomy, bad hands, deformed limbs, blurry, cropped, cross-eyed, extra arms, extra legs, extra limbs, extra pupils, bad proportions, poorly drawn hands, simple background, bad background, bad lighting, bad perspective</textarea>
+                        </div>
+
+                </details>
+
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+
+                        window.saveLoadTextAreaHeight = function() {
+                            let textareas = document.querySelectorAll('textarea');
+
+                            textareas.forEach(textarea => {
+                                // Function to adjust height
+                                textarea.style.height = 'auto'; // Reset height to recalculate
+                                textarea.style.height = textarea.scrollHeight + 'px';
+
+                            })
+                        }
+
+                        textareas = document.querySelectorAll('textarea');
+
+                        textareas.forEach(textarea => {
+                            textarea.addEventListener('input', saveLoadTextAreaHeight);
+                            textarea.addEventListener('change', saveLoadTextAreaHeight);
+                        })
+
+                        // give me a ubuntu command to kill a process id of 91298:
+                        // kill -9 91298
+
+                        saveLoadTextAreaHeight();
+
+                        window.addEventListener('resize', saveLoadTextAreaHeight);
+
+
+
+                    })
+
+                </script>
+
+                <details open>
+                    <summary>Aspect Ratio & Model</summary>
+                    <div class="form-control">
+                        <label for="aspectRatio">Aspect Ratio:</label>
+                        <select id="aspectRatio" name="aspectRatio" value="square">
+                            <option value="square">Square</option>
+                            <option value="portrait">Portrait</option>
+                            <option value="landscape">Landscape</option>
+                            <option value="16:9">16:9 (Wide)</option>
+                            <option value="9:16">9:16 (Tall)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-control">
+                        <label for="model">Model:</label>
+                        <select id="model" name="model">
+                            <!-- <option value="sonicdiffusion">DISABLED (SD 1.5) SonicDiffusion (Sonic the Hedgehog) DISABLED</option> -->
+                            <option value="fluffysonic">(SD 1.5) FluffySonic (Sonic the Hedgehog by kitsune_sage)</option>
+                            <option value="realisticVision">(SD 1.5) realisticVision (Realstic)</option>
+                            <option value="furryblend">(SD 1.5) FurryBlend (Furry/Anime)</option>
+                            <!-- <option value="sdxl-sonicdiffusion">DISABLED (SDXL) Sonic Diffusion (Sonic the Hedgehog, uses PonyXL Prompting) DISABLED</option> -->
+                            <!-- <option value="sdxl-ponydiffusion">(SDXL) Pony Diffusion (known as PonyXL)</option> -->
+                            <option value="sdxl-autismmix">(SDXL) Autism Mix ("Better" PonyXL, uses PonyXL Prompting)</option>
+                            <option value="sdxl-sonichasautismmix">(SDXL) SonicHasAutismMix (SonicDiffusionXL & AutismMix merge, uses PonyXL Prompting)</option>
+                            <option value="sdxl-ponyrealism">(SDXL) Pony Realism (Realistic, uses PonyXL Prompting)</option>
+                            <!-- <option value="sd3-medium">DISABLED (SD3) Medium (Stability AI) DISABLED</option> -->
+                        </select>
+                    </div>
+                </details>
+
+                <script>
+                    // on document load, if model is set to sdxl-ponydiffusion then set it to sdxl-autismmix:
+                    document.addEventListener('DOMContentLoaded', function() {
+                        if (document.getElementById('model').value === 'sdxl-ponydiffusion') {
+                            document.getElementById('model').value = 'sdxl-autismmix';
+                        }
+                    })
+                </script>
+
+                <div class="advanced">
+                    <div></div>
+                    <div></div>
+                    <!-- by default should be expanded -->
+                    <details id="nsfwlorawarning" style="width: auto" open>
+                        <summary style="color: rgb(255, 0, 0);">Press to dismiss warning</summary>
+                        <p>Warning! Some loras are NSFW! In the future there will be a filter option!</p>
+                        <br>
+                        <br>
+                    </details>
+                    <script>
+                        document.getElementById('nsfwlorawarning').addEventListener('click', function() {
+                            document.getElementById('nsfwlorawarning').style.display = 'none';
+                        })
+                    </script>
+
+
+
+
+
+
+                    <% loraDataKeys = ['style', 'effect', 'concept', 'clothing', 'character', 'pose', 'background'] %>
+
+                    <style>
+                        .form-control {
+                          margin-bottom: 20px;
+                        }
+                      
+                        .loraContainer {
+                            max-height: 600px !important; /* Adjust as needed for your layout */
+                            height: fit-content;
+                            width: 100%;
+                            overflow-y: auto; /* Allows scrolling within the container */
+                            border: 1px solid #00ff6a;
+                            border-radius: 4px;
+                            padding: 4px;
+                        }
+
+                      
+                        .checkbox-container {
+                          display: flex;
+                          align-items: center;
+                          margin-bottom: 2px; /* Adds space between checkbox lines */
+                        }
+                      
+                        .checkbox-container label {
+                          flex-grow: 1; /* Ensures the label takes up the available space */
+                          margin-right: 8px; /* Space between label and favorite button */
+                        }
+                      
+                        .favorite-btn {
+                          background: none;
+                          border: none !important;
+                          color: #ccc;
+                          cursor: pointer;
+                          padding: 0; /* Removes extra space around the button */
+                          margin-right: 8px; /* Space between label and favorite button */
+                          transition: color 0.7s; /* Smooth transition for color change */
+                          width: 30px !important;
+                        }
+                      
+                        .favorite-btn:hover {
+                            color: #ffec80; /* Gold color on hover to indicate interactivity */
+                            transition: color 0.1s;
+                        }
+                      
+                        .favorite-btn.favorite {
+                            color: #ffd700; /* Gold color for active favorite */
+                            transition: color 0.7s;
+                        }
+
+                        .loraSelection {
+                            display: none;
+                        }
+
+                        .loraSelection.active {
+                            background-color: rgba(255, 255, 255, 0.05);
+                            padding: 4px;
+                            width: 100%; /* Ensure select boxes take full width of their container */
+                            max-width: 100%; /* Adjust as needed for your layout */
+                            max-height: 500px;
+                            height: fit-content;
+                            overflow-y: auto; /* Adds scroll to selects if they exceed max height */
+                            display: grid;
+                            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); /* Adjust as needed */
+                            gap: 4px; /* Space between select boxes */
+                            /* make it so its left align: */
+                            justify-content: flex-start;
+                        }
+                      
+                        /* Additional styling for the search input for consistency */
+                        #loraSearch {
+                            width: 100%;
+                            padding: 8px;
+                            margin-bottom: 4px; /* Adds space between the search box and the first category */
+                            box-sizing: border-box; /* Ensures padding does not affect the overall width */
+                            border-color: #00ff6a;
+                        }
+
+                        #loraSelectionsSummaryDetails * {
+                            -webkit-user-select: none; /* Safari */
+                            -moz-user-select: none; /* Firefox */
+                            -ms-user-select: none; /* IE10+/Edge */
+                            user-select: none; /* Standard */
+                        }
+
+                      </style>
+
+                    <span id="allLorasObject">
+                        <% timeBeforeLoraInfo = new Date().getTime(); %>
+                        <% loraDataKeys.forEach(category => { %>
+                            <% if (lora_data[category]) { %>
+                                <% Object.entries(lora_data[category]).forEach(([key, value]) => { %>
+                                    <span id="<%= key %>-strength" data-strength="<%- value.strength || 'Null' %>"></span>
+                                    <span id="<%= key %>-words" data-words="<%- value.words || 'Null' %>"></span>
+                                    <span id="<%= key %>-description" data-description="<%- value.description || 'Null' %>"></span>
+                                    <span id="<%= key %>-name" data-name="<%- value.name || key %>"></span>
+                                    <span id="<%= key %>-link" data-link="<%- value.link || 'Null' %>"></span>
+                                    <span id="<%= key %>-dateCreated" data-dateCreated="<%- value.dateCreated || 'Null' %>"></span>
+                                <% }); %>
+                            <% } %>
+                        <% }); %>
+                    </span>  
+
+                    <details id="loraSelectionsSummaryDetails" open>
+                        <summary>Loras (<span id="totalLorasSelected"></span>/<span id="totalLoras"></span>)</summary>
+                        <div class="form-control">
+                            <label for="loraSearch">Lora Search:</label>
+                            <input type="text" id="loraSearch" onkeyup="filterLoras()" placeholder="Search for a lora...">
+                        </div>
+                        <!-- Somewhere in your HTML -->
+
+                        <style>
+                            /* styling for the sorting buttons, make sure they are next to eachother horizontally and not above/below! 
+                            use purple colours and active class to show which one is selected! */
+                            
+                            #sortAlphaBtn, #sortNewestBtn {
+                                background-color: #8c4caf40;
+                                border: 3px solid #8c4caf !important;
+                                color: white;
+                                padding: 7px 15px;
+                                text-align: center;
+                                font-size: 16px;
+                                border-radius: 10px;
+                                cursor: pointer;
+                                display: inline-block;
+                                margin: 4px 2px;
+                                transition: background-color 0.3s, transform 0.7s !important;
+                                transform-origin: center;
+                            }
+
+                            #sortAlphaBtn:hover, #sortNewestBtn:hover {
+                                background-color: #ce9be9;
+                                transform: scale(1.08) rotate(1deg);
+                            }
+
+                            /* detect active class and apply style: */
+
+                            #sortAlphaBtn.active, #sortNewestBtn.active {
+                                background-color: #8C4CAF;
+                            }
+                            
+                        </style>
+
+                        <button id="sortAlphaBtn" type="button">Sort Alphabetically</button>
+                        <button id="sortNewestBtn" type="button">Sort by Newest</button>
+
+                        <!-- showSafeCheckbox, showSuggestiveCheckbox, showNSFWCheckbox -->
+
+                        <style>
+                            /* styling for the showSafeCheckbox, showSuggestiveCheckbox, showNSFWCheckbox, make sure they are next to eachother horizontally and not above/below! 
+                            use purple colours and active class to show which one is selected! */
+                            
+                            #showSafeCheckbox, #showSuggestiveCheckbox, #showNSFWCheckbox, #showNACheckbox {
+                                background-color: #8c4caf40;
+                                border: 3px solid #8c4caf !important;
+                                color: white;
+                                padding: 7px 15px;
+                                text-align: center;
+                                font-size: 16px;
+                                border-radius: 10px;
+                                cursor: pointer;
+                                display: inline-block;
+                                margin: 4px 2px;
+                                transition: background-color 0.3s, transform 0.7s !important;
+                                transform-origin: center;
+                            }
+                            </style>
+                            
+
+                        <!-- recreate the above loop with a 512w x 768h image in the background of the image, have it so when the image is clicked the invisible checkbox is enabled: -->
+                        <div class="loraContainer">
+                            <!-- showSafeCheckbox, showSuggestiveCheckbox, showNSFWCheckbox -->
+                            <div>
+                                <label for="showNACheckbox" >N/A:</label>
+                                <input type="checkbox" id="showNACheckbox" name="showNACheckbox" value="showNACheckbox" checked>
+
+                                <label for="showSafeCheckbox" style="color: green;"> Safe:</label>
+                                <input type="checkbox" id="showSafeCheckbox" name="showSafeCheckbox" value="showSafeCheckbox" checked>
+
+                                <label for="showSuggestiveCheckbox" style="color: yellow;"> Suggestive:</label>
+                                <input type="checkbox" id="showSuggestiveCheckbox" name="showSuggestiveCheckbox" value="showSuggestiveCheckbox">
+
+                                <label for="showNSFWCheckbox" style="color: red;"> NSFW:</label>
+                                <input type="checkbox" id="showNSFWCheckbox" name="showNSFWCheckbox" value="showNSFWCheckbox">
+                            </div>
+                            <br>
+                            <!-- buttons that toggle which are visible, have an active and unactive state, default is style: -->
+                            <% loraDataKeys.forEach(category => { %>
+                                <% if (lora_data[category]) { %>
+                                    <button type="button" class="category-btn" onclick="toggleCategory(event, '<%= category %>')"><%= category.charAt(0).toUpperCase() + category.slice(1) %></button>
+                                <% } %>
+                            <% }); %>
+                            <% loraDataKeys.forEach(category => { %>
+                                <% if (lora_data[category]) { %>
+                                    <div id="<%= category %>-loras" class="loraSelection">
+                                        <div class="loraCardGrid">
+                                            <% Object.entries(lora_data[category]).forEach(([key, value]) => { %>
+                                                <div class="lorabox" style="display: block;">
+                                                    <div class="checkbox-container">
+                                                        <input type="checkbox" id="<%= key %>" name="<%= category %>" value="<%= key %>">
+                                                        <% if (value.rating == 'nsfw') { %>
+                                                            <label id="label-rating-<%= key %>" for="<%= key %>" style="color: red;">NSFW</label>
+                                                        <% } else if (value.rating == 'safe') { %>
+                                                            <label id="label-rating-<%= key %>" for="<%= key %>" style="color: green;">Safe</label>
+                                                        <% } else if (value.rating == 'suggestive') { %>
+                                                            <label id="label-rating-<%= key %>" for="<%= key %>" style="color: yellow;">Suggestive</label>
+                                                        <% } else { %>
+                                                            <label id="label-rating-<%= key %>" for="<%= key %>" style="color: white;">N/A</label>
+                                                        <% } %>
+                                                        <label id="label-<%= key %>" for="<%= key %>"><%= value.name || key %></label>
+                                                        <button type="button" class="favorite-btn" onclick="toggleFavorite(event, '<%= key %>')">★</button>
+                                                    </div>
+                                                    <img id="<%=key%>-image" width="256" height="384" src="<%= value.image %>" onclick="document.getElementById('<%= key %>').checked = !document.getElementById('<%= key %>').checked; document.getElementById('<%= key %>').dispatchEvent(new Event('change'));">
+                                                </div>
+                                            <% }); %>
+                                        </div>
+                                    </div>
+                                <% } %>
+                            <% }); %>
+                        </div>
+
+                        <span id="lastSelectedCategory" style="display: none;"></span hidden>
+
+                        <script>
+                            function toggleCategory(event, category) {
+                                // enable the category that has been clicked on, disable all others, if the category is already enabled then keep it enabled:
+                                const categoryBtns = document.querySelectorAll('.category-btn');
+                                categoryBtns.forEach(btn => {
+                                    if (btn.innerText === `${category.charAt(0).toUpperCase() + category.slice(1)}`) {
+                                        btn.classList.add('active');
+                                    } else {
+                                        btn.classList.remove('active');
+                                    }
+                                });
+
+                                // set the value of lastSelectedCategory to the category selected:
+                                document.getElementById('lastSelectedCategory').innerText = category;
+
+                                const loraSelections = document.querySelectorAll('.loraSelection');
+                                loraSelections.forEach(selection => {
+                                    if (selection.id === `${category}-loras`) {
+                                        // add active class to the selection:
+                                        selection.classList.add('active');
+                                    } else {
+                                        selection.classList.remove('active');
+                                    }
+                                });
+                            }
+
+                            // make the default category active:
+                            document.querySelector('.category-btn').classList.add('active');
+                            document.querySelector('.loraSelection').classList.add('active');
+                        </script>
+
+                        <% timeAfterLoraInfo = new Date().getTime(); %>
+                        <% timeToLoadLorasInfo = timeAfterLoraInfo - timeBeforeLoraInfo %>
+                        <p>Loras Loaded in <%=timeToLoadLorasInfo%>ms</p>
+                                        </details>
+                                    </details>
+                                </details>
+                            </details>
+                        </details>
+                    </details>
+                    </details>
+
+                    <script>
+
+                        document.addEventListener('DOMContentLoaded', (event) => {
+                            // Add event listener to model dropdown
+                            document.getElementById('model').addEventListener('change', handleModelChange);
+                            handleModelChange();
+
+                            document.querySelectorAll('.loraCardGrid').forEach(grid => {
+                                if (grid.children.length === 0) {
+                                    grid.remove();
+                                }
+                            });
+
+                        });
+
+                        function handleModelChange() {
+                            const modelValue = document.getElementById('model').value;
+                            const startsWithSdxl = modelValue.startsWith('sdxl');
+                            const startsWithSD3 = modelValue.startsWith('sd3');
+
+                            document.querySelectorAll('.loraSelection .lorabox').forEach(container => {
+                                const checkbox = container.querySelector('input[type="checkbox"]');
+                                key = checkbox.id.split('-')[1];
+                                if (startsWithSdxl) {
+                                    if (!key.startsWith('sdxl')) {
+                                        // Hide and uncheck if not starting with 'sdxl'
+                                        container.style.display = 'none';
+                                        if (checkbox.checked) {
+                                            checkbox.checked = false;
+                                            // fire event:
+                                            checkbox.dispatchEvent(new Event('change'));
+                                        }
+                                    } else {
+                                        // Show if it starts with 'sdxl'
+                                        container.style.display = '';
+                                    }
+                                } else if (startsWithSD3) {
+                                    if (!key.startsWith('sd3')) {
+                                        // Hide and uncheck if not starting with 'sd3'
+                                        container.style.display = 'none';
+                                        if (checkbox.checked) {
+                                            checkbox.checked = false;
+                                            // fire event:
+                                            checkbox.dispatchEvent(new Event('change'));
+                                        }
+                                    } else {
+                                        // Show if it starts with 'sd3'
+                                        container.style.display = '';
+                                    }
+                                } else {
+                                    if (key.startsWith('sdxl') || key.startsWith('sd3')) {
+                                        // Hide and uncheck if starting with 'sdxl' or 'sd3'
+                                        container.style.display = 'none';
+                                        if (checkbox.checked) {
+                                            checkbox.checked = false;
+                                            // fire event:
+                                            checkbox.dispatchEvent(new Event('change'));
+                                        }
+                                    } else {                                        
+                                        // Show all if model does not start with 'sdxl' or 'sd3'
+                                        container.style.display = '';
+                                    }
+                                }
+                            });
+
+                            // Call any functions necessary to update the UI based on these changes
+                        }
+
+
+
+
+
+                        var favorites = {};
+
+                        let currentSortMode = 'alphabetical'; // Default sort mode
+
+                        function sortLoras(category, sortMode = 'alphabetical') {
+                            const loraSelection = document.getElementById(`${category}-loras`);
+                            const lorans = Array.from(loraSelection.querySelectorAll('.lorabox'));
+
+                            // Sort Lorans by whether they're favorited, then by the specified sortMode
+                            lorans.sort((a, b) => {
+                                const isFavA = favorites[a.querySelector('input[type="checkbox"]').value] ? 0 : 1;
+                                const isFavB = favorites[b.querySelector('input[type="checkbox"]').value] ? 0 : 1;
+                                if (isFavA !== isFavB) {
+                                    return isFavA - isFavB; // Prioritize favorites
+                                } else {
+                                    const idA = a.querySelector('input[type="checkbox"]').value;
+                                    const idB = b.querySelector('input[type="checkbox"]').value;
+                                    if (sortMode === 'newest') {
+                                        // get the date created of the lora from the span object:
+                                        console.log(document.getElementById(`${idA}-dateCreated`).getAttribute('data-dateCreated'))
+                                        const dateA = new Date(Number(document.getElementById(`${idA}-dateCreated`).getAttribute('data-dateCreated')));
+                                        const dateB = new Date(Number(document.getElementById(`${idB}-dateCreated`).getAttribute('data-dateCreated')));
+                                        return dateB - dateA; // Newest first
+                                    } else {
+                                        return idA.localeCompare(idB); // Sort alphabetically by default
+                                    }
+                                }
+                            });
+
+                            // Re-append sorted Lorans to the category
+                            lorans.forEach(lora => loraSelection.appendChild(lora));
+                        }
+
+                        document.addEventListener('DOMContentLoaded', function () {
+                        const sortAlphaBtn = document.getElementById('sortAlphaBtn');
+                        const sortNewestBtn = document.getElementById('sortNewestBtn');
+
+                        sortAlphaBtn.addEventListener('click', function() {
+                            loraDataKeys.forEach(category => sortLoras(category), 'alphabetical');
+                            updateButtonStates('alphabetical');
+                        });
+
+                        sortNewestBtn.addEventListener('click', function() {
+                            loraDataKeys.forEach(category => sortLoras(category, 'newest'));
+                            updateButtonStates('newest');
+                        });
+
+                        function updateButtonStates(activeMode) {
+                            // Toggle button active state visuals here
+                            if (activeMode === 'alphabetical') {
+                                sortAlphaBtn.classList.add('active');
+                                sortNewestBtn.classList.remove('active');
+                            } else {
+                                sortAlphaBtn.classList.remove('active');
+                                sortNewestBtn.classList.add('active');
+                            }
+                        }
+                    });
+
+
+
+                        function toggleFavorite(event, key) {
+                            event.stopPropagation(); // Prevent the checkbox from being checked/unchecked when clicking the button
+                            const targetButton = event.target;
+                            const checkboxContainer = targetButton.closest('.checkbox-container');
+                            const category = checkboxContainer.closest('.loraSelection').id.replace('-loras', '');
+
+                            // Toggle favorite status
+                            if (favorites[key]) {
+                                delete favorites[key];
+                                targetButton.classList.remove('favorite');
+                            } else {
+                                favorites[key] = true;
+                                targetButton.classList.add('favorite');
+                            }
+
+                            sortLoras(category);
+                        }
+
+                        function filterLoras() {
+                            var input, filter, container, checkboxes, label, i, txtValue;
+                            input = document.getElementById('loraSearch');
+                            filter = input.value.toUpperCase();
+                            container = document.getElementsByClassName('loraSelection');
+                            model_name = document.getElementById('model').value;
+
+                            show_na = document.getElementById('showNACheckbox').checked;
+                            show_safe = document.getElementById('showSafeCheckbox').checked;
+                            show_nsfw = document.getElementById('showNSFWCheckbox').checked;
+                            show_suggestive = document.getElementById('showSuggestiveCheckbox').checked;
+        
+                            for (var j = 0; j < container.length; j++) {
+                                // checkbox-container class
+                                checkboxes = container[j].getElementsByClassName('checkbox-container');
+                                for (i = 0; i < checkboxes.length; i++) {
+                                    // label-lorakey ID
+                                    label = document.getElementById('label-' + checkboxes[i].getElementsByTagName('input')[0].id);
+                                    txtValue = label.textContent.toLowerCase() || label.innerText.toLowerCase();
+
+                                    rating_label = document.getElementById('label-rating-' + checkboxes[i].getElementsByTagName('input')[0].id);
+                                    rating_value = rating_label.textContent.toLowerCase() || rating_label.innerText.toLowerCase();
+
+                                    let isTextMatch = txtValue.toUpperCase().indexOf(filter) > -1;
+                                    let isModelSdxl = model_name.startsWith('sdxl');
+                                    let isLoraSdxl = txtValue.startsWith('sdxl');
+                                    let isModelSD3 = model_name.startsWith('sd3');
+                                    let isLoraSD3 = txtValue.startsWith('sd3');
+
+                                    // show / hide the id="loraid-image" image based on the search filter:
+                                    image = document.getElementById(checkboxes[i].getElementsByTagName('input')[0].id + '-image');
+
+                                    rating_match = false
+
+                                    if (show_na && rating_value == 'n/a') {
+                                        rating_match = true;
+                                    }
+                                    if (show_safe && rating_value == 'safe') {
+                                        rating_match = true;
+                                    }
+                                    if (show_suggestive && rating_value == 'suggestive') {
+                                        rating_match = true;
+                                    }
+                                    if (show_nsfw && rating_value == 'nsfw') {
+                                        rating_match = true;
+                                    }
+                                    if (!show_na && !show_safe && !show_suggestive && !show_nsfw) {
+                                        rating_match = false;
+                                    }
+
+                                    console.log(`Rating Value: ${rating_value}, Rating Match: ${rating_match}`)
+
+                                    if (model_name.startsWith('sdxl')) {
+                                        if (isTextMatch && isLoraSdxl) {
+                                            checkboxes[i].parentElement.style.display = ""
+                                        } else {
+                                            checkboxes[i].parentElement.style.display = "none";
+                                        }
+                                    } else if (model_name.startsWith('sd3')) {
+                                        if (isTextMatch && isLoraSD3) {
+                                            checkboxes[i].parentElement.style.display = ""
+                                        } else {
+                                            checkboxes[i].parentElement.style.display = "none";
+                                        }
+                                    } else {
+                                        if (isTextMatch) {
+                                            checkboxes[i].parentElement.style.display = ""
+                                        } else {
+                                            checkboxes[i].parentElement.style.display = "none";
+                                        }
+                                    }
+
+                                    if (!rating_match) {
+                                        checkboxes[i].parentElement.style.display = "none";
+                                    }
+
+                                    // modify the above to check if the lora is nsfw, suggestive or safe, and if the checkbox is checked for that type, also make sure that:
+                                    
+
+                                }
+                            }
+
+                        }
+
+                        // fire event for checkboxes to enable filtering:
+                        // on document load:
+                        document.addEventListener('DOMContentLoaded', function() {
+                            filterLoras();
+                        });
+                        // on events:
+                        document.getElementById('showNACheckbox').addEventListener('change', filterLoras);
+                        document.getElementById('showSafeCheckbox').addEventListener('change', filterLoras);
+                        document.getElementById('showSuggestiveCheckbox').addEventListener('change', filterLoras);
+                        document.getElementById('showNSFWCheckbox').addEventListener('change', filterLoras);
+
+                    </script>
+
+
+
+
+
+                    <style>
+                        #clearAllLorasButton {
+                            width: 100%;
+                            background-color: #ff000085; /* Red */
+                            border: none;
+                            color: white;
+                            padding: 15px 32px;
+                            text-align: center;
+                            text-decoration: none;
+                            display: inline-block;
+                            font-size: 16px;
+                            margin: 4px 2px;
+                            cursor: pointer;
+                            transition: transform 0.7s, background-color 0.3s; /* Adjust time as needed */
+                            transform: scale(1) rotate(0deg); /* Default state */
+                            transform-origin: center; /* Ensures the scaling happens from the center */
+                        }
+                        #clearAllLorasButton:hover {
+                            transform: scale(1.08) rotate(1deg); 
+                            background-color: #ff0000; /* Red */
+                        }
+                    </style>
+
+                    <button type="button" id="clearAllLorasButton">Clear All Lora's</button>
+                    <br>
+
+                    <style>
+             
+                        .lora-details {
+                            background-color: rgba(0, 0, 0, 0.5); /* Original light grey background */
+                            border: 1px solid #ddd; /* Light grey border */
+                            border-radius: 4px; /* Rounded corners */
+                            padding: 10px; /* Padding inside the div */
+                            margin-bottom: 10px; /* Space between each lora detail div */
+                            font-size: small;
+                        }
+
+                        .lora-details p {
+                            margin: 1px 0; /* Space between paragraphs */
+                        }
+
+                        .lora-name-label {
+                            position: relative;
+                            top: -5px;
+                            left: 0px; /* Moved the label 20px up as originally intended */
+                            display: block; /* Ensure label is on its own line */
+                            font-weight: bold; /* Emphasize the label */
+                        }
+
+                        .lora-category {
+                            color: rgb(255, 144, 144);
+                        }
+
+                        .lora-description {
+                            color: rgb(255, 216, 144);
+                        }
+
+                        .lora-strength {
+                            color: rgb(150, 255, 144);
+                        }
+
+                        .lora-words {
+                            color: rgb(144, 225, 255);
+                        }
+
+                        .lora-id {
+                            color: rgb(242, 144, 255);
+                        }
+
+                        .lora-link {
+                            color: #ff9900; /* Orange color for link */
+                            text-decoration: none; /* No underline for a clean look */
+                        }
+
+                        .lora-link:hover {
+                            text-decoration: underline; /* Underline on hover for interactivity */
+                        }
+
+                        .lora-grayed-out {
+                            color: #60606095; /* Light grey color */
+                            font-style: italic; /* Italicized for notes */
+                        }
+
+                        /* Additional styles for better layout and readability */
+                        .lora-details div {
+                            margin-bottom: 10px; /* Space between container divs */
+                        }
+
+                        .lora-toggle input[type="checkbox"] {
+                            margin-right: 5px; /* Space between checkbox and label */
+                        }
+
+                        .lora-note {
+                            color: #666; /* Greyed out note text for less emphasis */
+                            font-style: italic; /* Italicized for notes */
+                        }
+
+                        .lora-strength-slider {
+                            color: rgb(150, 255, 144);
+                        }
+
+                        .lora-words-copy-button {
+                            background-color: #4caf4f95; /* Green */
+                            border: none;
+                            color: white;
+                            padding: 4px;
+                            text-align: center;
+                            text-decoration: none;
+                            display: inline-block;
+                            font-size: 16px;
+                            margin: 4px 2px;
+                            cursor: pointer;
+                            transition: transform 0.7s, background-color 0.3s; /* Adjust time as needed */
+                            transform: scale(1) rotate(0deg); /* Default state */
+                            transform-origin: center; /* Ensures the scaling happens from the center */
+                        }
+
+
+                    </style>
+
+                    <div id="loraSelectionsSummary">
+                    </div>
+
+                    <script>
+                        document.addEventListener('DOMContentLoaded', (event) => {
+
+                            updateLoraSelectionsSummary(); // Initial update
+
+                            const selects = document.querySelectorAll('.loraSelection');
+                            selects.forEach(select => {
+                                select.addEventListener('wheel', function(event) {
+                                    const delta = event.deltaY;
+                                    const maxScrollTop = this.scrollHeight - this.offsetHeight;
+                                    const scrollTop = this.scrollTop;
+
+                                    if ((delta < 0 && scrollTop <= 0) || (delta > 0 && scrollTop >= maxScrollTop)) {
+                                        // Prevent scrolling beyond the top or bottom of the select element
+                                        event.preventDefault();
+                                    }
+                                });
+                            });
+                        });
+                    </script>
+
+                </div>
+
+                <input name="user-session" id="user-session" value="<%-session.accountId%>" hidden>
+
+
+                
+
+
+                <style>
+                    .canvas-container {
+                        position: relative;
+                        max-width: 100%; /* Adjust the max-width as per your layout */
+                        margin: auto; /* Center align the container */
+                        display: flex;
+                        justify-content: center; /* Center horizontally */
+                        align-items: center; /* Center vertically */
+                    }
+
+                    #maskCanvas, #displayCanvas {
+                        max-width: 100%; /* This ensures that the canvas doesn't exceed the width of its container */
+                        height: auto; /* Maintain the aspect ratio */
+                        position: absolute; /* Position the canvases absolutely */
+                        top: 0;
+                        left: 0;
+                        border: 1px solid black;
+                    }
+
+                    #maskCanvas {
+                        z-index: 10; /* Ensures the maskCanvas is on top */
+                    }
+
+                    #displayCanvas {
+                        z-index: 9; /* Below the maskCanvas */
+                    }
+                </style>
+
+            
+                <details id="extrasDetails" class="left-align-no-flex">
+                    <summary>Image2Image, Inpainting, OpenPose</summary>
+
+                    <div class="form-control" style="display: none;">
+                        <label for="composablediffusionCheckbox">Enable Composable Diffusion:</label>
+                        <input type="checkbox" id="composablediffusionCheckbox" name="composablediffusionCheckbox">
+                    </div>
+
+
+
+                    <div class="form-control" id="composablediffusionControls" style="display: none;">
+
+                        <label for="composablediffusionType">Composable Diffusion Type:</label>
+                        <select id="composablediffusionType" name="composablediffusionType">
+                            <option value="horizontal">Horizontal</option>
+                            <option value="vertical">Vertical</option>
+                        </select>
+
+                        <div class="form-control inline-slider">
+                            <label for="composablediffusionSplits">Composable Diffusion Splits:</label>
+                            <input type="range" id="composablediffusionSplits" name="composablediffusionSplits" min="2" max="6" step="1" value="2">
+                            <span id="composablediffusionSplitsValue" class="range-value">2</span>
+                        </div>
+
+
+                        <div class="form-control inline-slider">
+                            <label for="composablediffusionStrength">Composable Diffusion Strength:</label>
+                            <input type="range" id="composablediffusionStrength" name="composablediffusionStrength" min="0.5" max="0.75" step="0.01" value="0.7">
+                            <span id="composablediffusionStrengthValue" class="range-value">0.7</span>
+                        </div>
+
+                        
+                        <div class="form-control inline-slider">
+                            <label for="composablediffusionOverlap">Composable Diffusion Overlap:</label>
+                            <input type="range" id="composablediffusionOverlap" name="composablediffusionOverlap" min="0" max="0.3" step="0.1" value="0">
+                            <span id="composablediffusionOverlapValue" class="range-value">0</span>
+                        </div>
+
+                        <details>
+                            <summary>Composable Diffusion Help</summary>
+                            <p>Composable Diffusion is a new feature that allows you to compose multiple images together to create a single image. This is done by splitting the image into multiple parts and then diffusing each part individually. This allows you to create images that are more complex than what would be possible with a single image.</p>
+                            <p>Composable Diffusion is still experimental and may not work as expected. If you encounter any issues, please report them on the <a style="color: #0099ff;" href="https://discord.gg/AvbQuRmh7t">Discord</a>.</p>
+                            <br>
+                            <p>Composable Diffusion Type:</p>
+                            <p>Horizontal: The image is split horizontally into multiple parts.</p>
+                            <p>Vertical: The image is split vertically into multiple parts.</p>
+                            <br>
+                            <p>Composable Diffusion Splits:</p>
+                            <p>The number of splits to make. The image will be split into this many parts.</p>
+                            <br>
+                            <p>Composable Diffusion Strength:</p>
+                            <p>The strength of the diffusion. A higher strength will result in a more diffused image.</p>
+                            <br>
+                            <p>Composable Diffusion Overlap:</p>
+                            <p>Determines how much overlap there is between the image parts. A higher value will result in more overlap between the image parts.</p>
+                        </details>
+
+                    </div>
+
+
+                    <% if (session.accountId === '1039574722163249233') { %>
+                        <div class="form-control">
+                            <label for="txt2vidCheckbox">Enable Text2Video:</label>
+                            <input type="checkbox" id="txt2vidCheckbox" name="txt2vidCheckbox">
+                        </div>
+
+                        <div class="form-control" id="txt2vidControls">
+                            <label for="txt2vidLength">Text2Video Length (frames):</label>
+                            <input type="range" id="txt2vidLength" name="txt2vidLength" min="1" max="16" step="1" value="8">
+                            <span id="txt2vidLengthValue" class="range-value">8</span>
+                        </div>
+                    <% } else { %>
+                        <div class="form-control" style="display: none;">
+                            <label for="txt2vidCheckbox">Enable Text2Video:</label>
+                            <input type="checkbox" id="txt2vidCheckbox" name="txt2vidCheckbox">
+                        </div>
+
+                        <div class="form-control" id="txt2vidControls" style="display: none;">
+                            <label for="txt2vidLength">Text2Video Length (frames):</label>
+                            <input type="range" id="txt2vidLength" name="txt2vidLength" min="1" max="16" step="1" value="8">
+                            <span id="txt2vidLengthValue" class="range-value">8</span>
+                        </div>
+                    <% } %>
+
+                    
+                    
+                    
+
+
+                    <div class="form-control">
+                        <label for="img2imgCheckbox">Enable Image2Image:</label>
+                        <input type="checkbox" id="img2imgCheckbox" name="img2imgCheckbox">
+                    </div>
+                    
+                    <div class="form-control" id="img2imgControls" style="display: none;">
+                        <label for="uploadedImage">Upload Image:</label>
+                        <input type="file" id="uploadedImage" name="uploadedImage" accept="image/*">
+                        <br>
+                        <label for="img2imgStrength">img2img Strength:</label>
+                        <input type="range" id="img2imgStrength" name="img2imgStrength" min="0" max="100" step="1" value="50">
+                        <span id="img2imgStrengthValue" class="range-value">50%</span>
+                    </div>
+
+
+                    <!-- controlNetImg2Img controls -->
+
+                    <!-- <div class="form-control">
+                        <label for="controlNetImg2ImgCheckbox">Enable ControlNetImg2Img:</label>
+                        <input type="checkbox" id="controlNetImg2ImgCheckbox" name="controlNetImg2ImgCheckbox">
+                    </div>
+
+                    <div class="form-control" id="controlNetControls" style="display: none;">
+                        <label for="controlNetImage">Upload Image:</label>
+                        <input type="file" id="controlNetImage" name="controlNetImage" accept="image/*">
+                    </div> -->
+
+                    <style>
+                        #openposeControls {
+                            max-width: 100%; /* Adjust this as needed */
+                            /* Add more styling as needed */
+                        }
+                    
+                        #stickCanvas {
+                            width: 100%; /* This will scale the canvas to fit the container */
+                            height: auto; /* Maintain aspect ratio */
+                            display: block; /* Prevents extra space below the canvas */
+                        }
+                    </style>
+                    
+
+                    <div class="form-control" hidden style="display: none;">
+                        <label for="openposeCheckbox">OpenPose:</label>
+                        <input type="checkbox" id="openposeCheckbox" name="openposeCheckbox">
+                    </div>
+
+                    <div class="form-control" id="openposeControls">
+                        <canvas id="stickCanvas" width="512" height="756" style="background-color: black;"></canvas>
+                        <script src="../scripts/openpose.js" type="text/javascript"></script>
+                    </div>
+
+                    <script>
+                        // show the openposeControls when the openposeCheckbox is checked:
+                        document.getElementById('openposeCheckbox').addEventListener('change', function() {
+                            // if the openpose checkbox is checked
+                            if (this.checked) {
+                                // show the openposeControls
+                                document.getElementById('openposeControls').style.display = 'block';
+                            } else {
+                                // hide the openposeControls
+                                document.getElementById('openposeControls').style.display = 'none';
+                            }
+                        });
+                        document.getElementById('openposeCheckbox').dispatchEvent(new Event('change'));
+                    </script>
+
+
+
+                    <!-- inpainting checkbox -->
+                    <div class="form-control">
+                        <label for="inpaintingCheckbox">Enable Inpainting:</label>
+                        <input type="checkbox" id="inpaintingCheckbox" name="inpaintingCheckbox">
+                    </div>
+
+                    
+
+                    <div class="form-control" id="inpaintingControls" style="display: none;" >
+
+                        <label for="inpaintingStrength">Inpainting Strength:</label>
+                        <input type="range" id="inpaintingStrength" name="inpaintingStrength" min="0" max="100" step="1" value="50">
+                        <span id="inpaintingStrengthValue" class="range-value">50%</span>
+
+                        <label for="inpaintingImage">Upload Image:</label>
+                        <input type="file" id="inpaintingImage" id="inpaintingImage" name="inpaintingImage" accept="image/*">
+
+                        <label for="inpaintingOriginalCheckbox">Use Original Model:</label>
+                        <input type="checkbox" id="inpaintingOriginalCheckbox">
+                        <!-- Pen Size Slider -->
+                        <label for="penSize">Pen Size (<span id="penSizeValue">20</span>)</label>
+                        <input type="range" id="penSize" min="20" max="200" value="20">
+                        
+                        <!-- Eraser Checkbox -->
+                        <label for="eraserCheckbox">Eraser:</label>
+                        <input type="checkbox" id="eraserCheckbox">
+                        <div class="canvas-container">
+                            <canvas id="maskCanvas"></canvas>
+                            <canvas id="displayCanvas"></canvas>
+                        </div>
+                        <script src="../scripts/ai-inpainting.js?v2" type="text/javascript"></script>
+
+                        <script>
+                            // get the penSize element
+                            const penSize = document.getElementById('penSize');
+
+                            // get the penSizeValue element
+                            const penSizeValue = document.getElementById('penSizeValue');
+
+                            // add an event listener for when the penSize changes
+                            penSize.addEventListener('input', function() {
+                                // update the penSizeValue
+                                penSizeValue.innerText = this.value;
+                            });
+                            penSize.dispatchEvent(new Event('input'));
+                        </script>
+
+                    </div>
+
+                </details>
+
+
+            <!-- <script> to make inpaintingCheckbox and img2imgCheckbox exclusive: -->
+            <script>
+                // get the inpaintingCheckbox and img2imgCheckbox elements
+                const inpaintingCheckbox = document.getElementById('inpaintingCheckbox');
+                const img2imgCheckbox = document.getElementById('img2imgCheckbox');
+                const controlNetImg2ImgCheckbox = document.getElementById('controlNetImg2ImgCheckbox');
+                const openposeCheckbox = document.getElementById('openposeCheckbox');
+                const composablediffusionCheckbox = document.getElementById('composablediffusionCheckbox');
+                const txt2vidCheckbox = document.getElementById('txt2vidCheckbox');
+
+                // get the inpaintingControls and img2imgControls elements
+                const inpaintingControls = document.getElementById('inpaintingControls');
+                const img2imgControls = document.getElementById('img2imgControls');
+                const controlNetControls = document.getElementById('controlNetControls');
+                const openposeControls = document.getElementById('openposeControls');
+                const composablediffusionControls = document.getElementById('composablediffusionControls');
+                const txt2vidControls = document.getElementById('txt2vidControls');
+        
+                function disableCheckboxes(target) {
+                    if(target != "inpaintingCheckbox") {
+                        inpaintingCheckbox.checked = false;
+                        inpaintingControls.style.display = 'none';
+                    } if (target != "img2imgCheckbox") {
+                        img2imgCheckbox.checked = false;
+                        img2imgControls.style.display = 'none';
+                    } if (target != "openposeCheckbox") {
+                        openposeCheckbox.checked = false;
+                        openposeControls.style.display = 'none';
+                    } if (target != "composablediffusionCheckbox") {
+                        composablediffusionCheckbox.checked = false;
+                        composablediffusionControls.style.display = 'none';
+                    } if (target != "txt2vidCheckbox") {
+                        txt2vidCheckbox.checked = false;
+                        txt2vidControls.style.display = 'none';
+                    }
+
+                    // open the details element with the target id: "extrasDetails":
+                    
+                    extrasDetails = document.getElementById('extrasDetails');
+                    extrasDetails.open = true;
+
+
+                    switch(target) {
+                        case "inpaintingCheckbox":
+                            inpaintingCheckbox.checked = true;
+                            inpaintingControls.style.display = 'block';
+                            break;
+                        case "img2imgCheckbox":
+                            img2imgCheckbox.checked = true;
+                            img2imgControls.style.display = 'block';
+                            break;
+                        case "openposeCheckbox":
+                            openposeCheckbox.checked = true;
+                            openposeControls.style.display = 'block';
+                            break;
+                        case "composablediffusionCheckbox":
+                            composablediffusionCheckbox.checked = true;
+                            composablediffusionControls.style.display = 'block';
+                            break;
+                        case "txt2vidCheckbox":
+                            txt2vidCheckbox.checked = true;
+                            txt2vidControls.style.display = 'block';
+                            break;
+                    }
+                }
+
+                // add an event listener for when the inpaintingCheckbox changes
+                inpaintingCheckbox.addEventListener('change', function() {
+                    // if the inpaintingCheckbox is checked
+                    if (this.checked) {
+                        disableCheckboxes("inpaintingCheckbox")
+                    }
+                });
+
+                // add an event listener for when the img2imgCheckbox changes
+                img2imgCheckbox.addEventListener('change', function() {
+                    // if the img2imgCheckbox is checked
+                    if (this.checked) {
+                        disableCheckboxes("img2imgCheckbox")
+                    }
+                });
+
+                // add an event listener for when the openposeCheckbox changes
+                openposeCheckbox.addEventListener('change', function() {
+                    // if the openposeCheckbox is checked
+                    if (this.checked) {
+                        disableCheckboxes("openposeCheckbox")
+                    }
+                });
+
+                // add an event listener for when the composablediffusionCheckbox changes
+                composablediffusionCheckbox.addEventListener('change', function() {
+                    // if the composablediffusionCheckbox is checked
+                    if (this.checked) {
+                        disableCheckboxes("composablediffusionCheckbox")
+                    }
+                });
+
+                // add an event listener for when the txt2vidCheckbox changes
+                txt2vidCheckbox.addEventListener('change', function() {
+                    // if the txt2vidCheckbox is checked
+                    if (this.checked) {
+                        disableCheckboxes("txt2vidCheckbox")
+                    }
+                });
+
+
+
+            </script>
+                
+            </form>
+
+        
+        </div>
+
+        <div class="flex-under-div" style="margin: 20px;">
+
+            <!-- <center>
+                <h2>We are hosting a <a style="color: gold;">$100</a> AI Contest to celebrate the new year! So be sure to check the <a href="https://discord.gg/AvbQuRmh7t" style="color:rgb(69, 196, 255)f;">discord</a> for more information!</h2>
+                <br>
+            </center> -->
+
+            <style>
+                /* remove the up down arrows */
+                .sliderInputBox {
+                    width: 70px;
+                    height: auto;
+                    padding: 5px;
+                    margin: 0;
+                    border: none;
+                    border-radius: 4px;
+                    text-align: center;
+                }
+                .sliderInputBox:focus {
+                    outline: none;
+
+                }
+            </style>
+
+                <details open>
+                    <summary>Settings (Steps, Quanitity & more)</summary>
+                    <div class="form-control inline-slider">
+                        <label for="steps">Steps:</label>
+                        <input form="generatorForm" type="range" id="steps" name="steps" min="5" max="75" step="1" value="20">
+                        <!-- <span id="stepsValue" class="range-value">15</span> -->
+                        <input form="generatorForm" type="number" class="sliderInputBox" id="stepsInput" name="stepsInput" value="15"><a id="stepsMax"></a>
+                    </div>
+    
+                    <div class="form-control inline-slider">
+                        <label for="quantity">Image Quantity:</label>
+                        <input form="generatorForm" type="range" id="quantity" name="quantity" min="1" max="4" step="1" value="4">
+                        <input form="generatorForm" type="number" class="sliderInputBox" id="quantityInput" name="quantityInput" value="4"><a id="quantityMax"></a>
+                    </div>
+
+                    <div class="form-control inline-slider">
+                        <label for="cfguidance">CFG:</label>
+                        <input form="generatorForm" type="range" id="cfguidance" name="cfguidance" min="1" max="24" step="0.5" value="6">
+                        <input form="generatorForm" type="number" class="sliderInputBox" id="cfguidanceInput" name="cfguidanceInput" value="6"><a id="cfguidanceMax"></a>
+                    </div>
+    
+                    <div class="form-control">
+                        <label for="seed">Seed: (-1 = random)</label>
+                        
+                        <input form="generatorForm" type="number" id="seed" name="seed" min="-1999999999999" max="18446744073709551615" value="-1">
+    
+                    </div>
+                    <div class="form-control">
+                        <label for="upscaleCheckbox">Upscale:</label>
+                        <input form="generatorForm" type="checkbox" id="upscaleCheckbox" name="upscaleCheckbox">
+                    </div>
+
+                    <div class="form-control">
+                        <label for="scheduler">Scheduler:</label>
+                        <select name="scheduler" id="scheduler">
+                            <option value="eulera">eulera</option>
+                            <option value="dpm">dpm</option>
+                            <option value="ddim">ddim</option>
+                        </select>
+                    </div>
+                    
+                </details>
+
+
+            <script>
+                // update the labels for the steps and quantity sliders on change and initially:
+                // function to update the stepsValue and quantityValue labels:
+                function updateLabels() {
+
+                    let steps = document.getElementById('steps')
+                    let stepsInput = document.getElementById('stepsInput')
+                    let quantity = document.getElementById('quantity')
+                    let quantityInput = document.getElementById('quantityInput')
+                    let cfguidance = document.getElementById('cfguidance')
+                    let cfguidanceInput = document.getElementById('cfguidanceInput')
+                    let aspectRatio = document.getElementById('aspectRatio')
+                    let model = document.getElementById('model')
+
+                    function setSteps(min,max) {
+                        steps.min = min
+                        steps.max = max
+                        stepsInput.min = min
+                        stepsInput.max = max
+                    }
+
+                    function maxQuantity(max) {
+                        quantity.max = max
+                        quantityInput.max = max
+                    }
+
+                    function maxCfguidance(max) {
+                        cfguidance.max = max
+                        cfguidanceInput.max = max
+                    }
+
+                    if (model.value.includes('sdxl')) {
+                        if (quantity.value == 1) {
+                            setSteps(10,40)
+                        } else {
+                            setSteps(10,30)
+                        }
+                        maxCfguidance(8)
+                    } else if (model.value.includes('sd3')) {
+                        setSteps(10,40)
+                        maxQuantity(1)
+                        maxCfguidance(8)
+                    } else {
+                        if (quantity.value == 1) {
+                            setSteps(10,40)
+                        } else {
+                            setSteps(10,30)
+                        }
+                        maxCfguidance(12)
+                    }
+
+                    maxQuantity(4)
+                    
+
+
+                    
+
+
+                    document.getElementById('stepsMax').innerText = `/${steps.max}`
+                    document.getElementById('quantityMax').innerText = `/${quantity.max}`
+                    document.getElementById('cfguidanceMax').innerText = `/${cfguidance.max}`
+
+
+                }
+
+
+                // checks when the steps slider changes and updates the label:
+                document.getElementById('steps').addEventListener('input', function() {
+                    document.getElementById('stepsInput').value = document.getElementById('steps').value
+                    updateLabels()
+                })
+                document.getElementById('steps').dispatchEvent(new Event('input'));
+
+                document.getElementById('stepsInput').addEventListener('input', function() {
+                    document.getElementById('steps').value = document.getElementById('stepsInput').value
+                    updateLabels()
+                })
+                document.getElementById('stepsInput').dispatchEvent(new Event('input'));
+
+
+
+                // checks when the quantity slider changes and updates the label:
+                document.getElementById('quantity').addEventListener('input', function() {
+                    document.getElementById('quantityInput').value = document.getElementById('quantity').value
+                    updateLabels()
+                })
+                document.getElementById('quantity').dispatchEvent(new Event('input'));
+
+                document.getElementById('quantityInput').addEventListener('input', function() {
+                    document.getElementById('quantity').value = document.getElementById('quantityInput').value
+                    updateLabels()
+                })
+                document.getElementById('quantityInput').dispatchEvent(new Event('input'));
+
+
+
+                // checks when the cfguidance slider changes and updates the label:
+                document.getElementById('cfguidance').addEventListener('input', function() {
+                    document.getElementById('cfguidanceInput').value = document.getElementById('cfguidance').value
+                    updateLabels()
+                })
+                document.getElementById('cfguidance').dispatchEvent(new Event('input'));
+
+                document.getElementById('cfguidanceInput').addEventListener('input', function() {
+                    document.getElementById('cfguidance').value = document.getElementById('cfguidanceInput').value
+                    updateLabels()
+                })
+                document.getElementById('cfguidanceInput').dispatchEvent(new Event('input'));
+
+
+                setInterval(() => {
+                    updateLabels()
+                }, 1000);
+
+            </script>
+
+            <div id="additionalInfo"></div><br>
+            <div id="response"></div>
+            <div id="queuePosition" style="display: none;">Your position in queue: <span style="color: gold;" id="positionNumber"></span></div>
+            <br>
+            <div>
+            <label for="fastpass">Fastpass:</label>
+                <input form="generatorForm" type="text" id="fastpass" name="fastpass">
+            </div>
+            
+            <br>
+            <!-- rounded style -->
+            <!-- <div class="center-fully-no-flex" style="border: 1px solid #ffffff; border-radius: 10px; padding: 10px; background-color: rgba(130, 86, 169, 0.584);">
+                <p style="font-size: large !important;">Want to skip the queue? Join the <a href="https://discord.gg/AvbQuRmh7t">Discord</a> to win a FastPass! </p>
+            </div> -->
+            <!-- <br> -->
+            
+            <details id="outputDetails" open>
+                <summary>Output(s)</summary>
+                <div id="advertisement" style="display: none;">
+            
+                </div>
+                <div id="imagesContainer" class="imagesContainer"></div>
+            </details>
+            <br>
+            
+            <!-- if the imagesContainer div is empty then hide the dropdown: -->
+            <script>
+                imagesContainer = document.getElementById('imagesContainer')
+                outputDetails = document.getElementById('outputDetails')
+                imagesContainer.addEventListener('DOMNodeInserted', function() {
+                    if (imagesContainer.children.length > 0) {
+                        outputDetails.open = true;
+                        outputDetails.style.display = 'block';
+                    } else {
+                        outputDetails.open = false;
+                        outputDetails.style.display = 'none';
+                    }
+                });
+                // trigger:
+                imagesContainer.dispatchEvent(new Event('DOMNodeInserted'));
+            </script>
+
+            <% if (session.accountId === '1039574722163249233') { %>
+                <!-- <input style="display: none;" type="checkbox" id="lightning_mode">Enable Lightning</checkbox> -->
+            <% } else { %>
+                <!-- <input style="display: none;" type="checkbox" id="lightning_mode">Enable Lightning</checkbox> -->
+            <% } %>
+            
+            <div class="form-control">
+                <button form="generatorForm" type="submit" id="generateButton">Generate Image</button>
+                <button style="display: none;" id="cancelButton">Cancel Request</button>
+            </div>
+            
+            <br>
+
+        </div>
+
+    </div>
+
+    <style>
+        #advertisement {
+            text-align: center !important;
+            color: white;
+            font-size: 20px;
+            width: 90%;
+            height: 80px;
+            border: 1px solid rgb(255, 255, 255);
+            border-radius: 10px;
+            padding: 10px;
+            margin: 10px;
+            justify-content: center;
+            display: flex;
+        }
+        .discordad {
+            background-color: rgba(130, 86, 169, 0.584);
+        }
+        .redditad {
+            background-color: rgba(169, 108, 86, 0.584);
+        }
+        .kofiad {
+            background-color: rgba(86, 134, 169, 0.584);
+        }
+    </style>
+
+    <script>
+        // get advertisement div:
+        const advertisement = document.getElementById('advertisement');
+        // every 30 seconds change the advertisement, make it out of css elements, have a list of ads, and change the innerHTML of the advertisement div:\
+        let ads = [
+            {
+                advert_id: 'discordad',
+                text: ['Want to skip the queue? Join the Discord compete for a FastPass!', 'Share your images on the community Discord!', 'Got Suggestions? Join the community Discord!'],
+                link: 'https://discord.gg/AvbQuRmh7t',
+            },
+            {
+                advert_id: 'redditad',
+                text: ['We have a reddit! Share your creations at r/JSCammie!', 'Share your creations at r/JSCammie!', 'Join the community at r/JSCammie!', 'Got Suggestions? Join the community at r/JSCammie!'],
+                link: 'https://www.reddit.com/r/JSCammie/',
+            },
+            {
+                advert_id: 'kofiad',
+                text: ['Donate to the developer on Ko-fi!', 'Buy the developer a coffee on Ko-fi!', 'Support the developer on Ko-fi!'],
+                link: 'https://ko-fi.com/jscammie',
+            }
+        ]
+
+        function setAdvertisement() {
+            let ad = ads[Math.floor(Math.random() * ads.length)];
+            let adText = ad.text[Math.floor(Math.random() * ad.text.length)];
+            advertisement.innerHTML = `<a id="advertisementcontent" href="${ad.link}" style="color: white; text-decoration: none;">${adText}</a>`;
+            // set the advertisement href click area to be the full advertisement div size:
+            document.getElementById('advertisementcontent').style.display = 'block';
+            document.getElementById('advertisementcontent').style.width = '100%';
+            document.getElementById('advertisementcontent').style.height = '100%';
+            document.getElementById('advertisementcontent').style.textAlign = 'center';
+            if (ad.advert_id === 'discordad') {
+                // remove all classes from the advertisement div:
+                classList = advertisement.classList;
+                for (let i = 0; i < classList.length; i++) {
+                    advertisement.classList.remove(classList[i]);
+                }
+                advertisement.classList.add('discordad');
+            } else if (ad.advert_id === 'redditad') {
+                // remove all classes from the advertisement div:
+                classList = advertisement.classList;
+                for (let i = 0; i < classList.length; i++) {
+                    advertisement.classList.remove(classList[i]);
+                }
+                advertisement.classList.add('redditad');
+            } else if (ad.advert_id === 'kofiad') {
+                // remove all classes from the advertisement div:
+                classList = advertisement.classList;
+                for (let i = 0; i < classList.length; i++) {
+                    advertisement.classList.remove(classList[i]);
+                }
+                advertisement.classList.add('kofiad');
+            }
+
+        }
+
+        setInterval(() => {
+            setAdvertisement()
+        }, 30000);
+        // set initial advertisement:
+        setAdvertisement();
+    </script>
+
+
+
+    <div id="imageOverlay" style="display:none;">
+        <img id="overlayImage" src="" alt="Enlarged view" />
+    </div> 
+
+    <!-- get partials/_footer: -->
+    <%- include('../partials/_footer') %>
+    
+
+
+    
+
+    <script>
+        // Get all the elements
+        const loraContainers = document.querySelectorAll('.loraContainer');
+        const totalLorasSelected = document.getElementById('totalLorasSelected');
+        const totalLoras = document.getElementById('totalLoras');
+        const clearAllLorasButton = document.getElementById('clearAllLorasButton');
+      
+        // Function to update total selected and total Loras
+        function updateTotalCounts() {
+            let totalLorasCount = 0;
+            let totalLorasSelectedCount = 0;
+      
+            loraContainers.forEach(container => {
+                let checkboxes = container.querySelectorAll('input[type="checkbox"]');
+                totalLorasCount += checkboxes.length;
+                totalLorasSelectedCount += Array.from(checkboxes).filter(checkbox => checkbox.checked).length;
+            });
+
+            // count the total number of loras per category, and display it in the category header:
+            // category-loras-label
+            loraDataKeys.forEach(category => {
+                let categoryLorasLabel = document.getElementById(`${category}-loras-label`);
+                let categoryLoras = document.getElementById(`${category}-loras`);
+                let categoryLorasCount = categoryLoras.querySelectorAll('input[type="checkbox"]').length;
+                let categoryLorasCountChecked = Array.from(categoryLoras.querySelectorAll('input[type="checkbox"]')).filter(checkbox => checkbox.checked).length;
+                categoryLorasLabel.innerText = `${category.charAt(0).toUpperCase()}${category.slice(1)} (${categoryLorasCountChecked}/${categoryLorasCount})`;
+            });
+      
+            totalLorasSelected.innerText = totalLorasSelectedCount;
+            totalLoras.innerText = totalLorasCount;
+        }
+      
+        // Event listener for changes in checkboxes
+        loraContainers.forEach(container => {
+            container.addEventListener('change', function(event) {
+                if (event.target.type === 'checkbox') {
+                updateTotalCounts();
+                }
+            });
+        });
+      
+        // Event listener for clear all Loras button
+        clearAllLorasButton.addEventListener('click', function() {
+            if (!confirm(`Are you sure you want to clear all Lora's?`)) {
+                return;
+            }
+            document.getElementById('loraSelectionsSummary').innerHTML = '';
+            loraContainers.forEach(container => {
+                const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+                checkboxes.forEach(checkbox => {
+                checkbox.checked = false;
+                });
+            });
+            updateTotalCounts();
+        });
+      
+        // Call updateTotalCounts on page load to initialize the count
+        document.addEventListener('DOMContentLoaded', updateTotalCounts);
+      </script>
+
+
+
+
+
+    <script>
+        document.getElementById('img2imgCheckbox').addEventListener('change', function() {
+            const isChecked = this.checked;
+            const img2imgControls = document.getElementById('img2imgControls');
+
+            if (isChecked) {
+                img2imgControls.style.display = 'block';
+            } else {
+                img2imgControls.style.display = 'none';
+            }
+        });
+
+        document.getElementById('img2imgStrength').addEventListener('input', function() {
+            document.getElementById('img2imgStrengthValue').innerText = this.value + '%';
+        });
+        document.getElementById('img2imgStrength').dispatchEvent(new Event('input'));
+
+
+        document.getElementById('composablediffusionStrength').addEventListener('input', function() {
+            document.getElementById('composablediffusionStrengthValue').innerText = this.value;
+        });
+        document.getElementById('composablediffusionStrength').dispatchEvent(new Event('input'));
+
+
+        document.getElementById('composablediffusionOverlap').addEventListener('input', function() {
+            document.getElementById('composablediffusionOverlapValue').innerText = this.value;
+        });
+        document.getElementById('composablediffusionOverlap').dispatchEvent(new Event('input'));
+
+
+        document.getElementById('composablediffusionSplits').addEventListener('input', function() {
+            document.getElementById('composablediffusionSplitsValue').innerText = this.value;
+        });
+        document.getElementById('composablediffusionSplits').dispatchEvent(new Event('input'));
+
+
+        document.getElementById('txt2vidLength').addEventListener('input', function() {
+            document.getElementById('txt2vidLengthValue').innerText = this.value;
+        });
+        document.getElementById('txt2vidLength').dispatchEvent(new Event('input'));
+
+
+        // inpainting checkbox
+        document.getElementById('inpaintingCheckbox').addEventListener('change', function() {
+            const isChecked = this.checked;
+            const inpaintingControls = document.getElementById('inpaintingControls');
+
+            if (isChecked) {
+                inpaintingControls.style.display = 'block';
+            } else {
+                inpaintingControls.style.display = 'none';
+            }
+        });
+
+        document.getElementById('inpaintingStrength').addEventListener('input', function() {
+            document.getElementById('inpaintingStrengthValue').innerText = this.value + '%';
+        });
+        document.getElementById('inpaintingStrength').dispatchEvent(new Event('input'));
+
+        // if the user presses shift and enter on their keyboard, submit the form:
+        document.addEventListener('keydown', function(event) {
+            if (event.shiftKey && event.key === 'Enter') {
+                document.getElementById('generateButton').click();
+            }
+        });
+
+    </script>
+
+
+
+    
+    <script>
+        let timeout = null;  // This timeout variable should be outside the updateWordCount function
+
+        function displayWordCount(promptWordCount, negativePromptWordCount) {
+            const promptWordCountElement = document.getElementById('promptWordCount');
+            const negativePromptWordCountElement = document.getElementById('negativePromptWordCount');
+
+            promptWordCountElement.innerText = `Tokens: ${promptWordCount}`;
+            negativePromptWordCountElement.innerText = `Tokens: ${negativePromptWordCount}`;
+
+            function removeAllClasses(element) {
+                element.classList.remove('wordCountGreen');
+                element.classList.remove('wordCountYellow');
+                element.classList.remove('wordCountRed');
+            }
+
+            function setWordCountClass(element, wordCount) {
+                removeAllClasses(element);
+                if (document.getElementById('model').value.startsWith('sdxl-')) {
+                    if (wordCount > 90) {
+                        element.classList.add('wordCountRed');
+                    } else if (wordCount > 75) {
+                        element.classList.add('wordCountYellow');
+                    } else {
+                        element.classList.add('wordCountGreen');
+                    }
+                } else {
+                    if (wordCount > 90) {
+                        element.classList.add('wordCountRed');
+                    } else if (wordCount > 75) {
+                        element.classList.add('wordCountYellow');
+                    } else {
+                        element.classList.add('wordCountGreen');
+                    }
+                }
+            }
+
+            setWordCountClass(promptWordCountElement, promptWordCount);
+            setWordCountClass(negativePromptWordCountElement, negativePromptWordCount);
+        }
+
+        function updateWordCount() {
+            if (document.getElementById('prompt').value.trim() === '' && document.getElementById('negativeprompt').value.trim() === '') {
+                displayWordCount(0, 0);
+                return;
+            }
+
+            const delay = 1000; // Change delay to 1000 ms for 1 request per second
+
+            // Clear the timeout if it already exists
+            if (timeout !== null) {
+                clearTimeout(timeout);
+            }
+
+            // Set a new timeout
+            timeout = setTimeout(() => {
+                getWordCount();
+            }, delay);
+        }
+
+        function getWordCount() {
+            const promptTextarea = document.getElementById('prompt');
+            const negativePromptInput = document.getElementById('negativeprompt');
+
+            // Construct data payload for POST request
+            const data = {
+                prompt: promptTextarea.value,
+                negativeprompt: negativePromptInput.value
+            };
+
+            // Send POST request to server
+            fetch('/token-length', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                displayWordCount(data.prompt, data.negative_prompt);
+            })
+            .catch(error => {
+                console.error('Error fetching word counts:', error);
+                displayWordCount('Error', 'Error'); // Display error in word count fields
+            });
+        }
+
+        // Add event listeners for input on both the prompt textarea and the negative prompt input
+        document.getElementById('prompt').addEventListener('input', updateWordCount);
+        document.getElementById('negativeprompt').addEventListener('input', updateWordCount);
+
+        // Initial update on page load
+        updateWordCount();
+    </script>
+
+
+
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            loraDataKeys.forEach(category => {
+                if (document.getElementById(`${category}-loras`)) {
+                    sortLoras(category);
+                }
+            });
+        });
+
+    </script>
+
+
+
+
+
+
+<script>
+    let selectedLoras;
+    let allLorasData = {}; // Persistently track all LORAs' data including strength values
+
+    function getSelectedLoras() {
+        const loraCheckboxes = document.querySelectorAll('.loraSelection input[type="checkbox"]:checked');
+        selectedLoras = Array.from(loraCheckboxes, checkbox => checkbox.value);
+        console.log("Selected Loras:", selectedLoras);
+        return selectedLoras;
+    }
+
+    var currentStrengths = {}; // Temporary storage for current strength values
+
+    function loraObjectFunction() {
+        const allLorasDataFull = document.getElementById('allLorasObject').children;
+        
+        // Preserve current strength values before clearing allLorasData
+        for (let loraId in allLorasData) {
+            if (allLorasData.hasOwnProperty(loraId) && allLorasData[loraId].strengthValue) {
+                currentStrengths[loraId] = allLorasData[loraId].strengthValue; // Use strengthValue to preserve
+            }
+        }
+        
+        allLorasData = {}; // Reset data before repopulation
+        
+        for (let i = 0; i < allLorasDataFull.length; i++) {
+            const loraDataElement = allLorasDataFull[i];
+            const baseId = loraDataElement.id.replace(/-(description|strength|words|name|link|strengthValue|dateCreated)$/, '');
+            
+            if (!allLorasData[baseId]) {
+                allLorasData[baseId] = {
+                    description: 'Null',
+                    strength: 'Null',
+                    words: 'Null',
+                    name: 'Null',
+                    link: 'Null',
+                    strengthValue: 'Null',
+                    dateCreated: 'Null'
+                };
+            }
+            
+            const dataType = loraDataElement.id.match(/-(description|strength|words|name|link|strengthValue|dateCreated)$/)[1];
+            allLorasData[baseId][dataType] = loraDataElement.dataset[dataType];
+            if (dataType === 'words') {
+                allLorasData[baseId].words = allLorasData[baseId].words.split(';,');
+            }
+        }
+        
+        // Reapply the preserved strength values
+        for (let loraId in currentStrengths) {
+            if (allLorasData[loraId]) {
+                allLorasData[loraId].strengthValue = currentStrengths[loraId];
+            }
+        }
+
+        console.log("Consolidated Loras Data:", allLorasData);
+    }
+
+    // function copyXWordsToClipboard(array_index, loraId, array) {
+    //         event.preventDefault();
+    //         event.stopPropagation();
+
+    //         console.log(array)
+
+    //         console.log("array_index:", array_index)
+    //         console.log("loraId:", loraId)
+    //         console.log("array:", array)
+
+            
+
+    //         // Ensure navigator.clipboard is available; it might not be available in non-secure contexts
+    //         if (!navigator.clipboard) {
+    //             console.error('Clipboard API not available. Please use a secure context (HTTPS).');
+    //             return;
+    //         }
+
+    //         // Since we're working directly with an array now, there's no need to split it by ";"
+    //         // Directly access the array element at the given index
+    //         const words = array[array_index];
+
+    //         // Attempt to copy the words to the clipboard
+    //         navigator.clipboard.writeText(words).then(
+    //             function() {
+    //                 // Success callback
+    //                 console.log('Async: Copying to clipboard was successful!');
+    //             },
+    //             function(err) {
+    //                 // Error callback
+    //                 console.error('Async: Could not copy text: ', err);
+    //             }
+    //         );
+    //     }
+
+    // rewrite to work when the array contains a random ' in it:
+    function copyXWordsToClipboard(array_index, loraId, array) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        for (let i = 0; i < array.length; i++) {
+            array[i] = array[i].replace(/'/g, "\\'");
+        }
+
+        console.log("array_index:", array_index)
+        console.log("loraId:", loraId)
+        console.log("array:", array)
+
+        // Ensure navigator.clipboard is available; it might not be available in non-secure contexts
+        if (!navigator.clipboard) {
+            console.error('Clipboard API not available. Please use a secure context (HTTPS).');
+            return;
+        }
+
+        // Since we're working directly with an array now, there's no need to split it by ";"
+        // Directly access the array element at the given index
+        const words = array[array_index];
+
+        // Attempt to copy the words to the clipboard
+        navigator.clipboard.writeText(words).then(
+            function() {
+                // Success callback
+                console.log('Async: Copying to clipboard was successful!');
+            },
+            function(err) {
+                // Error callback
+                console.error('Async: Could not copy text: ', err);
+            }
+        );
+    }
+
+    function updateLoraSelectionsSummary() {
+        const loraSelectionsSummary = document.getElementById('loraSelectionsSummary');
+        loraSelectionsSummary.innerHTML = ''; // Clear existing content
+
+        selectedLoras.forEach(loraId => {
+            const loraData = allLorasData[loraId];
+            if (loraData) {
+                let category = loraId.split('-')[0];
+                category = category.charAt(0).toUpperCase() + category.slice(1);
+
+                const words_formatted = loraData.words.map((word, index) =>
+                    `<a class="lora-words">
+                        <strong>Words ${index + 1}:</strong> ${word}
+                        <br>
+                        <button class="lora-words-copy-button" onclick="copyXWordsToClipboard(${index}, '${loraId}', [${loraData.words.map(word => `'${word}'`).join(',')}])">Copy</button>
+                    </a><br><br>`
+                ).join('');
+
+                if (loraData.strengthValue == 'Null') {
+                    loraData.strengthValue = loraData.strength; // Default strength value if not previously set
+                }
+
+                const loraDetailsTemplate = `
+                    <div class="lora-details">
+                        <div class="lora-toggle">
+                            <input type="checkbox" id="enable-${loraId}" name="enabledLoras" value="${loraId}" checked onchange="toggleLora('${loraId}', this.checked)">
+                            <label for="enable-${loraId}">
+                                <span class="lora-category">${category}</span> | ${loraData.name || 'Null'}
+                            </label>
+                        </div>
+                        <div class="lora-info">
+                            <p class="lora-description"><strong>Description:</strong> ${loraData.description || 'Null'}</p>
+                            <p class="lora-strength"><strong>Default Strength:</strong> ${loraData.strength || 'Null'}</p>
+                            ${words_formatted}
+                            <p class="lora-strength-slider"> 
+                                <input type="range" id="strength-${loraId}" name="strength-${loraId}" min="-3" max="3" step="0.1" value="${loraData.strengthValue}" style="width: 80%;">
+                                <a id="strength-${loraId}-value" style="transform: translateY(-32px) !important; margin: 4px; font-size: 28px">${loraData.strengthValue}</a>
+                            </p>
+                            <button class="lora-reset-strength-button" onclick="resetStrength('${loraId}')">Reset Strength</button>
+                            <p class="lora-date"><strong>Date Created/Updated:</strong> ${loraData.dateCreated || 'Null'}</p>
+                            <p class="lora-link"><strong>Link:</strong> <a href="${loraData.link || '#'}">Clickable Link</a></p>
+                        </div>
+                    </div>`;
+
+                loraSelectionsSummary.innerHTML += loraDetailsTemplate;
+            }
+        });
+
+        // Update event listeners
+        document.querySelectorAll('#loraSelectionsSummary .lora-details input[type="range"]').forEach(slider => {
+            slider.oninput = function() {
+                const loraId = this.id.replace('strength-', '');
+                document.getElementById(`strength-${loraId}-value`).innerText = this.value;
+                allLorasData[loraId].strengthValue = this.value; // Update the dynamic strength value
+            };
+        });
+    }
+
+    function resetStrength(loraId) {
+        const defaultStrength = allLorasData[loraId].strength;
+        const slider = document.getElementById(`strength-${loraId}`);
+        const display = document.getElementById(`strength-${loraId}-value`);
+        slider.value = defaultStrength;
+        display.innerText = defaultStrength;
+        allLorasData[loraId].strengthValue = defaultStrength; // Reset to default
+    }
+
+    function toggleLora(loraId, isChecked) {
+        allLorasData[loraId].enabled = isChecked;
+        console.log(`Lora ${loraId} is now ${isChecked ? 'enabled' : 'disabled'}.`)
+        // get the og checkbox:
+        const loraCheckbox = document.getElementById(`${loraId}`);
+        if (!isChecked) {
+            // get the checkbox that it corresponds to and uncheck it:
+            loraCheckbox.checked = false;
+            // fire the change event on the checkbox:
+            loraCheckbox.dispatchEvent(new Event('change'));
+        }
+    }
+
+    document.querySelectorAll('.loraSelection input[type="checkbox"]').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            selectedLoras = getSelectedLoras();
+            document.getElementById('totalLorasSelected').textContent = selectedLoras.length;
+            loraObjectFunction();
+            updateLoraSelectionsSummary();
+        });
+    });
+</script>
+
+
+
+
+
+
+
+
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Function to create a drop area
+        const createDropArea = (text, side) => {
+            const dropArea = document.createElement('div');
+            dropArea.innerText = text;
+            dropArea.style.position = 'fixed';
+            dropArea.style.top = '20%';
+            dropArea.style[side] = '10px';
+            dropArea.style.width = '45%';
+            dropArea.style.height = '60%';
+            dropArea.style.border = '2px dashed black';
+            dropArea.style.borderRadius = '10px';
+            dropArea.style.textAlign = 'center';
+            dropArea.style.paddingTop = '20%';
+            dropArea.style.color = 'grey';
+            dropArea.style.fontSize = '20px';
+            dropArea.style.display = 'none'; // Initially hidden
+            document.body.appendChild(dropArea);
+            return dropArea;
+        };
+    
+        // Create drop areas and initially hide them
+        const inpaintingDropArea = createDropArea('Send to Inpainting', 'left');
+        const img2ImgDropArea = createDropArea('Send to Img2Img', 'right');
+    
+        // Function to show/hide drop areas
+        const showDropAreas = (show) => {
+            inpaintingDropArea.style.display = show ? 'block' : 'none';
+            img2ImgDropArea.style.display = show ? 'block' : 'none';
+        };
+    
+        // Drag events on the window to show/hide drop areas
+        window.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            showDropAreas(true);
+        });
+    
+        window.addEventListener('dragover', (e) => {
+            e.preventDefault(); // Necessary to allow for the drop event to fire
+        });
+    
+        window.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            if (e.clientX <= 0 || e.clientX >= window.innerWidth || e.clientY <= 0 || e.clientY >= window.innerHeight) {
+                showDropAreas(false);
+            }
+        });
+    
+        window.addEventListener('drop', (e) => {
+            e.preventDefault();
+            showDropAreas(false);
+        });
+    
+        // Function to handle file drop
+        const handleFileDrop = (file, target) => {
+            const checkboxId = target === 'inpainting' ? 'inpaintingCheckbox' : 'img2imgCheckbox';
+            const inputId = target === 'inpainting' ? 'inpaintingImage' : 'uploadedImage';
+            
+            document.getElementById(checkboxId).checked = true;
+            document.getElementById(checkboxId).dispatchEvent(new Event('change'));
+            
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            document.getElementById(inputId).files = dataTransfer.files;
+            document.getElementById(inputId).dispatchEvent(new Event('change'));
+        };
+    
+        // Setup drop area event listeners
+        const setupDropArea = (dropArea, target) => {
+            dropArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                if (e.dataTransfer.files.length > 0) {
+                    handleFileDrop(e.dataTransfer.files[0], target);
+                }
+                showDropAreas(false);
+            });
+        };
+    
+        setupDropArea(inpaintingDropArea, 'inpainting');
+        setupDropArea(img2ImgDropArea, 'img2img');
+    });
+
+    // if inpaintingImage has a file inside it, then move the footerBar style class to be the image height downwards:
+    document.getElementById('inpaintingImage').addEventListener('change', function() {
+        imageHeight = document.getElementById('inpaintingImage').clientHeight;
+        if (this.files.length > 0) {
+            document.getElementById('footerBar').style.marginTop = `${imageHeight}px`;
+        } else {
+            document.getElementById('footerBar').style.marginTop = '0px';
+        }
+    });
+    </script>
+    
+
+
+
+    <script>
+
+        // blast everything with a change / input event to update the summary:
+        // when the DOM is loaded, dispatch change events to update the summary:
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('model').dispatchEvent(new Event('input'));
+        });
+
+
+        document.getElementById('imagesContainer').addEventListener('click', function(event) {
+            if (event.target.tagName === 'IMG') {
+                showOverlay(event.target.src);
+            }
+        });
+
+        let currentImageIndex = 0;
+        let imagesSrcList = [];
+
+        function showOverlay(src) {
+            const overlay = document.getElementById('imageOverlay');
+            overlay.style.display = 'flex'; // Change to 'flex' to activate flexbox
+            document.getElementById('overlayImage').src = src;
+    
+            // Disable scrolling on the body
+            document.body.style.overflow = 'hidden';
+            const overlayImage = document.getElementById('overlayImage');
+
+            overlay.style.display = 'block';
+            overlayImage.src = src;
+            currentImageIndex = imagesSrcList.indexOf(src);
+
+            // Add event listener for keydown
+            document.addEventListener('keydown', handleArrowKeyPress);
+        }
+
+        function hideOverlay() {
+            const overlay = document.getElementById('imageOverlay');
+            overlay.style.display = 'none';
+            
+            // Enable scrolling
+            document.body.style.overflow = '';
+
+            // Remove event listener to prevent interference when overlay is not active
+            document.removeEventListener('keydown', handleArrowKeyPress);
+        }
+
+        function handleArrowKeyPress(event) {
+            if (!imagesSrcList.length) return; // Exit if no images are available
+
+            if (event.key === 'ArrowRight') {
+                currentImageIndex = (currentImageIndex + 1) % imagesSrcList.length;
+            } else if (event.key === 'ArrowLeft') {
+                currentImageIndex = (currentImageIndex - 1 + imagesSrcList.length) % imagesSrcList.length;
+            } else {
+                return; // Exit if not a left/right arrow key
+            }
+            document.getElementById('overlayImage').src = imagesSrcList[currentImageIndex];
+        }
+
+        // Function to populate imagesSrcList when images are loaded
+        function populateImagesSrcList() {
+            imagesSrcList = Array.from(document.querySelectorAll('#imagesContainer img')).map(img => img.src);        }
+
+        // Add click event listener to the overlay to hide it when clicked
+        document.getElementById('imageOverlay').addEventListener('click', hideOverlay);
+    </script>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.13.1/jquery-ui.min.js"></script>
+
+    <script>
+
+        // document.getElementById('advancedCheckbox').dispatchEvent(new Event('change'));
+
+        function checkForNullModel () {
+            if (document.getElementById('model').value === null || document.getElementById('model').value === undefined || document.getElementById('model').value === "") {
+                document.getElementById('model').value = document.getElementById('model').options[1].value;
+                document.getElementById('model').dispatchEvent(new Event('change'));
+            }
+        }
+
+        function checkForNullAspectRatio () {
+            if (document.getElementById('aspectRatio').value === null || document.getElementById('aspectRatio').value === undefined || document.getElementById('aspectRatio').value === "") {
+                document.getElementById('aspectRatio').value = document.getElementById('aspectRatio').options[1].value;
+                document.getElementById('aspectRatio').dispatchEvent(new Event('change'));
+            }
+        }
+
+        // add event listener for the model dropdown:
+        document.getElementById('model').addEventListener('change', () => {
+            updateLoraSelectionsSummary();
+            checkForNullModel();
+        });
+        document.getElementById('model').dispatchEvent(new Event('change'));
+
+        // add event listener for the aspectRatio dropdown:
+        document.getElementById('aspectRatio').addEventListener('change', () => {
+            checkForNullAspectRatio();
+        });
+        document.getElementById('aspectRatio').dispatchEvent(new Event('change'));
+
+    </script>
+    
+    <script src="https://www.jscammie.com/scripts/ai-form.js?v19"></script>
+    <script src="https://www.jscammie.com/scripts/ai-autocomplete.js?v19"></script>
+</body>
+</html>

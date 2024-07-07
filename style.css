@@ -1,0 +1,212 @@
+/* variables: */
+:root {
+    --frosted-background: rgba(0, 0, 0, 0.246);
+    --frosted-blur: blur(5px);
+    --background-colour: #5c83ac;
+    --highlight-colour: rgba(0, 208, 255, 0.3);
+
+    --bg-colour-1: rgba(72, 0, 255, 0.5);
+    --bg-colour-2: rgba(0, 255, 217, 0.5);
+
+    --dark-mode-transition: background-color 2s ease, background-image 2s ease;
+
+    --bg-colour-1-dark: rgba(72, 0, 255, 0.2);
+    --bg-colour-2-dark: rgba(0, 255, 217, 0.2);
+
+
+}
+
+body {
+    background-color: var(--background-colour);
+    /* Create a linear gradient at 45 degrees from pink to blue */
+    background-image: linear-gradient(45deg, var(--bg-colour-1), var(--bg-colour-2));
+    /* Repeat the gradient */
+    background-repeat: repeat;
+    /* Ensure the background covers the entire page */
+    background-attachment: fixed;
+    margin: 0px;
+    min-height: 100vh !important;
+    position: relative;
+    transition: var(--dark-mode-transition);
+}
+
+body.dark {
+    background-image: linear-gradient(45deg, var(--bg-colour-1-dark), var(--bg-colour-2-dark));
+}
+
+.topNavBar.dark {
+    background-color: calc(var(--background-colour) - 50) !important;
+}
+
+.dark{
+    background-color: #000000;
+    color: #ffffff;
+    transition: var(--dark-mode-transition);
+}
+
+.no-transition {
+    transition: none !important;
+}
+
+* {
+    color: white;
+    font-family: 'Roboto', sans-serif;
+}
+
+textarea {
+    background-color: rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--highlight-colour);
+    border-radius: 10px;
+    padding: 10px;
+    width: 100%;
+    resize: none;
+    outline: none;
+    font-size: 20px;
+    font-family: 'Roboto', sans-serif;
+}
+
+input {
+    background-color: rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--highlight-colour);
+    border-radius: 10px;
+    padding: 10px;
+    width: 100%;
+    resize: none;
+    outline: none;
+    font-size: 20px;
+}
+
+button {
+    background-color: var(--highlight-colour);
+    border: 1px solid var(--highlight-colour);
+    border-radius: 10px;
+    padding: 10px;
+    width: fit-content;
+    font-size: 20px;
+    cursor: pointer;
+    transition: border 0.5s ease;
+}
+
+button:hover {
+    border: 1px solid white;
+    transition: border 0.5s ease;
+}
+
+
+
+img {
+    width: 100%;
+    height: auto;
+}
+
+
+
+
+
+
+/* site wide scrollbar adjustments: */
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--frosted-background);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--highlight-colour);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--highlight-colour);
+    transition: background 0.5s ease;
+}
+
+::-webkit-scrollbar-thumb:active {
+    background: var(--highlight-colour);
+    transition: background 0.5s ease;
+}
+
+
+
+
+.page-content {
+    margin: 5%;
+    margin-top: 0px;
+    min-height: calc(100vh - 380px); /* Adjust 120px to the combined height of your header and footer */
+}
+
+/* Frosted glass effect */
+.frosted {
+    background-color: var(--frosted-background);
+    backdrop-filter: var(--frosted-blur);
+}
+
+/* Frosted glass effect with rounded corners */
+.round-frosted {
+    background-color: var(--frosted-background);
+    backdrop-filter: var(--frosted-blur);
+    border-radius: 30px;
+}
+
+input[type=checkbox] {
+    width: 20px;
+    height: 20px;
+    scale: 1;
+    transition: var(--dark-mode-transition)
+}
+
+input[type=checkbox]:checked {
+    background-color: var(--highlight-colour);
+}
+
+input[type=checkbox]:hover {
+    background-color: var(--highlight-colour);
+    transition: background-color scale 1s ease;
+    scale: 1.1;
+}
+
+
+.mw50-dynamic {
+    transition: max-width 0.5s ease; /* Transition for max-width over 0.5 seconds */
+    max-width: 50%; /* Default max-width */
+    margin: auto;
+}
+
+@media screen and (max-width: 900px) {
+    .mw50-dynamic {
+        max-width: 80%; /* Max-width changes on smaller screens */
+    }
+}
+
+@media screen and (min-width: 900px) {
+    .mw50-dynamic {
+        max-width: 50%; /* Max-width for larger screens */
+    }
+}
+
+
+
+.mw75-dynamic {
+    transition: max-width 0.5s ease; /* Transition for max-width over 0.5 seconds */
+    max-width: 95%; /* Default max-width */
+    margin: auto;
+}
+
+
+
+.center-fully {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.center-fully-no-flex {
+    text-align: center;
+}
+
+.left-align-no-flex {
+    justify-content: left !important;
+    text-align: left !important;
+}

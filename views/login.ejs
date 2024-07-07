@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord Login | JSCammie.com</title>
+    <link rel='stylesheet' href='/style.css' />
+    
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-K3KJJKS1R4"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-K3KJJKS1R4');
+    </script>
+
+    <style>
+
+
+    /* make the button underneath the flex display: */
+        .discord-login-btn {
+            display: inline-block;
+            background-color: #7289DA; /* Discord brand color */
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+        }
+
+        .discord-login-btn:hover {
+            background-color: #5b6eae; /* Darker shade for hover effect */
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Navigation -->
+    <%- include('../partials/_navigation') %>
+
+    <div class="center-fully-no-flex" style="margin-bottom: 3rem;">
+        <%- include('../partials/_bannerAdvert') %>
+    </div>
+
+    <!-- Login Section -->
+    <div class="round-frosted page-content mw50-dynamic center-fully">
+        <ul class="center-fully-no-flex">
+            <h1>Login Below</h1>
+            <a href="https://discord.com/api/oauth2/authorize?client_id=1194813360529735711&response_type=token&redirect_uri=https%3A%2F%2Fwww.jscammie.com%2Fauth%2Fdiscord&scope=identify" class="discord-login-btn" style="display: block;">LOGIN WITH DISCORD</a>    
+            <br><br>
+        </ul>
+        
+    </div>
+
+    <!-- get partials/_footer: -->
+    <%- include('../partials/_footer') %>
+
+</body>
+</html>

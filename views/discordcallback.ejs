@@ -1,0 +1,64 @@
+<!-- setup basic html template with metadata etc: -->
+<html>
+<head>
+    <title>Discord Login | JSCammie.com</title>
+    <link rel='stylesheet' href='/style.css' />
+
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-K3KJJKS1R4"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-K3KJJKS1R4');
+    </script>
+
+</head>
+<body>
+
+    <!-- get partials/_navigation: -->
+    <%- include('../partials/_navigation') %>
+
+    <div class="center-fully-no-flex" style="margin-bottom: 3rem;">
+        <%- include('../partials/_bannerAdvert') %>
+    </div>
+
+    <div class="round-frosted page-content mw50-dynamic">
+        <ul class="center-fully-no-flex">
+            <br><br>
+            <h1>Logging in...</h1>
+            <br><br>
+        </ul>
+    
+
+
+    <script>
+        window.onload = function() {
+          const hash = window.location.hash.substr(1);
+          const params = new URLSearchParams(hash);
+          console.log(params);
+          const accessToken = params.get('access_token');
+          console.log(accessToken);
+      
+          if (accessToken) {
+            // Send the access token to the server, when it finishes redirect to the homepage
+            fetch('/receive-token', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ accessToken: accessToken })
+            }).then(() => {
+                window.location.href = '/';
+            })
+          }
+        }
+      </script>
+
+      <!-- get partials/_footer: -->
+    <%- include('../partials/_footer') %>
+    
+</body>
+</html>
