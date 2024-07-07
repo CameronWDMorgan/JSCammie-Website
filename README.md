@@ -24,7 +24,7 @@ This project is the public facing JSCammie.com to help with the burden of develo
 
 ### Built with
 
-JSCammie is built with x, y and z.
+JSCammie is built with <a href="https://nodejs.org/en">NodeJS</a> and <a href="https://ejs.co/">EJS</a>
 
 ## Getting Started
 
