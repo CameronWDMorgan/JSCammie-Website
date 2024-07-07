@@ -64,10 +64,6 @@ document.getElementById('generateButton').addEventListener('click', async functi
 
     let advancedCheckbox = "on"
 
-    // let advancedCheckbox = formData.get('advancedCheckbox')
-    
-    let enhance_prompt = formData.get('enhance_prompt')
-
     let inpainting_toggle = formData.get('inpaintingCheckbox')
 
     let inpaintingCheckbox = false
@@ -87,10 +83,6 @@ document.getElementById('generateButton').addEventListener('click', async functi
         strength = formData.get('inpaintingStrength')
     } else {
         strength = formData.get('img2imgStrength')
-    }
-
-    if(enhance_prompt == "on") {
-        enhance_prompt = true
     }
 
     // Function to get all selected loras
@@ -138,17 +130,11 @@ document.getElementById('generateButton').addEventListener('click', async functi
         imageBase64 = await getBase64(file)
     }
 
-    if(document.getElementById('openposeCheckbox').checked) {
-        imageBase64 = getOpenPoseCanvasDataUrl();
-    }
-
     if(document.getElementById('inpaintingOriginalCheckbox').checked) {
         inpainting_original_option = true
     } else {
         inpainting_original_option = false
     }
-
-    document.getElementById('txt2vidCheckbox') ? console.log("txt2vid") : console.log("no txt2vid")
 
     let request_type = "txt2img"
 
@@ -157,28 +143,6 @@ document.getElementById('generateButton').addEventListener('click', async functi
     } 
     if(document.getElementById('inpaintingCheckbox').checked) {
         request_type = "inpainting"
-    } 
-    if(document.getElementById('openposeCheckbox').checked) {
-        request_type = "openpose"
-    } 
-    if(document.getElementById('composablediffusionCheckbox').checked) {
-        request_type = "latent_couple"
-    } 
-    if(document.getElementById('txt2vidCheckbox').checked) {
-        request_type = "txt2video"
-        console.log("txt2vid")
-    }
-
-    if(document.getElementById('upscaleCheckbox').checked) {
-        upscaleCheckbox = true
-    } else {
-        upscaleCheckbox = false
-    }
-
-
-    if(document.getElementById('composablediffusionCheckbox').checked) {
-        strength = document.getElementById('composablediffusionStrength').value
-        targetQuantity = 1
     }
 
     function getFavoritedLoraIds() {
@@ -229,7 +193,6 @@ document.getElementById('generateButton').addEventListener('click', async functi
         strength: strength,
         guidance: targetGuidance,
         savedloras: savedloras,
-        enhance_prompt: enhance_prompt,
         request_type: request_type,
         advancedMode: advancedCheckbox,
         inpainting: inpaintingCheckbox,
@@ -237,17 +200,10 @@ document.getElementById('generateButton').addEventListener('click', async functi
         accountId: accountId,
         inpainting_original_option: inpainting_original_option,
         fastpass: formData.get('fastpass'),
-        upscale: upscaleCheckbox,
-        splitType: formData.get('composablediffusionType'),
-        splits: formData.get('composablediffusionSplits') || None,
-        splitRatio: formData.get('composablediffusionRatio'),
-        splitOverlap: formData.get('composablediffusionOverlap'),
-        video_length: formData.get('txt2vidLength') || None,
         nsfwlorawarning: loraNSFWWarning,
         strengthenabled: strengthenabled,
         autocompleteenabled: autocompleteenabled,
         scheduler: schedulerValue,
-        // lightning_mode: document.getElementById('lightning_mode').checked,
     };
 
     console.log(data)
