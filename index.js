@@ -984,35 +984,37 @@ app.post('/ai-save-delete/', async function(req, res){
     res.send({success: 'Deleted'})
 })
 
-// https:
-
 const http = require('http')
 const https = require('https');
 const e = require('express');
 const { scheduler } = require('timers/promises');
 const { time } = require('console');
 
-console.log(process.env.CA_BUNDLE_PATH)
+// https only enabled when not in DEVELOPMENT mode, as the certificates are not valid for localhost/not in the repo:
+if (process.env.DEVELOPMENT !== 'true') {
+    const caBundle = fs.readFileSync(process.env.CA_BUNDLE_PATH)
+    const caString = caBundle.toString();
+    const ca = caString.split('-----END CERTIFICATE-----\r\n').map(cert => cert +'-----END CERTIFICATE-----\r\n')
+    ca.pop()
+    const cert = fs.readFileSync(process.env.CRT_PATH)
+    const key = fs.readFileSync(process.env.PK_PATH)
+        
+    let options = {
+        cert: cert, 
+        ca: ca,
+        key: key
+    };
 
-const caBundle = fs.readFileSync(process.env.CA_BUNDLE_PATH)
-const caString = caBundle.toString();
-const ca = caString.split('-----END CERTIFICATE-----\r\n').map(cert => cert +'-----END CERTIFICATE-----\r\n')
-ca.pop()
-const cert = fs.readFileSync(process.env.CRT_PATH)
-const key = fs.readFileSync(process.env.PK_PATH)
-    
-let options = {
-    cert: cert, 
-    ca: ca,
-    key: key
-};
+    const httpsServer = https.createServer(options, app)
 
-const httpsServer = https.createServer(options, app)
+    httpsServer.listen(443, () => {
+        console.log(`Example app listening at https://localhost:443`)
+    })
+
+}
+
+
 const httpServer = http.createServer(app)
-
-httpsServer.listen(443, () => {
-    console.log(`Example app listening at https://localhost:443`)
-})
 
 httpServer.listen(port, () => {
     console.log(`Example app listening at http://localhost:${port}`)
