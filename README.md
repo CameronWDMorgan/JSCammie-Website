@@ -24,7 +24,7 @@ This project is the public facing JSCammie.com to help with the burden of develo
 
 ### Built with
 
-JSCammie is built with <a href="https://nodejs.org/en">NodeJS</a> and <a href="https://ejs.co/">EJS</a>
+JSCammie is built with [NodeJS](https://nodejs.org/en) and [EJS](https://ejs.co/)
 
 ## Getting Started
 
@@ -43,8 +43,11 @@ To get started with the repo, do the following;
 
 ## Usage
 
+**Please note, this repo is not ready to be hostable in its current state.**
+
 ## Roadmap
 
+- [ ] Upload the character prompt used for generating LORA preview images.
 - [ ] Preview images for the LORAs.
   - [ ] SD 1.5 based LORAs.
   - [ ] SD XL based LORAs.
