@@ -400,8 +400,8 @@ async function loraImagesCache() {
                 loraData.image = `http://www.jscammie.com/loraimages/sdxl/${category}/${lora}.png`
             } else {
                 // if there is no lora image then set it to the default image:
-                if (!fs.existsSync(`.\\loraimages\\sdxl\\${category}\\${lora}.png`)) {
-                    fs.writeFileSync(`.\\loraimages\\sdxl\\${category}\\${lora}.png`, defaultImage)
+                if (!fs.existsSync(`.\\loraimages\\${category}\\${lora}.png`)) {
+                    fs.writeFileSync(`.\\loraimages\\${category}\\${lora}.png`, defaultImage)
                 }
                 loraData.image = `http://www.jscammie.com/loraimages/${category}/${lora}.png`
             }
