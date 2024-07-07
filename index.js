@@ -591,33 +591,14 @@ setInterval(updateYAMLCache, 7500);
 async function loraImagesCache() {
 
     for (const [category, loras] of Object.entries(cachedYAMLData)) {
+        // get the default image:
+        const defaultImage = fs.readFileSync('.\\loraimages\\default.png')
+
         for (const [lora, loraData] of Object.entries(loras)) {
-            // if (!fs.existsSync(`C:\\Users\\anime\\Documents\\Coding\\Stability Matrix\\Data\\Models\\Lora\\loraimages\\${category}\\${lora}.png`)) {
-            //     loraData.image = `C:\\Users\\anime\\Documents\\Coding\\Stability Matrix\\Data\\Models\\Lora\\loraimages\\default\\default.png`
-            // }else {
-            //     loraData.image = `C:\\Users\\anime\\Documents\\Coding\\Stability Matrix\\Data\\Models\\Lora\\loraimages\\${category}\\${lora}.png`
-            // }
 
-            // do sdxl then normal:
-
-            if (lora.includes('sdxl')) {
-                if (fs.existsSync(`C:\\Users\\anime\\Documents\\Coding\\Stability Matrix\\Data\\Models\\Lora\\loraimages\\sdxl\\${category}\\${lora}.png`)) {
-                    loraData.image = `C:\\Users\\anime\\Documents\\Coding\\Stability Matrix\\Data\\Models\\Lora\\loraimages\\sdxl\\${category}\\${lora}.png`
-                } else {
-                    loraData.image = `C:\\Users\\anime\\Documents\\Coding\\Stability Matrix\\Data\\Models\\Lora\\loraimages\\default\\default.png`
-                }
-            } else {
-                if (fs.existsSync(`C:\\Users\\anime\\Documents\\Coding\\Stability Matrix\\Data\\Models\\Lora\\loraimages\\${category}\\${lora}.png`)) {
-                    loraData.image = `C:\\Users\\anime\\Documents\\Coding\\Stability Matrix\\Data\\Models\\Lora\\loraimages\\${category}\\${lora}.png`
-                } else {
-                    loraData.image = `C:\\Users\\anime\\Documents\\Coding\\Stability Matrix\\Data\\Models\\Lora\\loraimages\\default\\default.png`
-                }
-            }
-
-            // load the image and save it in /loraimages/category/lora.png or /loraimages/sdxl/category/lora.png:
             image = fs.readFileSync(loraData.image)
-            // save the image to a file:
-            // ensure the directory exists:
+
+            // ensure directories exist:
             if (!fs.existsSync(`.\\loraimages\\${category}`)) {
                 fs.mkdirSync(`.\\loraimages\\${category}`, { recursive: true })
             }
@@ -625,36 +606,21 @@ async function loraImagesCache() {
                 fs.mkdirSync(`.\\loraimages\\sdxl\\${category}`, { recursive: true })
             }
 
-            // if the name of the lora has sdxl in it, save it to the sdxl directory, otherwise save it to the normal directory:
+            // set the image path in the loraData:
             if(lora.includes('sdxl')) {
-                // if there is an image already there, check if it is the same as the one we are trying to save:
-                if (fs.existsSync(`.\\loraimages\\sdxl\\${category}\\${lora}.png`)) {
-                    // if the image is the same, do nothing, otherwise save the new image:
-                    if (fs.readFileSync(`.\\loraimages\\sdxl\\${category}\\${lora}.png`) == image) {
-                        // do nothing
-                    } else {
-                        fs.writeFileSync(`.\\loraimages\\sdxl\\${category}\\${lora}.png`, image)
-                        loraData.image = `http://www.jscammie.com/loraimages/sdxl/${category}/${lora}.png`
-                    }
-                } else {
-                    fs.writeFileSync(`.\\loraimages\\sdxl\\${category}\\${lora}.png`, image)
-                    loraData.image = `http://www.jscammie.com/loraimages/sdxl/${category}/${lora}.png`
+                // if there is no lora image then set it to the default image:
+                if (!fs.existsSync(`.\\loraimages\\sdxl\\${category}\\${lora}.png`)) {
+                    fs.writeFileSync(`.\\loraimages\\sdxl\\${category}\\${lora}.png`, defaultImage)
                 }
+                loraData.image = `http://www.jscammie.com/loraimages/sdxl/${category}/${lora}.png`
             } else {
-                // if there is an image already there, check if it is the same as the one we are trying to save:
-                if (fs.existsSync(`.\\loraimages\\${category}\\${lora}.png`)) {
-                    // if the image is the same, do nothing, otherwise save the new image:
-                    if (fs.readFileSync(`.\\loraimages\\${category}\\${lora}.png`) == image) {
-                        // do nothing
-                    } else {
-                        fs.writeFileSync(`.\\loraimages\\${category}\\${lora}.png`, image)
-                        loraData.image = `http://www.jscammie.com/loraimages/${category}/${lora}.png`
-                    }
-                } else {
-                    fs.writeFileSync(`.\\loraimages\\${category}\\${lora}.png`, image)
-                    loraData.image = `http://www.jscammie.com/loraimages/${category}/${lora}.png`
+                // if there is no lora image then set it to the default image:
+                if (!fs.existsSync(`.\\loraimages\\sdxl\\${category}\\${lora}.png`)) {
+                    fs.writeFileSync(`.\\loraimages\\sdxl\\${category}\\${lora}.png`, defaultImage)
                 }
+                loraData.image = `http://www.jscammie.com/loraimages/${category}/${lora}.png`
             }
+
             // add it to the cachedYAMLData:
             cachedYAMLData[category][lora] = loraData
         }
