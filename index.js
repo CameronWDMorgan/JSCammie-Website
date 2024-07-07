@@ -449,11 +449,6 @@ app.get('/', async function(req, res){
     }
 })
 
-app.get('/ai', async function(res){
-    // redirect to the root:
-    res.redirect('/')
-});
-
 app.post('/token-length', async function(req, res){
     try {
         const response = await fetch(`${AI_API_URL}/token-length`, {
@@ -748,6 +743,10 @@ app.post('/ai-save-delete/', async function(req, res){
         }
     )
     res.send({success: 'Deleted'})
+})
+
+app.get('/ai', async function(req, res){
+    res.redirect('/')
 })
 
 const http = require('http')
