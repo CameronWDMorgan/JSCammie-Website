@@ -40,7 +40,7 @@ app.use(cookieSession({
     maxAge: (24 * 60 * 60 * 1000) * 30 // 24 hours - 30 days
 }))
 
-app.use((req, res, next) => {
+app.use((req, next) => {
     if (req.session) {
         // Update some session property to ensure the session is considered modified.
         req.session.nowInMinutes = Math.floor(Date.now() / 60e3);
@@ -76,7 +76,6 @@ app.use(requireHTTPS);
 app.use(express.json());
 
 const userProfileSchema = require('./schemas/userProfileSchema.js')
-const userContestSchema = require('./schemas/userContestSchema.js')
 
 // setup views directory:
 app.set('views', './views')
@@ -124,218 +123,6 @@ app.post('/toggle-darkmode', (req, res) => {
     // Respond with the new state or redirect, etc.
     res.json({ darkmode: req.session.darkmode });
 });
-
-
-
-// blogs code
-
-const getBlogFiles = () => {
-    const directoryPath = path.join(__dirname, 'blogs')
-    let blogs = fs.readdirSync(directoryPath).filter(file => file.endsWith('.ejs'))
-    allHTML = []
-    let fileStats = blogs.map(file => {
-        let stats = fs.statSync(path.join(directoryPath, file));
-        return { file, stats };
-    });
-    blogs = fileStats.map(f => f.file);
-
-
-    blogs.forEach((blog, index) => {
-        const blogHTML = fs.readFileSync(path.join(__dirname, 'blogs', blog), { encoding: 'utf-8' })
-        allHTML.push(blogHTML)
-    })
-    
-
-    // Sort files by creation date, fall back to last modified date if necessary
-    fileStats.sort((a, b) => {
-        let dateA = a.stats.birthtimeMs;
-        let dateB = b.stats.birthtimeMs;
-        return dateA - dateB;
-    });
-    return allHTML
-}
-
-const getAllContestsInfo = () => {
-    const directoryPath = path.join(__dirname, 'contestsInfo')
-    let contestsInfo = fs.readdirSync(directoryPath).filter(file => file.endsWith('.ejs'))
-    allHTML = []
-    let fileStats = contestsInfo.map(file => {
-        let stats = fs.statSync(path.join(directoryPath, file));
-        return { file, stats };
-    });
-
-    // Sort files by creation date, fall back to last modified date if necessary
-    fileStats.sort((a, b) => {
-        let dateA = a.stats.birthtimeMs;
-        let dateB = b.stats.birthtimeMs;
-        return dateA - dateB;
-    });
-
-    contestsInfo = fileStats.map(f => f.file);
-
-    contestsInfo.forEach((contestInfo, index) => {
-        const HTML = fs.readFileSync(path.join(__dirname, 'contestsInfo', contestInfo), { encoding: 'utf-8' })
-        allHTML.push(HTML)
-    })
-
-    allHTML.reverse()
-
-    return allHTML
-}
-
-const getAllContests = () => {
-    const directoryPath = path.join(__dirname, 'contests')
-    let contests = fs.readdirSync(directoryPath).filter(file => file.endsWith('.ejs'))
-    allHTML = []
-    let fileStats = contests.map(file => {
-        let stats = fs.statSync(path.join(directoryPath, file));
-        return { file, stats };
-    });
-
-    // Sort files by creation date, fall back to last modified date if necessary
-    fileStats.sort((a, b) => {
-        let dateA = a.stats.birthtimeMs;
-        let dateB = b.stats.birthtimeMs;
-        return dateA - dateB;
-    });
-
-    contests = fileStats.map(f => f.file);
-
-    contests.forEach((contest, index) => {
-        const HTML = fs.readFileSync(path.join(__dirname, 'contests', contest), { encoding: 'utf-8' })
-        allHTML.push(HTML)
-    })
-
-    allHTML.reverse()
-
-    return allHTML
-}
-
-// const contestGuidelines = fs.readFileSync(path.join(__dirname, 'contestGuidelines.ejs'), { encoding: 'utf-8' })
-
-// app.get('/contests', (req, res) => {
-//     const contestFiles = getAllContestsInfo()
-//     res.render('contests', {
-//         session: req.session,
-//         contests: contestFiles,
-//         contestGuidelines: contestGuidelines
-//     })
-// })
-
-// app.get('/contest/:contestId', (req, res) => {
-//     const contestId = req.params.contestId
-//     const contestFile = fs.readFileSync(path.join(__dirname, 'contests', `${contestId}.ejs`), { encoding: 'utf-8' })
-//     res.render('contest', {
-//         session: req.session,
-//         contest: contestFile,
-//         contestId: contestId,
-//         contestGuidelines: contestGuidelines
-//     })
-// })
-
-
-
-
-
-
-
-
-
-// app.post('/contest/submit/:contestId', async (req, res) => {
-//     const contestId = req.params.contestId
-//     const dataUrl = req.body.image
-//     const accountId = req.session.accountId
-
-//     if (!dataUrl) {
-//         res.status(400).send('No image data received.');
-//         return;
-//     }
-
-//     if (accountId === undefined || accountId === null) {
-//         res.status(400).send('No account ID received.');
-//         return;
-//     }
-
-//     dataToPush = {
-//         accountId: accountId,
-//         base64: dataUrl
-//     }
-
-//     console.log(dataToPush)
-
-//     try {
-//         // First, remove any existing entry with the same accountId
-//         await userContestSchema.updateOne(
-//             { contestId: contestId },
-//             { $pull: { entries: { accountId: accountId } } }
-//         );
-    
-//         // Then, add the new entry. This could be combined with the removal in a single operation if desired.
-//         await userContestSchema.findOneAndUpdate(
-//             { contestId: contestId },
-//             { $push: { entries: dataToPush } },
-//             { upsert: true }
-//         );
-    
-//         res.send({html: "<p>Submitted</p>"});
-//     } catch (error) {
-//         console.error("Error updating contest entry:", error);
-//         res.status(500).send({html: `<p>Error submitting entry</p>`});
-//     }
-    
-
-// })
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// const getChangelogFiles = () => {
-//     const directoryPath = path.join(__dirname, 'changelogs')
-//     let changelogs = fs.readdirSync(directoryPath).filter(file => file.endsWith('.ejs'))
-//     allHTML = []
-//     let fileStats = changelogs.map(file => {
-//         let stats = fs.statSync(path.join(directoryPath, file));
-//         return { file, stats };
-//     });
-
-//     // Sort files by creation date, fall back to last modified date if necessary
-//     fileStats.sort((a, b) => {
-//         let dateA = a.stats.birthtimeMs;
-//         let dateB = b.stats.birthtimeMs;
-//         return dateA - dateB;
-//     });
-
-//     changelogs = fileStats.map(f => f.file);
-
-//     changelogs.forEach((changelog, index) => {
-//         const HTML = fs.readFileSync(path.join(__dirname, 'changelogs', changelog), { encoding: 'utf-8' })
-//         allHTML.push(HTML)
-//     })
-
-//     allHTML.reverse()
-
-//     return allHTML
-// }
-
-// app.get('/changelogs', (req, res) => {
-//     const changelogFiles = getChangelogFiles()
-//     res.render('changelog', { 
-//         session: req.session,
-//         changelogs: changelogFiles 
-//     })
-// })
 
 app.get('/projects', (req, res) => {
     res.render('projects', {
@@ -421,7 +208,7 @@ app.post('/get-metadata', (req, res) => {
     try {
         // Convert data URL to a buffer
         const base64 = dataUrl.split(',')[1];
-        const buffer = Buffer.from(base64, 'base64');
+        const buffer = buffer.from(base64, 'base64');
         
         // Load metadata from buffer
         const tags = ExifReader.load(buffer);
@@ -450,7 +237,7 @@ app.post('/get-metadata', (req, res) => {
     }
 });
 
-// ai stuffs:
+// ? ai stuffs:
 
 const { parse } = require('csv-parse/sync');
 
@@ -518,7 +305,7 @@ app.post('/autocomplete', async (req, res) => {
     }
 });
 
-// // test the autocomplete function:
+// ? test the autocomplete function:
 try {
     timeBeforeTest = Date.now()
     fetch('https://www.jscammie.com/autocomplete', {
@@ -662,7 +449,7 @@ app.get('/', async function(req, res){
     }
 })
 
-app.get('/ai', async function(req, res){
+app.get('/ai', async function(res){
     // redirect to the root:
     res.redirect('/')
 });
@@ -683,27 +470,6 @@ app.post('/token-length', async function(req, res){
         res.status(500).send('Error getting token length');
     }
 })
-
-// get the queues data and cache it ever second:
-// let combinedQueues = [];
-// async function updateQueues() {
-//     try {
-//         let queuesResponse = await fetch(`${AI_API_URL}/get-all-queue`, {
-//             method: 'GET',
-//             headers: { 'Content-Type': 'application/json' },
-//         });
-//         let queues = await queuesResponse.json();
-
-//         // Combine queues into a single array
-//         if (!queues || !queues.queue_0 || !queues.queue_1) {
-//             throw new Error('Invalid queue data received');
-//         }
-//         combinedQueues = queues.queue_0.concat(queues.queue_1);
-//     } catch (error) {
-//         console.error(error);
-//     }
-// }
-// setInterval(updateQueues, 1000);
 
 app.post('/generate', async function(req, res){
     try {
@@ -986,9 +752,6 @@ app.post('/ai-save-delete/', async function(req, res){
 
 const http = require('http')
 const https = require('https');
-const e = require('express');
-const { scheduler } = require('timers/promises');
-const { time } = require('console');
 
 // https only enabled when not in DEVELOPMENT mode, as the certificates are not valid for localhost/not in the repo:
 if (process.env.DEVELOPMENT !== 'true') {
