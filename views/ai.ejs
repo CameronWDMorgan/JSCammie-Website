@@ -2201,93 +2201,7 @@
 
             
                 <details id="extrasDetails" class="left-align-no-flex">
-                    <summary>Image2Image, Inpainting, OpenPose</summary>
-
-                    <div class="form-control" style="display: none;">
-                        <label for="composablediffusionCheckbox">Enable Composable Diffusion:</label>
-                        <input type="checkbox" id="composablediffusionCheckbox" name="composablediffusionCheckbox">
-                    </div>
-
-
-
-                    <div class="form-control" id="composablediffusionControls" style="display: none;">
-
-                        <label for="composablediffusionType">Composable Diffusion Type:</label>
-                        <select id="composablediffusionType" name="composablediffusionType">
-                            <option value="horizontal">Horizontal</option>
-                            <option value="vertical">Vertical</option>
-                        </select>
-
-                        <div class="form-control inline-slider">
-                            <label for="composablediffusionSplits">Composable Diffusion Splits:</label>
-                            <input type="range" id="composablediffusionSplits" name="composablediffusionSplits" min="2" max="6" step="1" value="2">
-                            <span id="composablediffusionSplitsValue" class="range-value">2</span>
-                        </div>
-
-
-                        <div class="form-control inline-slider">
-                            <label for="composablediffusionStrength">Composable Diffusion Strength:</label>
-                            <input type="range" id="composablediffusionStrength" name="composablediffusionStrength" min="0.5" max="0.75" step="0.01" value="0.7">
-                            <span id="composablediffusionStrengthValue" class="range-value">0.7</span>
-                        </div>
-
-                        
-                        <div class="form-control inline-slider">
-                            <label for="composablediffusionOverlap">Composable Diffusion Overlap:</label>
-                            <input type="range" id="composablediffusionOverlap" name="composablediffusionOverlap" min="0" max="0.3" step="0.1" value="0">
-                            <span id="composablediffusionOverlapValue" class="range-value">0</span>
-                        </div>
-
-                        <details>
-                            <summary>Composable Diffusion Help</summary>
-                            <p>Composable Diffusion is a new feature that allows you to compose multiple images together to create a single image. This is done by splitting the image into multiple parts and then diffusing each part individually. This allows you to create images that are more complex than what would be possible with a single image.</p>
-                            <p>Composable Diffusion is still experimental and may not work as expected. If you encounter any issues, please report them on the <a style="color: #0099ff;" href="https://discord.gg/AvbQuRmh7t">Discord</a>.</p>
-                            <br>
-                            <p>Composable Diffusion Type:</p>
-                            <p>Horizontal: The image is split horizontally into multiple parts.</p>
-                            <p>Vertical: The image is split vertically into multiple parts.</p>
-                            <br>
-                            <p>Composable Diffusion Splits:</p>
-                            <p>The number of splits to make. The image will be split into this many parts.</p>
-                            <br>
-                            <p>Composable Diffusion Strength:</p>
-                            <p>The strength of the diffusion. A higher strength will result in a more diffused image.</p>
-                            <br>
-                            <p>Composable Diffusion Overlap:</p>
-                            <p>Determines how much overlap there is between the image parts. A higher value will result in more overlap between the image parts.</p>
-                        </details>
-
-                    </div>
-
-
-                    <% if (session.accountId === '1039574722163249233') { %>
-                        <div class="form-control">
-                            <label for="txt2vidCheckbox">Enable Text2Video:</label>
-                            <input type="checkbox" id="txt2vidCheckbox" name="txt2vidCheckbox">
-                        </div>
-
-                        <div class="form-control" id="txt2vidControls">
-                            <label for="txt2vidLength">Text2Video Length (frames):</label>
-                            <input type="range" id="txt2vidLength" name="txt2vidLength" min="1" max="16" step="1" value="8">
-                            <span id="txt2vidLengthValue" class="range-value">8</span>
-                        </div>
-                    <% } else { %>
-                        <div class="form-control" style="display: none;">
-                            <label for="txt2vidCheckbox">Enable Text2Video:</label>
-                            <input type="checkbox" id="txt2vidCheckbox" name="txt2vidCheckbox">
-                        </div>
-
-                        <div class="form-control" id="txt2vidControls" style="display: none;">
-                            <label for="txt2vidLength">Text2Video Length (frames):</label>
-                            <input type="range" id="txt2vidLength" name="txt2vidLength" min="1" max="16" step="1" value="8">
-                            <span id="txt2vidLengthValue" class="range-value">8</span>
-                        </div>
-                    <% } %>
-
-                    
-                    
-                    
-
+                    <summary>Image2Image, Inpainting</summary>
 
                     <div class="form-control">
                         <label for="img2imgCheckbox">Enable Image2Image:</label>
@@ -2302,19 +2216,6 @@
                         <input type="range" id="img2imgStrength" name="img2imgStrength" min="0" max="100" step="1" value="50">
                         <span id="img2imgStrengthValue" class="range-value">50%</span>
                     </div>
-
-
-                    <!-- controlNetImg2Img controls -->
-
-                    <!-- <div class="form-control">
-                        <label for="controlNetImg2ImgCheckbox">Enable ControlNetImg2Img:</label>
-                        <input type="checkbox" id="controlNetImg2ImgCheckbox" name="controlNetImg2ImgCheckbox">
-                    </div>
-
-                    <div class="form-control" id="controlNetControls" style="display: none;">
-                        <label for="controlNetImage">Upload Image:</label>
-                        <input type="file" id="controlNetImage" name="controlNetImage" accept="image/*">
-                    </div> -->
 
                     <style>
                         #openposeControls {
@@ -2422,10 +2323,6 @@
                 // get the inpaintingControls and img2imgControls elements
                 const inpaintingControls = document.getElementById('inpaintingControls');
                 const img2imgControls = document.getElementById('img2imgControls');
-                const controlNetControls = document.getElementById('controlNetControls');
-                const openposeControls = document.getElementById('openposeControls');
-                const composablediffusionControls = document.getElementById('composablediffusionControls');
-                const txt2vidControls = document.getElementById('txt2vidControls');
         
                 function disableCheckboxes(target) {
                     if(target != "inpaintingCheckbox") {
@@ -2434,15 +2331,6 @@
                     } if (target != "img2imgCheckbox") {
                         img2imgCheckbox.checked = false;
                         img2imgControls.style.display = 'none';
-                    } if (target != "openposeCheckbox") {
-                        openposeCheckbox.checked = false;
-                        openposeControls.style.display = 'none';
-                    } if (target != "composablediffusionCheckbox") {
-                        composablediffusionCheckbox.checked = false;
-                        composablediffusionControls.style.display = 'none';
-                    } if (target != "txt2vidCheckbox") {
-                        txt2vidCheckbox.checked = false;
-                        txt2vidControls.style.display = 'none';
                     }
 
                     // open the details element with the target id: "extrasDetails":
@@ -2459,18 +2347,6 @@
                         case "img2imgCheckbox":
                             img2imgCheckbox.checked = true;
                             img2imgControls.style.display = 'block';
-                            break;
-                        case "openposeCheckbox":
-                            openposeCheckbox.checked = true;
-                            openposeControls.style.display = 'block';
-                            break;
-                        case "composablediffusionCheckbox":
-                            composablediffusionCheckbox.checked = true;
-                            composablediffusionControls.style.display = 'block';
-                            break;
-                        case "txt2vidCheckbox":
-                            txt2vidCheckbox.checked = true;
-                            txt2vidControls.style.display = 'block';
                             break;
                     }
                 }
@@ -2490,32 +2366,6 @@
                         disableCheckboxes("img2imgCheckbox")
                     }
                 });
-
-                // add an event listener for when the openposeCheckbox changes
-                openposeCheckbox.addEventListener('change', function() {
-                    // if the openposeCheckbox is checked
-                    if (this.checked) {
-                        disableCheckboxes("openposeCheckbox")
-                    }
-                });
-
-                // add an event listener for when the composablediffusionCheckbox changes
-                composablediffusionCheckbox.addEventListener('change', function() {
-                    // if the composablediffusionCheckbox is checked
-                    if (this.checked) {
-                        disableCheckboxes("composablediffusionCheckbox")
-                    }
-                });
-
-                // add an event listener for when the txt2vidCheckbox changes
-                txt2vidCheckbox.addEventListener('change', function() {
-                    // if the txt2vidCheckbox is checked
-                    if (this.checked) {
-                        disableCheckboxes("txt2vidCheckbox")
-                    }
-                });
-
-
 
             </script>
                 
@@ -2575,17 +2425,13 @@
                         <input form="generatorForm" type="number" id="seed" name="seed" min="-1999999999999" max="18446744073709551615" value="-1">
     
                     </div>
-                    <div class="form-control">
-                        <label for="upscaleCheckbox">Upscale:</label>
-                        <input form="generatorForm" type="checkbox" id="upscaleCheckbox" name="upscaleCheckbox">
-                    </div>
 
                     <div class="form-control">
                         <label for="scheduler">Scheduler:</label>
                         <select name="scheduler" id="scheduler">
-                            <option value="eulera">eulera</option>
-                            <option value="dpm">dpm</option>
-                            <option value="ddim">ddim</option>
+                            <option value="eulera">Euler Ancestral</option>
+                            <option value="dpm">Dppm_2m</option>
+                            <option value="ddim">DDIM</option>
                         </select>
                     </div>
                     
@@ -2644,10 +2490,6 @@
                     }
 
                     maxQuantity(4)
-                    
-
-
-                    
 
 
                     document.getElementById('stepsMax').innerText = `/${steps.max}`
@@ -2718,11 +2560,7 @@
             </div>
             
             <br>
-            <!-- rounded style -->
-            <!-- <div class="center-fully-no-flex" style="border: 1px solid #ffffff; border-radius: 10px; padding: 10px; background-color: rgba(130, 86, 169, 0.584);">
-                <p style="font-size: large !important;">Want to skip the queue? Join the <a href="https://discord.gg/AvbQuRmh7t">Discord</a> to win a FastPass! </p>
-            </div> -->
-            <!-- <br> -->
+
             
             <details id="outputDetails" open>
                 <summary>Output(s)</summary>
@@ -2749,12 +2587,6 @@
                 // trigger:
                 imagesContainer.dispatchEvent(new Event('DOMNodeInserted'));
             </script>
-
-            <% if (session.accountId === '1039574722163249233') { %>
-                <!-- <input style="display: none;" type="checkbox" id="lightning_mode">Enable Lightning</checkbox> -->
-            <% } else { %>
-                <!-- <input style="display: none;" type="checkbox" id="lightning_mode">Enable Lightning</checkbox> -->
-            <% } %>
             
             <div class="form-control">
                 <button form="generatorForm" type="submit" id="generateButton">Generate Image</button>
@@ -2874,40 +2706,6 @@
         const totalLorasSelected = document.getElementById('totalLorasSelected');
         const totalLoras = document.getElementById('totalLoras');
         const clearAllLorasButton = document.getElementById('clearAllLorasButton');
-      
-        // Function to update total selected and total Loras
-        function updateTotalCounts() {
-            let totalLorasCount = 0;
-            let totalLorasSelectedCount = 0;
-      
-            loraContainers.forEach(container => {
-                let checkboxes = container.querySelectorAll('input[type="checkbox"]');
-                totalLorasCount += checkboxes.length;
-                totalLorasSelectedCount += Array.from(checkboxes).filter(checkbox => checkbox.checked).length;
-            });
-
-            // count the total number of loras per category, and display it in the category header:
-            // category-loras-label
-            loraDataKeys.forEach(category => {
-                let categoryLorasLabel = document.getElementById(`${category}-loras-label`);
-                let categoryLoras = document.getElementById(`${category}-loras`);
-                let categoryLorasCount = categoryLoras.querySelectorAll('input[type="checkbox"]').length;
-                let categoryLorasCountChecked = Array.from(categoryLoras.querySelectorAll('input[type="checkbox"]')).filter(checkbox => checkbox.checked).length;
-                categoryLorasLabel.innerText = `${category.charAt(0).toUpperCase()}${category.slice(1)} (${categoryLorasCountChecked}/${categoryLorasCount})`;
-            });
-      
-            totalLorasSelected.innerText = totalLorasSelectedCount;
-            totalLoras.innerText = totalLorasCount;
-        }
-      
-        // Event listener for changes in checkboxes
-        loraContainers.forEach(container => {
-            container.addEventListener('change', function(event) {
-                if (event.target.type === 'checkbox') {
-                updateTotalCounts();
-                }
-            });
-        });
       
         // Event listener for clear all Loras button
         clearAllLorasButton.addEventListener('click', function() {
