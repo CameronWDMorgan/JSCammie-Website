@@ -40,7 +40,7 @@ app.use(cookieSession({
     maxAge: (24 * 60 * 60 * 1000) * 30 // 24 hours - 30 days
 }))
 
-app.use((req, next) => {
+app.use((req, res, next) => {
     if (req.session) {
         // Update some session property to ensure the session is considered modified.
         req.session.nowInMinutes = Math.floor(Date.now() / 60e3);
