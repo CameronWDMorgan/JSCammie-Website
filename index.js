@@ -373,7 +373,7 @@ function updateYAMLCache() {
 }
 
 updateYAMLCache()
-setInterval(updateYAMLCache, 7500);
+setInterval(updateYAMLCache, 5000);
 
 async function loraImagesCache() {
 
