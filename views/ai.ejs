@@ -425,12 +425,12 @@
 
     <!-- add a loading screen that covers the whole page until all content is loaded, include a loading bar: -->
     <!-- loading screen div -->
-    <div class="loadingGradient" id="loadingScreen" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; display: flex; justify-content: center; align-items: center; z-index: 1000; transition: opacity 1s;">
+    <div class="loadingGradient" id="loadingScreen" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; display: flex; justify-content: center; align-items: center; z-index: 1000; transition: opacity 2s;">
         <!-- center of screen loading bar -->
         <div style="width: 40%; padding: 20px; border-radius: 10px; display: flex; flex-direction: column; align-items: center;">
             <h2>Loading...</h2>
             <div style="width: 100%; background-color: #00000015; border-radius: 10px;">
-                <div class="loadingBarGradient" id="loadingBar" style="width: 0%; height: 20px; border-radius: 10px; transition: width 3s;"></div>
+                <div class="loadingBarGradient" id="loadingBar" style="width: 0%; height: 20px; border-radius: 10px; transition: width 1.5s;"></div>
             </div>
         </div>
     </div>
@@ -442,10 +442,14 @@
             const loadingScreen = document.getElementById('loadingScreen');
             // fade out the loading screen:
             loadingScreen.style.opacity = 0;
-            // remove the loading screen after 1 second:
+
+            // make it so they can click through the loading screen to the content below it:
+            loadingScreen.style.pointerEvents = 'none';
+
+            // remove the loading screen after 3 second:
             setTimeout(() => {
                 loadingScreen.remove();
-            }, 1000);
+            }, 3000);
         });
 
         // loading bar:
