@@ -435,6 +435,11 @@
         </div>
     </div>
 
+    <!-- popup that displays how long it took to load, for example: 3.65s -->
+    <div style="position: fixed; top: 0; right: 0; padding: 10px; background-color: #00000015; border-radius: 0 0 0 10px; z-index: 1000;">
+        <p id="loadTime">Loading...</p>
+    </div>
+
     <script>
         // remove the loading screen when the page is fully loaded:
         window.addEventListener('load', function() {
@@ -445,6 +450,13 @@
 
             // make it so they can click through the loading screen to the content below it:
             loadingScreen.style.pointerEvents = 'none';
+
+            // get the load time element:
+            const loadTime = document.getElementById('loadTime');
+            // get the time it took to load the page:
+            const loadTimeMS = new Date().getTime() - window.performance.timing.navigationStart;
+            // set the load time text to the time it took to load the page in seconds (3.54s for example):
+            loadTime.innerText = `Loaded in ${loadTimeMS / 1000}s`;
 
             // remove the loading screen after 3 second:
             setTimeout(() => {
@@ -1655,21 +1667,21 @@
 
                       </style>
 
-                    <span id="allLorasObject" hidden style="display: none;">
+                    <span id="allLorasObject" style="display: none;" hidden>
                         <% timeBeforeLoraInfo = new Date().getTime(); %>
                         <% loraDataKeys.forEach(category => { %>
                             <% if (lora_data[category]) { %>
                                 <% Object.entries(lora_data[category]).forEach(([key, value]) => { %>
-                                    <span id="<%= key %>-strength" data-strength="<%- value.strength || 'Null' %>"></span>
-                                    <span id="<%= key %>-words" data-words="<%- value.words || 'Null' %>"></span>
-                                    <span id="<%= key %>-description" data-description="<%- value.description || 'Null' %>"></span>
-                                    <span id="<%= key %>-name" data-name="<%- value.name || key %>"></span>
-                                    <span id="<%= key %>-link" data-link="<%- value.link || 'Null' %>"></span>
-                                    <span id="<%= key %>-dateCreated" data-dateCreated="<%- value.dateCreated || 'Null' %>"></span>
+                                    <span id="<%= key %>-strength" data-strength="<%- value.strength || 'Null' %>" hidden></span>
+                                    <span id="<%= key %>-words" data-words="<%- value.words || 'Null' %>" hidden></span>
+                                    <span id="<%= key %>-description" data-description="<%- value.description || 'Null' %>" hidden></span>
+                                    <span id="<%= key %>-name" data-name="<%- value.name || key %>" hidden></span>
+                                    <span id="<%= key %>-link" data-link="<%- value.link || 'Null' %>" hidden></span>
+                                    <span id="<%= key %>-dateCreated" data-dateCreated="<%- value.dateCreated || 'Null' %>" hidden></span>
                                 <% }); %>
                             <% } %>
                         <% }); %>
-                    </span>  
+                    </span>
 
                     <details id="loraSelectionsSummaryDetails" open>
                         <summary>Loras (<span id="totalLorasSelected"></span>/<span id="totalLoras"></span>)</summary>
@@ -1765,7 +1777,7 @@
                                     <div id="<%= category %>-loras" class="loraSelection">
                                         <div class="loraCardGrid">
                                             <% Object.entries(lora_data[category]).forEach(([key, value]) => { %>
-                                                <div class="lorabox" style="display: block;">
+                                                <div class="lorabox" style="display: none;">
                                                     <div class="checkbox-container">
                                                         <input type="checkbox" id="<%= key %>" name="<%= category %>" value="<%= key %>">
                                                         <% if (value.rating == 'nsfw') { %>
@@ -1780,7 +1792,7 @@
                                                         <label id="label-<%= key %>" for="<%= key %>"><%= value.name || key %></label>
                                                         <button type="button" class="favorite-btn" onclick="toggleFavorite(event, '<%= key %>')">★</button>
                                                     </div>
-                                                    <img id="<%=key%>-image" width="256" height="384" src="<%= value.image %>" onclick="document.getElementById('<%= key %>').checked = !document.getElementById('<%= key %>').checked; document.getElementById('<%= key %>').dispatchEvent(new Event('change'));">
+                                                    <img loading="lazy" id="<%=key%>-image" width="256" height="384" src="<%= value.image %>" onclick="document.getElementById('<%= key %>').checked = !document.getElementById('<%= key %>').checked; document.getElementById('<%= key %>').dispatchEvent(new Event('change'));">
                                                 </div>
                                             <% }); %>
                                         </div>
