@@ -881,9 +881,6 @@
                         }
 
                         function exportAIData() {
-                            // Export the AI data to a file
-                            console.log('Exporting AI Data');
-
                             // Get the AI data from the form
                             let aiData = {
                                 prompt: document.getElementById('prompt').value,
@@ -916,9 +913,6 @@
                                     aiData.loras.push(checkbox.value);
                                 });
                             }
-
-                            console.log(`Exported AI Data:`);
-                            console.log(aiData);
 
                             // export it to a yaml file:
                             let yamlData = {
@@ -956,8 +950,6 @@
                                 return; // Exit the function if the user cancels the action
                             }
 
-                            console.log('Importing AI Data...');
-
                             // Split data lines and then extract values after colon and trim spaces
                             let yamlData = data.split('\n').map(line => line.includes(':') ? line.split(':')[1].trim() : '');
 
@@ -973,8 +965,6 @@
                                 cfg: yamlData[8],
                                 seed: yamlData[9]
                             };
-
-                            console.log(aiData);
 
                             function setValueSafely(elementId, value) {
                                 const element = document.getElementById(elementId);
@@ -1053,7 +1043,6 @@
                             }
 
                             // load the slot with the given slotId
-                            console.log(slotId)
                             let saveData = document.getElementById(`saveSlot-${slotId}`)
 
                             // set the generator form values to the save slot values:
@@ -1061,7 +1050,6 @@
                             const saveSlotDetails = saveData.getElementsByTagName('details')[0];
                             const saveSlotDetailsParagraphs = saveSlotDetails.getElementsByTagName('p');
 
-                            console.log(slotId)
 
                             // selectedLoras is document
 
@@ -1147,7 +1135,6 @@
                             }
 
                             // delete the slot with the given slotId
-                            console.log(slotId)
                             fetch('/ai-save-delete', {
                                 method: 'POST',
                                 body: JSON.stringify({saveSlotId: slotId}),
@@ -1157,7 +1144,6 @@
                             }).then(response => response.json())
                             .then(data => {
                                 // Handle response
-                                console.log(data);
                                 refreshSaveSlots()
                             });
                         }
@@ -1195,8 +1181,6 @@
                     document.addEventListener('DOMContentLoaded', function() {
                         // Assuming lastRequestSD contains all necessary data as JSON
                         let lastRequestSD = JSON.parse(document.getElementById('lastRequestSD').textContent || '{}');
-
-                        console.log(lastRequestSD)
 
                         // Set form values to the last request values
                         document.getElementById('prompt').value = lastRequestSD.prompt || '';
@@ -1399,7 +1383,6 @@
                                 }).then(response => response.json())
                                 .then(data => {
                                     // Handle response
-                                    console.log(data);
                                     // set the status to none:
                                     document.getElementById('enhancePromptStatus').innerHTML = '';
                                     // set the button to enabled:
@@ -1918,7 +1901,6 @@
                                     const idB = b.querySelector('input[type="checkbox"]').value;
                                     if (sortMode === 'newest') {
                                         // get the date created of the lora from the span object:
-                                        console.log(document.getElementById(`${idA}-dateCreated`).getAttribute('data-dateCreated'))
                                         const dateA = new Date(Number(document.getElementById(`${idA}-dateCreated`).getAttribute('data-dateCreated')));
                                         const dateB = new Date(Number(document.getElementById(`${idB}-dateCreated`).getAttribute('data-dateCreated')));
                                         return dateB - dateA; // Newest first
@@ -2027,8 +2009,6 @@
                                     if (!show_na && !show_safe && !show_suggestive && !show_nsfw) {
                                         rating_match = false;
                                     }
-
-                                    console.log(`Rating Value: ${rating_value}, Rating Match: ${rating_match}`)
 
                                     if (model_name.startsWith('sdxl')) {
                                         if (isTextMatch && isLoraSdxl) {
@@ -3034,6 +3014,7 @@
 
         console.log("Consolidated Loras Data:", allLorasData);
     }
+
 
     // function copyXWordsToClipboard(array_index, loraId, array) {
     //         event.preventDefault();
