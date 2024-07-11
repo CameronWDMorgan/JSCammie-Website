@@ -563,20 +563,38 @@
 
             <!-- style the save slot buttons, with on hover effects -->
             <style>
-                .saveSlotButton.Load {
-                    background-color: #4c68af95; /* Green */
+
+                .saveSlotButtonDiv {
+                    display: flex;
+                    justify-content: space-between;
+                }
+
+                .saveSlobtDiv[button] {
+                    margin-right: 0%;
+                    margin-left: 80%;
+                }
+
+                /* make sure the save slot button is ONLY ONE LINE: */
+                .saveSlotButton {
                     border: none;
                     color: white;
-                    padding: 15px 32px;
+                    padding: 2px;
                     text-align: center;
+                    word-wrap: normal;
                     text-decoration: none;
                     display: inline-block;
-                    font-size: 16px;
-                    margin: 4px 2px;
+                    font-size: 15px;
+                    margin: 0 2px;
                     cursor: pointer;
                     transition: transform 0.7s, background-color 0.3s; /* Adjust time as needed */
                     transform: scale(1) rotate(0deg); /* Default state */
                     transform-origin: center; /* Ensures the scaling happens from the center */
+                    width: fit-content;
+                }
+
+
+                .saveSlotButton.Load {
+                    background-color: #4c68af95; /* Green */
                 }
                 .saveSlotButton.Load:hover {
                     transform: scale(1.08) rotate(1deg); 
@@ -586,18 +604,6 @@
 
                 .saveSlotButton.Delete {
                     background-color: #ff000095; /* Red */
-                    border: none;
-                    color: white;
-                    padding: 15px 32px;
-                    text-align: center;
-                    text-decoration: none;
-                    display: inline-block;
-                    font-size: 16px;
-                    margin: 4px 2px;
-                    cursor: pointer;
-                    transition: transform 0.7s, background-color 0.3s; /* Adjust time as needed */
-                    transform: scale(1) rotate(0deg); /* Default state */
-                    transform-origin: center; /* Ensures the scaling happens from the center */
                 }
                 .saveSlotButton.Delete:hover {
                     transform: scale(1.08) rotate(1deg); 
@@ -607,18 +613,6 @@
 
                 .saveSlotButton.Update {
                     background-color: #2fa72d95; /* Red */
-                    border: none;
-                    color: white;
-                    padding: 15px 32px;
-                    text-align: center;
-                    text-decoration: none;
-                    display: inline-block;
-                    font-size: 16px;
-                    margin: 4px 2px;
-                    cursor: pointer;
-                    transition: transform 0.7s, background-color 0.3s; /* Adjust time as needed */
-                    transform: scale(1) rotate(0deg); /* Default state */
-                    transform-origin: center; /* Ensures the scaling happens from the center */
                 }
                 .saveSlotButton.Update:hover {
                     transform: scale(1.08) rotate(1deg); 
@@ -629,7 +623,7 @@
                     background-color: #4caf4f95; /* Green */
                     border: none;
                     color: white;
-                    padding: 15px 32px;
+                    padding: 7px 12px;
                     text-align: center;
                     text-decoration: none;
                     display: inline-block;
@@ -650,18 +644,7 @@
                 }
                 .createSaveSlotButton[disabled] {
                     background-color: #60606095; /* Green */
-                    border: none;
-                    color: white;
-                    padding: 15px 32px;
-                    text-align: center;
-                    text-decoration: none;
-                    display: inline-block;
-                    font-size: 16px;
-                    margin: 4px 2px;
                     cursor: not-allowed;
-                    transition: transform 0.7s, background-color 0.3s; /* Adjust time as needed */
-                    transform: scale(1) rotate(0deg); /* Default state */
-                    transform-origin: center; /* Ensures the scaling happens from the center */
                 }
 
 
@@ -701,7 +684,11 @@
                                         
                                         finalHtml += `<div id="saveSlot-${saveSlot.saveSlotId}">
                                             <details>
-                                            <summary>${saveSlot.name}</summary>
+                                            <summary class="saveSlotButtonDiv">${saveSlot.name} <br>
+                                                <button class="saveSlotButton Load" type="button" onclick="loadSlot('${saveSlot.saveSlotId}')">Load 💾</button>
+                                                <button class="saveSlotButton Delete" type="button" onclick="deleteSlot('${saveSlot.saveSlotId}')">Delete 🗑️</button>
+                                                <button class="saveSlotButton Update" type="button" onclick="updateSlot('${saveSlot.saveSlotId}')">Update ⬆️</button>
+                                            </summary>
                                             <input id="saveSlot-${saveSlot.saveSlotId}-prompt" type="hidden" value="${saveSlot.prompt}"></input> 
                                             <input id="saveSlot-${saveSlot.saveSlotId}-negativeprompt" type="hidden" value="${saveSlot.negativeprompt}"></input>
                                             <input id="saveSlot-${saveSlot.saveSlotId}-aspectRatio" type="hidden" value="${saveSlot.aspectRatio}"></input>
@@ -725,11 +712,6 @@
                                             <p>CFG: ${saveSlot.cfg}</p>
                                             <p>Seed: ${saveSlot.seed}</p>
                                             </details>
-                                            <a style="display: flex; justify-content: space-between;">
-                                                <button class="saveSlotButton Load" type="button" onclick="loadSlot('${saveSlot.saveSlotId}')">Load 💾</button>
-                                                <button class="saveSlotButton Delete" type="button" onclick="deleteSlot('${saveSlot.saveSlotId}')">Delete 🗑️</button>
-                                                <button class="saveSlotButton Update" type="button" onclick="updateSlot('${saveSlot.saveSlotId}')">Update ⬆️</button>
-                                            </a>
                                             </div>
 
                                             <br>
