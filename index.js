@@ -334,7 +334,7 @@ try {
     console.log(error)
 }
 
-let cachedLoraData = null
+let cachedYAMLData = null
 // let AI_API_URL = "https://neversfw.ngrok.dev"
 let AI_API_URL = "http://localhost:5003"
 
@@ -346,8 +346,8 @@ function sortObjectByKey(obj) {
     }, {});
 }
 
-// Function to fetch, sort, and cache Lora data
-function updateLoraCache() {
+// Function to fetch, sort, and cache YAML data
+function updateYAMLCache() {
     try {
         fetch(`${AI_API_URL}/get-lora-yaml`)
             .then(response => response.json())
@@ -357,27 +357,27 @@ function updateLoraCache() {
                     data[category] = sortObjectByKey(data[category]);
                 });
 
-                cachedLoraData = sortObjectByKey(data);
+                cachedYAMLData = sortObjectByKey(data);
             })
-            .catch(err => console.log('Error fetching Lora data:', err));
+            .catch(err => console.log('Error fetching YAML data:', err));
     } catch (error) {
         console.log(error)
     }
 
-    if (cachedLoraData !== null) {
-        console.log('Lora data updated and cached');
+    if (cachedYAMLData !== null) {
+        console.log('YAML data updated and cached');
         loraImagesCache()
     }
     
     
 }
 
-updateLoraCache()
-setInterval(updateLoraCache, 5000);
+updateYAMLCache()
+setInterval(updateYAMLCache, 5000);
 
 async function loraImagesCache() {
 
-    for (const [category, loras] of Object.entries(cachedLoraData)) {
+    for (const [category, loras] of Object.entries(cachedYAMLData)) {
         // get the default image:
         const defaultImage = fs.readFileSync('.\\loraimages\\default.png')
 
@@ -406,15 +406,15 @@ async function loraImagesCache() {
                 loraData.image = `http://www.jscammie.com/loraimages/${category}/${lora}.png`
             }
 
-            // add it to the cachedLoraData:
-            cachedLoraData[category][lora] = loraData
+            // add it to the cachedYAMLData:
+            cachedYAMLData[category][lora] = loraData
         }
         // console.log the index:
-        console.log(`Cached Lora data updated with images for ${category}`)
+        console.log(`Cached YAML data updated with images for ${category}`)
     }
-    console.log('Cached Lora data updated with images')
-    modifiedCachedLoraData = cachedLoraData
-    // console.log(cachedLoraData)
+    console.log('Cached YAML data updated with images')
+    modifiedCachedYAMLData = cachedYAMLData
+    // console.log(cachedYAMLData)
 }
 
 app.get('/', async function(req, res){
@@ -440,7 +440,7 @@ app.get('/', async function(req, res){
 
         res.render('ai', { 
             session: req.session,
-            lora_data: modifiedCachedLoraData,
+            lora_data: modifiedCachedYAMLData,
             aiSaveSlots: aiSaveSlots,
         });
     } catch (error) {

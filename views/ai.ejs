@@ -461,6 +461,9 @@
             // remove the loading screen after 3 second:
             setTimeout(() => {
                 loadingScreen.remove();
+                setTimeout(() => {
+                    loadTime.remove();
+                }, 3000);
             }, 3000);
         });
 
