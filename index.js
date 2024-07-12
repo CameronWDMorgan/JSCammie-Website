@@ -417,6 +417,38 @@ async function loraImagesCache() {
     // console.log(cachedYAMLData)
 }
 
+app.get('/beta/ai', async function(req, res){
+    try {
+
+        reqIdString = `${req.session.accountId}`
+        foundAccount = await userProfileSchema.findOne({accountId: reqIdString})
+
+        if(foundAccount !== null) {
+            if(foundAccount.aiSaveSlots !== null) {
+                aiSaveSlots = foundAccount.aiSaveSlots
+            } else {
+                aiSaveSlots = []
+                await userProfileSchema.findOneAndUpdate({ accountId: reqIdString },
+                    {
+                        aiSaveSlots: []
+                    }
+                )
+            }
+        } else {
+            aiSaveSlots = []
+        }
+
+        res.render('beta/ai', { 
+            session: req.session,
+            lora_data: modifiedCachedYAMLData,
+            aiSaveSlots: aiSaveSlots,
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error loading tags data');
+    }
+})
+
 app.get('/', async function(req, res){
     try {
 
