@@ -24,7 +24,7 @@ This project is the public facing JSCammie.com to help with the burden of develo
 
 ### Built with
 
-JSCammie is built with [NodeJS](https://nodejs.org/en) and [EJS](https://ejs.co/)
+JSCammie is built with <a href="https://nodejs.org/en">NodeJS</a> and <a href="https://ejs.co/">EJS</a>
 
 ## Getting Started
 
@@ -51,6 +51,7 @@ To get started with the repo, do the following;
 - [ ] Preview images for the LORAs.
   - [ ] SD 1.5 based LORAs.
   - [ ] SD XL based LORAs.
+- [ ] Work on redesigned Frontend (views/beta/ai.ejs) (LOW PRIORITY)
 - [ ] Fix bugs as and when they appear.
 
 ## Contributing
