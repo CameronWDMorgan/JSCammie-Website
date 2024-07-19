@@ -153,13 +153,6 @@ document.getElementById('generateButton').addEventListener('click', async functi
 
     console.log(favouritedLoras)
 
-    let lorawarning = document.getElementById('nsfwlorawarning')
-    if(lorawarning.style.display == "none") {
-        loraNSFWWarning = true
-    } else {
-        loraNSFWWarning = false
-    }
-
     let strengthenabled = document.getElementById('strengthArrowkeysCheckbox').checked
 
     let autocompleteenabled = document.getElementById('autocompleteCheckbox').checked
@@ -200,7 +193,6 @@ document.getElementById('generateButton').addEventListener('click', async functi
         accountId: accountId,
         inpainting_original_option: inpainting_original_option,
         fastpass: formData.get('fastpass'),
-        nsfwlorawarning: loraNSFWWarning,
         strengthenabled: strengthenabled,
         autocompleteenabled: autocompleteenabled,
         scheduler: schedulerValue,

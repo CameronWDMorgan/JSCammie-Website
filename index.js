@@ -538,7 +538,6 @@ app.post('/generate', async function(req, res){
             loras: request.lora,
             aspectRatio: request.aspect_ratio,
             favoriteLoras: request.favoriteLoras,
-            nsfwlorawarning: request.nsfwlorawarning,
             strengthenabled: request.strengthenabled,
             autocompleteenabled: request.autocompleteenabled,
             steps: request.steps,
