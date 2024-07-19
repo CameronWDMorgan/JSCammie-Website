@@ -1204,13 +1204,6 @@
                         document.getElementById('model').dispatchEvent(new Event('change'));
                         document.getElementById('aspectRatio').dispatchEvent(new Event('change'));
 
-                        let nsfwlorawarning = lastRequestSD.nsfwlorawarning || false;
-                        if (nsfwlorawarning === false) {
-                            document.getElementById('nsfwlorawarning').style.display = 'block'
-                        } else {
-                            document.getElementById('nsfwlorawarning').style.display = 'none'
-                        }
-
                         let autocompleteenabled = lastRequestSD.autocompleteenabled || false;
                         if (autocompleteenabled === true) {
                             document.getElementById('autocompleteCheckbox').checked = true;
@@ -1504,12 +1497,11 @@
                     <div class="form-control">
                         <label for="model">Model:</label>
                         <select id="model" name="model">
-                            <!-- <option value="sonicdiffusion">DISABLED (SD 1.5) SonicDiffusion (Sonic the Hedgehog) DISABLED</option> -->
                             <option value="fluffysonic">(SD 1.5) FluffySonic (Sonic the Hedgehog by kitsune_sage)</option>
                             <option value="realisticVision">(SD 1.5) realisticVision (Realstic)</option>
                             <option value="furryblend">(SD 1.5) FurryBlend (Furry/Anime)</option>
-                            <!-- <option value="sdxl-sonicdiffusion">DISABLED (SDXL) Sonic Diffusion (Sonic the Hedgehog, uses PonyXL Prompting) DISABLED</option> -->
-                            <!-- <option value="sdxl-ponydiffusion">(SDXL) Pony Diffusion (known as PonyXL)</option> -->
+                            <option value="toonify">(SD 1.5) Toonify (2d Toon Style)</option>
+                            <option value="flat2danimerge">(SD 1.5) Flat2DAnimeMerge (2D Anime, unique style)</option>
                             <option value="sdxl-autismmix">(SDXL) Autism Mix ("Better" PonyXL, uses PonyXL Prompting)</option>
                             <option value="sdxl-sonichasautismmix">(SDXL) SonicHasAutismMix (SonicDiffusionXL & AutismMix merge, uses PonyXL Prompting)</option>
                             <option value="sdxl-ponyrealism">(SDXL) Pony Realism (Realistic, uses PonyXL Prompting)</option>
@@ -1530,23 +1522,6 @@
                 <div class="advanced">
                     <div></div>
                     <div></div>
-                    <!-- by default should be expanded -->
-                    <details id="nsfwlorawarning" style="width: auto" open>
-                        <summary style="color: rgb(255, 0, 0);">Press to dismiss warning</summary>
-                        <p>Warning! Some loras are NSFW! In the future there will be a filter option!</p>
-                        <br>
-                        <br>
-                    </details>
-                    <script>
-                        document.getElementById('nsfwlorawarning').addEventListener('click', function() {
-                            document.getElementById('nsfwlorawarning').style.display = 'none';
-                        })
-                    </script>
-
-
-
-
-
 
                     <% loraDataKeys = ['style', 'effect', 'concept', 'clothing', 'character', 'pose', 'background'] %>
 
@@ -2026,7 +2001,7 @@
                                             checkboxes[i].parentElement.style.display = "none";
                                         }
                                     } else {
-                                        if (isTextMatch) {
+                                        if (isTextMatch && !isLoraSdxl && !isLoraSD3) {
                                             checkboxes[i].parentElement.style.display = ""
                                         } else {
                                             checkboxes[i].parentElement.style.display = "none";
