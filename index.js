@@ -78,7 +78,8 @@ app.use(requireHTTPS);
 
 app.use(express.json());
 
-const userProfileSchema = require('./schemas/userProfileSchema.js')
+const userProfileSchema = require('./schemas/userProfileSchema.js');
+const { type } = require('os');
 
 // setup views directory:
 app.set('views', './views')
@@ -664,9 +665,36 @@ app.get('/result/:request_id', async function(req, res){
 
             await userProfileSchema.findOneAndUpdate({ accountId: req.session.accountId }, { credits: creditsFinal })
 
-            console.log(`Userprofile credits decremented by ${creditsRequired}`)
-            console.log(userProfile)
+            console.log(`${userProfile.username} credits decremented by ${creditsRequired}`)
             json.credits = userProfile.credits - creditsRequired
+        }
+
+        if (json.accountId !== "0" && req.session.loggedIn) {
+            let userProfile = await userProfileSchema.findOne({accountId: req.session.accountId})
+            if (userProfile.credits == null || userProfile.credits == undefined) {
+                creditsCurrent = 250
+            } else {
+                creditsCurrent = userProfile.credits
+            }
+
+            // have a random change to get a credit, 1 in 10 chance:
+            randomChance = Math.round(Math.floor(Math.random() * 2))
+            // random number, biased towards 1, can be up to 50:
+            randomCredits = Math.round(Math.floor(Math.random() * 1))
+
+            randomChance2 = Math.round(Math.floor(Math.random() * 10))
+
+            if (randomChance2 == 1) {
+                randomCredits += 25
+            }
+
+            // if the random number is 1, add the credits to the user:
+            if (randomChance == 1) {
+                creditsCurrent += randomCredits
+            }
+            console.log(`${userProfile.username} credits incremented by ${randomCredits}`)
+                await userProfileSchema.findOneAndUpdate({ accountId: req.session.accountId }, { credits: creditsCurrent })
+                json.credits = creditsCurrent
         }
 
         res.send(json);

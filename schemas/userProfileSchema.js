@@ -19,6 +19,11 @@ const aiSaveSlotSchema = new Schema({
     advancedMode: { type: Boolean, default: false },
 })  
 
+const dailiesSchema = new Schema({
+    timestamp: { type: String, required: true },
+    type: { type: String, required: true },
+})
+
 const userProfileSchema = new Schema({
     badges: { type: Array, default: [] },
     supporter: { type: Boolean, default: false },
@@ -29,6 +34,7 @@ const userProfileSchema = new Schema({
     level: { type: Number, default: 1 },
     aiSaveSlots: [aiSaveSlotSchema],
     credits: { type: Number, default: 250 },
+    dailies: [dailiesSchema],
 })
 
 const name = 'userAccount'

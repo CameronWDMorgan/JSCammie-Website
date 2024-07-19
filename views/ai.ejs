@@ -2634,7 +2634,7 @@
             <div class="form-control">
 
                 <% if (session.loggedIn) { %>
-                <button class="fastqueueButton" form="generatorForm" id="fastqueueButton" type="submit">Fast Queue (<span id="currentGemsPrice">25</span>💎)</button>
+                <button class="fastqueueButton" form="generatorForm" id="fastqueueButton" type="submit">Fast Queue (<span id="currentCreditsPrice">25</span>💎)</button>
 
                 <script>
                     // even default button press:
@@ -2651,7 +2651,7 @@
                     });
                 </script>
                 <% } else { %>
-                <button class="fastqueueButton" form="generatorForm" id="fastqueueButton" type="submit">Fast Queue (<span id="currentGemsPrice">25</span>💎|Login Required)</button>
+                <button class="fastqueueButton" form="generatorForm" id="fastqueueButton" type="submit">Fast Queue (<span id="currentCreditsPrice">25</span>💎|Login Required)</button>
 
                 <script>
                     // even default button press:
@@ -2668,7 +2668,7 @@
                 <button style="display: none;" id="cancelButton">Cancel Request</button>
             </div>
 
-            <script src="https://www.jscammie.com/scripts/ai-calculateGemsPrice.js?v1"></script>
+            <script src="https://www.jscammie.com/scripts/ai-calculateCreditsPrice.js?v3"></script>
             
             <script>
 
@@ -2692,7 +2692,7 @@
 
                     console.log(loraCount, model)
 
-                    document.getElementById('currentGemsPrice').innerText = getGemsPrice(loraCount, model)
+                    document.getElementById('currentCreditsPrice').innerText = getCreditsPrice(loraCount, model)
                 }
 
                 document.addEventListener('DOMContentLoaded', function() {

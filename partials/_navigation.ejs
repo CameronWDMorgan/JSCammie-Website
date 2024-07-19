@@ -32,7 +32,7 @@
         color: white;
         text-decoration: none;
         font-size: 18px;
-        padding: 5px 10px;
+        padding: 7px 5px;
         margin: 0 2px;
         border-radius: 4px;
     }
@@ -48,7 +48,7 @@
     @media screen and (max-width: 900px) {
         .navLink {
             font-size: 14px; /* Adjust font size for smaller screens */
-            padding: 4px 8px; /* Adjust padding for smaller screens */
+            padding: 2px 4px; /* Adjust padding for smaller screens */
         }
         .topNavBar {
             height: 50px; /* Adjusted for smaller screens */
@@ -66,7 +66,7 @@
         color: white;
         border: 4px solid rgba(0, 0, 0, 0);
         font-size: 18px;
-        padding: 12px;
+        padding: 6px;
         margin: 0 5px;
         /* transition border and background-colour: */
         transition: border 1s, background-color 1s;
@@ -86,83 +86,6 @@
     }
 </style>
 
-<style>
-    .hamburgerContainer {
-        display: none;
-    }
-
-    .hamburgerMenu {
-        display: flex;
-        flex-direction: column;
-        justify-content: space-around;
-        width: 30px;
-        height: 30px;
-        cursor: pointer;
-    }
-
-    .hamburgerLine {
-        width: 100%;
-        height: 3px;
-        background-color: white;
-    }
-
-    .sideMenu {
-        position: fixed;
-        top: 0;
-        left: 0;
-        height: 100%;
-        width: 0;
-        background-color: var(--background-colour);
-        overflow-x: hidden;
-        transition: 0.5s;
-        z-index: 99;
-    }
-
-    .sideMenu.show {
-        width: 250px;
-    }
-
-    .sideLink {
-        display: block;
-        color: white;
-        padding: 16px;
-        text-decoration: none;
-        transition: 0.3s;
-    }
-
-    .sideLink:hover {
-        background-color: var(--highlight-colour);
-    }
-
-    .sideLink:active {
-        background-color: var(--highlight-colour);
-    }
-
-    @media screen and (max-width: 900px) {
-        .hamburgerContainer {
-            display: block;
-        }
-
-        .sideMenu {
-            width: 200px;
-        }
-
-        .sideLink {
-            padding: 12px;
-        }
-    }
-
-    @media screen and (max-width: 600px) {
-        .sideMenu {
-            width: 150px;
-        }
-
-        .sideLink {
-            padding: 8px;
-        }
-    }
-</style>
-
 <nav class="topNavBar">
     <div class="navContainer">
         <a href="/home" class="navLink">🏠</a>
@@ -179,15 +102,126 @@
         <button id="darkModeButton" class="navLink" style="margin-left: auto;">
             <span id="darkModeIcon">🌙</span>
         </button>
-        <a>💎 <a id="creditsDisplay">0</a></a>
+        <button id="creditsNav">💎 <a id="creditsDisplay" style="transition: all 1s;">0</a></button>
     </div>
 </nav>
 
-<!-- have an animation with green or red text ontop of the creditsDisplay that fades out of them losing however much credits -->
+<div id="creditsDailyPopup" style="display: none;">
+    <button id="3hrCreditsButton"><a id="3hrCreditsButtonTimeLeft"></a>/3hr</button>
+    <button id="12hrCreditsButton"><a id="12hrCreditsButtonTimeLeft"></a>/12hr</button>
+</div>
+
+
+<style>
+    #creditsDailyPopup {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: var(--background-colour);
+        color: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        z-index: 1000;
+    }
+
+    #creditsDailyPopup button {
+        background-color: var(--highlight-colour);
+        color: white;
+        padding: 10px;
+        margin: 5px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    #creditsDailyPopup button:hover {
+        background-color: var(--highlight-colour-hover);
+    }
+
+    #creditsDailyPopup button:active {
+        background-color: var(--highlight-colour-active);
+    }
+
+    #creditsDailyPopup button:disabled {
+        background-color: var(--highlight-colour-disabled);
+    }
+
+    #creditsDailyPopup button:disabled:hover {
+        background-color: var(--highlight-colour-disabled);
+    }
+
+    #creditsDailyPopup button:disabled:active {
+        background-color: var(--highlight-colour-disabled);
+    }
+</style>
 
 <script>
-    // every x seconds, update the credits display from get request to /userProfile:
+
+    // when the creditsNav button is clicked, show the creditsDailyPopup: on the center of the screen:
+    document.getElementById('creditsNav').addEventListener('click', () => {
+        if (document.getElementById('creditsDailyPopup').style.display == 'none') {
+            document.getElementById('creditsDailyPopup').style.display = 'block';
+        } else {
+            document.getElementById('creditsDailyPopup').style.display = 'none';
+        }
+    });
+</script>
+
+<script>
+    const creditsDisplay = document.getElementById('creditsDisplay');
+
+    // every .1 seconds, check if the creditsDisplay value is higher or lower than the previous value:
+    // the credits display is updated by other scripts:
+    let previousCredits = 0;
+    let currentCredits = 0;
     setInterval(() => {
+        currentCredits = parseInt(creditsDisplay.textContent);
+        if (currentCredits > previousCredits) {
+            creditsDisplay.style.color = 'green';
+            setTimeout(() => {
+                creditsDisplay.style.color = 'white';
+            }, 1000);
+        } else if (currentCredits < previousCredits) {
+            creditsDisplay.style.color = 'red';
+            setTimeout(() => {
+                creditsDisplay.style.color = 'white';
+            }, 1000);
+        }
+        previousCredits = currentCredits;
+    }, 100);
+</script>
+
+<script>
+
+    function sendDailiesRequest(type) {
+        // make a request to post /dailies:
+        fetch('/dailies', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                type: type
+            })
+        }).then(response => response.json())
+            .then(data => {
+                console.log(data);
+            });
+        updateUserProfile()
+    }
+
+    document.getElementById('3hrCreditsButton').addEventListener('click', () => {
+        sendDailiesRequest('3hr');
+    });
+
+    document.getElementById('12hrCreditsButton').addEventListener('click', () => {
+        sendDailiesRequest('12hr');
+    });
+
+
+    function updateUserProfile() {
         fetch('/userProfile', {
             method: 'GET',
             headers: {
@@ -197,6 +231,11 @@
             .then(data => {
                 document.getElementById('creditsDisplay').textContent = data.credits;
             });
+    }
+
+    updateUserProfile()
+    setInterval(() => {
+        updateUserProfile()
     }, 5000);
 </script>
 

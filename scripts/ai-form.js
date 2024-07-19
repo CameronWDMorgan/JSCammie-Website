@@ -178,7 +178,7 @@ document.getElementById('generateButton').addEventListener('click', async functi
         fastqueue = false
     }
 
-    gemsRequired = document.getElementById('currentGemsPrice').innerText
+    creditsRequired = document.getElementById('currentCreditsPrice').innerText
 
     let data = {
         prompt: promptValue,
@@ -206,7 +206,7 @@ document.getElementById('generateButton').addEventListener('click', async functi
         autocompleteenabled: autocompleteenabled,
         scheduler: schedulerValue,
         fastqueue: fastqueue,
-        gemsRequired: 0,
+        creditsRequired: 0,
     };
 
     console.log(data)
@@ -348,9 +348,9 @@ document.getElementById('generateButton').addEventListener('click', async functi
 
                             const results = await resultResponse.json();
 
-                            // update the gemsDisplay IF the results.fastqueue is true:
+                            // update the creditsDisplay IF the results.fastqueue is true:
                             if (results.fastqueue == true) {
-                                document.getElementById('gemsDisplay').innerText = results.gems;
+                                document.getElementById('creditsDisplay').innerText = results.credits;
                             }
 
                             base64Images = results.images;

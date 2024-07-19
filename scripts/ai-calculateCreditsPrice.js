@@ -1,4 +1,4 @@
-function getGemsPrice(loraCount, model) {
+function getCreditsPrice(loraCount, model) {
 
 	let dynamicGemsPrice = 0
 	const baseGemsPrice = 7
@@ -27,4 +27,4 @@ function getGemsPrice(loraCount, model) {
 
 // exort the function:
 
-module.exports = getGemsPrice
+module.exports = getCreditsPrice
