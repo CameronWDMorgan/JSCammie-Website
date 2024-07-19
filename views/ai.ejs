@@ -2,9 +2,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Free PDXL/SDXL/SD1.5 Stable Diffusion AI Image Generator | JSCammie.com</title>
+    <title>Free Stable Diffusion AI Image Generator PDXL/SDXL/SD1.5 | JSCammie.com</title>
     <meta name="description" content="Free PDXL/SDXL and SD 1.5 Stable Diffusion Generator | Generate free images SFW & NSFW with multiple models, loras & more!">
-    <meta name="keywords" content="inpainting, img2img, txt2img, stable diffusion, ai image generator, sdxl ai image generator, openpose, ai free online, sfw, nsfw, sdxl, sd1.5, loras, lora, embeddings, ">
+    <meta name="keywords" content="nsfw, uncensored, free, online, inpainting, img2img, txt2img, stable diffusion, ai image generator, sdxl ai image generator, ai free online, sfw, nsfw, sdxl, sd1.5, loras, lora, embeddings, pdxl, pony diffusion">
     <meta name="author" content="JSCammie">
 
     
@@ -2333,10 +2333,6 @@
                 // get the inpaintingCheckbox and img2imgCheckbox elements
                 const inpaintingCheckbox = document.getElementById('inpaintingCheckbox');
                 const img2imgCheckbox = document.getElementById('img2imgCheckbox');
-                const controlNetImg2ImgCheckbox = document.getElementById('controlNetImg2ImgCheckbox');
-                const openposeCheckbox = document.getElementById('openposeCheckbox');
-                const composablediffusionCheckbox = document.getElementById('composablediffusionCheckbox');
-                const txt2vidCheckbox = document.getElementById('txt2vidCheckbox');
 
                 // get the inpaintingControls and img2imgControls elements
                 const inpaintingControls = document.getElementById('inpaintingControls');
@@ -2500,9 +2496,9 @@
                         maxCfguidance(8)
                     } else {
                         if (quantity.value == 1) {
-                            setSteps(10,40)
+                            setSteps(10,60)
                         } else {
-                            setSteps(10,30)
+                            setSteps(10,50)
                         }
                         maxCfguidance(12)
                     }
@@ -2572,9 +2568,9 @@
             <div id="response"></div>
             <div id="queuePosition" style="display: none;">Your position in queue: <span style="color: gold;" id="positionNumber"></span></div>
             <br>
-            <div>
-            <label for="fastpass">Fastpass:</label>
-                <input form="generatorForm" type="text" id="fastpass" name="fastpass">
+            <div hidden style="display: none;">
+                <label for="fastpass">Fastpass:</label>
+                    <input autocomplete="on" form="generatorForm" type="text" id="fastpass" name="fastpass">
             </div>
             
             <br>
@@ -2605,11 +2601,118 @@
                 // trigger:
                 imagesContainer.dispatchEvent(new Event('DOMNodeInserted'));
             </script>
+
+            <style>
+
+                /* blue button, space background with css magic, purple border: */
+                .fastqueueButton {
+                    background-image: linear-gradient(120deg, rgb(72, 72, 72) 0%, rgb(9, 9, 9) 100%);
+                    border: none;
+                    color: white;
+                    padding: 15px 32px;
+                    text-align: center;
+                    text-decoration: none;
+                    display: inline-block;
+                    font-size: 16px;
+                    margin: 4px 2px;
+                    cursor: pointer;
+                    transition: transform 0.7s, background-image 0.3s; /* Adjust time as needed */
+                    transform: scale(0.9) rotate(0deg); /* Default state */
+                    transform-origin: center; /* Ensures the scaling happens from the center */
+                }
+
+                /* when active class is added ontop of the fastqueueButton then have it be "activeated" looking: */
+                .fastqueueButton.active {
+                    transition: transform 0.7s, background-image 0.3s; /* Adjust time as needed */
+                    transform: scale(1); 
+                    background-image: linear-gradient(120deg, rgb(156, 199, 255) 0%, rgb(255, 151, 252) 100%);
+                    border: 2px solid rgb(255, 144, 144);
+                }
+
+            </style>
             
             <div class="form-control">
+
+                <% if (session.loggedIn) { %>
+                <button class="fastqueueButton" form="generatorForm" id="fastqueueButton" type="submit">Fast Queue (<span id="currentGemsPrice">25</span>💎)</button>
+
+                <script>
+                    // even default button press:
+                    // for the fastqueueButton:
+                    document.getElementById('fastqueueButton').addEventListener('click', function() {
+                        event.preventDefault();
+                        if (this.classList.contains('active')) {
+    
+                            this.classList.remove('active');
+    
+                        } else {
+                            this.classList.add('active');
+                        }
+                    });
+                </script>
+                <% } else { %>
+                <button class="fastqueueButton" form="generatorForm" id="fastqueueButton" type="submit">Fast Queue (<span id="currentGemsPrice">25</span>💎|Login Required)</button>
+
+                <script>
+                    // even default button press:
+                    // for the fastqueueButton:
+                    document.getElementById('fastqueueButton').addEventListener('click', function() {
+                        event.preventDefault();
+                    });
+                </script>
+
+                <% } %>
+                
+
                 <button form="generatorForm" type="submit" id="generateButton">Generate Image</button>
                 <button style="display: none;" id="cancelButton">Cancel Request</button>
             </div>
+
+            <script src="https://www.jscammie.com/scripts/ai-calculateGemsPrice.js?v1"></script>
+            
+            <script>
+
+                function prepareData() {
+                    
+                    loraCount = 0
+
+                    let loraSelections = document.querySelectorAll('.loraSelection')
+
+                    for (let i = 0; i < loraSelections.length; i++) {
+                        let checkboxes = loraSelections[i].querySelectorAll('input[type="checkbox"]')
+                        for (let j = 0; j < checkboxes.length; j++) {
+                            if (checkboxes[j].checked) {
+                                loraCount += 1
+                            }
+                        }
+                    }
+
+
+                    model = document.getElementById('model').value
+
+                    console.log(loraCount, model)
+
+                    document.getElementById('currentGemsPrice').innerText = getGemsPrice(loraCount, model)
+                }
+
+                document.addEventListener('DOMContentLoaded', function() {
+                    prepareData()
+                });
+
+                // on model change:
+                document.getElementById('model').addEventListener('change', function() {
+                    prepareData()
+                });
+
+                // on lora change:
+                document.getElementById('loraSelectionsSummary').addEventListener('DOMSubtreeModified', function() {
+                    prepareData()
+                });
+
+            </script>
+
+
+            
             
             <br>
 
@@ -2764,30 +2867,6 @@
             document.getElementById('img2imgStrengthValue').innerText = this.value + '%';
         });
         document.getElementById('img2imgStrength').dispatchEvent(new Event('input'));
-
-
-        document.getElementById('composablediffusionStrength').addEventListener('input', function() {
-            document.getElementById('composablediffusionStrengthValue').innerText = this.value;
-        });
-        document.getElementById('composablediffusionStrength').dispatchEvent(new Event('input'));
-
-
-        document.getElementById('composablediffusionOverlap').addEventListener('input', function() {
-            document.getElementById('composablediffusionOverlapValue').innerText = this.value;
-        });
-        document.getElementById('composablediffusionOverlap').dispatchEvent(new Event('input'));
-
-
-        document.getElementById('composablediffusionSplits').addEventListener('input', function() {
-            document.getElementById('composablediffusionSplitsValue').innerText = this.value;
-        });
-        document.getElementById('composablediffusionSplits').dispatchEvent(new Event('input'));
-
-
-        document.getElementById('txt2vidLength').addEventListener('input', function() {
-            document.getElementById('txt2vidLengthValue').innerText = this.value;
-        });
-        document.getElementById('txt2vidLength').dispatchEvent(new Event('input'));
 
 
         // inpainting checkbox
@@ -3157,29 +3236,23 @@
 
 
 
-
-
-
-
-
-
-
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         // Function to create a drop area
         const createDropArea = (text, side) => {
             const dropArea = document.createElement('div');
             dropArea.innerText = text;
+            dropArea.backgroundImage = 'linear-gradient(120deg, rgb(72, 72, 72) 0%, rgb(9, 9, 9) 100%)';
             dropArea.style.position = 'fixed';
             dropArea.style.top = '20%';
             dropArea.style[side] = '10px';
-            dropArea.style.width = '45%';
+            dropArea.style.width = '20%';
             dropArea.style.height = '60%';
-            dropArea.style.border = '2px dashed black';
+            dropArea.style.border = '2px dashed white';
             dropArea.style.borderRadius = '10px';
             dropArea.style.textAlign = 'center';
             dropArea.style.paddingTop = '20%';
-            dropArea.style.color = 'grey';
+            dropArea.style.color = 'white';
             dropArea.style.fontSize = '20px';
             dropArea.style.display = 'none'; // Initially hidden
             document.body.appendChild(dropArea);

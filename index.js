@@ -19,6 +19,9 @@ app.set('view engine', 'ejs');
 
 const ExifReader = require('exifreader');
 
+// load getCreditsPrice(loraCount, model) function from scripts/ai-calculateCreditsPrice.js
+const getCreditsPrice = require('./scripts/ai-calculateCreditsPrice.js')
+
 // dotenv for environment variables:
 require('dotenv').config();
 
@@ -40,7 +43,7 @@ app.use(cookieSession({
     maxAge: (24 * 60 * 60 * 1000) * 30 // 24 hours - 30 days
 }))
 
-app.use((req, res, next) => {
+app.use( async (req, res, next) => {
     if (req.session) {
         // Update some session property to ensure the session is considered modified.
         req.session.nowInMinutes = Math.floor(Date.now() / 60e3);
@@ -449,6 +452,11 @@ app.get('/beta/ai', async function(req, res){
     }
 })
 
+app.get('/userProfile', async (req, res) => {
+    let userProfile = await userProfileSchema.findOne({ accountId: req.session.accountId });
+    res.json(userProfile)
+})
+
 app.get('/', async function(req, res){
     try {
 
@@ -470,7 +478,10 @@ app.get('/', async function(req, res){
             aiSaveSlots = []
         }
 
+        let userProfile = await userProfileSchema.findOne({accountId: req.session.accountId})
+
         res.render('ai', { 
+            userProfile,
             session: req.session,
             lora_data: modifiedCachedYAMLData,
             aiSaveSlots: aiSaveSlots,
@@ -548,6 +559,34 @@ app.post('/generate', async function(req, res){
         };
         req.session.lastRequestSD = filteredLastRequest;
 
+        if (request.fastqueue == true) {
+            request.fastqueue = false
+
+            let userProfile = await userProfileSchema.findOne({accountId: req.session.accountId})
+
+            let creditsRequired = getCreditsPrice(request.lora.length, request.model)
+            request.creditsRequired = creditsRequired
+
+            if (userProfile !== null && userProfile.credits >= creditsRequired && userProfile != {}) {
+                request.fastqueue = true
+            } else {
+                request.fastqueue = false
+            }
+    
+            if (userProfile.credits < creditsRequired) {
+                res.send({status: "error", message: "You do not have enough credits to generate an image in the fastqueue."})
+                return
+            }
+            if (request.fastqueue == false) {
+                res.send({status: "error", message: "Fast queue not enabled OR profile not found."})
+                return
+            
+            }
+        }
+        
+        
+
+
         // Send the modified request object
         const postResponse = await fetch(`${AI_API_URL}/generate`, {
             method: 'POST',
@@ -607,6 +646,28 @@ app.get('/result/:request_id', async function(req, res){
         });
 
         const json = await response.json();
+
+        if (json.accountId !== "0" && json.fastqueue === true && json.status !== "error") {
+            // get the user profile:
+            let userProfile = await userProfileSchema.findOne({accountId: req.session.accountId})
+
+            creditsRequired = json.creditsRequired
+
+            // set credits to be the default value if it is not found:
+            if (userProfile.credits == null || userProfile.credits == undefined) {
+                creditsCurrent = 250
+            } else {
+                creditsCurrent = userProfile.credits
+            }
+
+            creditsFinal = creditsCurrent - creditsRequired
+
+            await userProfileSchema.findOneAndUpdate({ accountId: req.session.accountId }, { credits: creditsFinal })
+
+            console.log(`Userprofile credits decremented by ${creditsRequired}`)
+            console.log(userProfile)
+            json.credits = userProfile.credits - creditsRequired
+        }
 
         res.send(json);
     } catch (error) {

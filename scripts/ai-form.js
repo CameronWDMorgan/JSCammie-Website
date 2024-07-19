@@ -171,6 +171,15 @@ document.getElementById('generateButton').addEventListener('click', async functi
    
     console.log(`lora_strengths: ${lora_strengths}`)
 
+    fastqueueClasses = document.getElementById('fastqueueButton').classList
+    if (fastqueueClasses.contains('active')) {
+        fastqueue = true
+    } else {
+        fastqueue = false
+    }
+
+    gemsRequired = document.getElementById('currentGemsPrice').innerText
+
     let data = {
         prompt: promptValue,
         negativeprompt: formData.get('negativeprompt'),
@@ -196,6 +205,8 @@ document.getElementById('generateButton').addEventListener('click', async functi
         strengthenabled: strengthenabled,
         autocompleteenabled: autocompleteenabled,
         scheduler: schedulerValue,
+        fastqueue: fastqueue,
+        gemsRequired: 0,
     };
 
     console.log(data)
@@ -332,7 +343,15 @@ document.getElementById('generateButton').addEventListener('click', async functi
                         });
                 
                         if (resultResponse.ok) {
+
+                            
+
                             const results = await resultResponse.json();
+
+                            // update the gemsDisplay IF the results.fastqueue is true:
+                            if (results.fastqueue == true) {
+                                document.getElementById('gemsDisplay').innerText = results.gems;
+                            }
 
                             base64Images = results.images;
 
