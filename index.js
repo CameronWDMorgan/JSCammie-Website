@@ -455,8 +455,63 @@ app.get('/beta/ai', async function(req, res){
 
 app.get('/userProfile', async (req, res) => {
     let userProfile = await userProfileSchema.findOne({ accountId: req.session.accountId });
-    res.json(userProfile)
+    res.send({ userProfile: userProfile})
 })
+
+app.post('/dailies', async (req, res) => {
+    let userProfile = await userProfileSchema.findOne({ accountId: req.session.accountId });
+
+    // check if the user exists, its a mongodb document that is returned:
+    if (userProfile == null) {
+        res.send({ status: 'error', message: 'User not found' })
+        return
+    }
+
+    let dailyType = req.body.type;
+    let currentTimestamp = await Date.now()
+
+    // the time that the dailies were last claimed:
+    let dailiesTime = 0
+
+    // the time difference in ms that is required for the dailies to be claimed: 
+    let differenceRequired = 0
+
+    // the amount of credits earned for the dailies:
+    let creditsEarned = 0
+
+    timestamp3hr = userProfile?.dailies?.timestamp3hr ?? "0";
+    timestamp12hr = userProfile?.dailies?.timestamp12hr ?? "0";
+
+    switch (dailyType) {
+        case'3hr':
+            dailiesTime = timestamp3hr
+            differenceRequired = 10800000
+            creditsEarned = 100
+            break
+        case'12hr':
+            dailiesTime = timestamp12hr
+            differenceRequired = 43200000
+            creditsEarned = 250
+            break
+    }
+
+    let dailiesTimeDifference = dailiesTime + differenceRequired
+
+    if (dailiesTimeDifference > currentTimestamp) {
+        console.log(`dailyType: ${dailyType}, username: ${userProfile.username}, currentTimestamp: ${currentTimestamp}, differenceRequired: ${differenceRequired}, dailiesTime: ${dailiesTime}, dailiesTimeDifference: ${dailiesTimeDifference}`)
+        res.send({ status: 'error', message: 'Dailies already claimed' })
+        return
+    }
+
+    if (dailyType == '3hr') {
+        await userProfileSchema.findOneAndUpdate({ accountId: req.session.accountId }, { 'dailies.timestamp3hr': currentTimestamp, credits: userProfile.credits + creditsEarned })
+    } else if (dailyType == '12hr') {
+        await userProfileSchema.findOneAndUpdate({ accountId: req.session.accountId }, { 'dailies.timestamp12hr': currentTimestamp, credits: userProfile.credits + creditsEarned })
+    }
+
+    res.send({ status: 'success', message: 'Dailies claimed' })
+})
+
 
 app.get('/', async function(req, res){
     try {

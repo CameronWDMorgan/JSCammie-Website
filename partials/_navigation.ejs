@@ -102,14 +102,36 @@
         <button id="darkModeButton" class="navLink" style="margin-left: auto;">
             <span id="darkModeIcon">🌙</span>
         </button>
-        <button id="creditsNav">💎 <a id="creditsDisplay" style="transition: all 1s;">0</a></button>
+        <button id="creditsNav">Credits: <a id="creditsDisplay" style="transition: all 1s;">0</a></button>
     </div>
 </nav>
 
 <div id="creditsDailyPopup" style="display: none;">
-    <button id="3hrCreditsButton"><a id="3hrCreditsButtonTimeLeft"></a>/3hr</button>
-    <button id="12hrCreditsButton"><a id="12hrCreditsButtonTimeLeft"></a>/12hr</button>
+    <div class="dailiesDivSideBySide">
+        <p class="topTextCreditsButton">3 Hour Reward (100)</p>
+        <button id="3hrCreditsButton"><a id="3hrCreditsButtonTimeLeft"></a>/3hr</button>
+    </div>
+    <div class="dailiesDivSideBySide">
+        <p class="topTextCreditsButton">12 Hour Reward (250)</p>
+        <button id="12hrCreditsButton"><a id="12hrCreditsButtonTimeLeft"></a>/12hr</button>
+    </div>
 </div>
+
+<style>
+    /* styles from dailiesDivSideBySide and topTextCreditsButton */
+    .dailiesDivSideBySide {
+        display: block;
+        justify-content: space-between;
+        align-items: center;
+        margin: 10px;
+    }
+    
+    .topTextCreditsButton {
+        font-size: 18px;
+        margin: 0;
+    }
+
+</style>
 
 
 <style>
@@ -122,16 +144,17 @@
         color: white;
         padding: 20px;
         border-radius: 10px;
+        border: 2px solid rgb(255, 143, 246);
         box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
         z-index: 1000;
     }
 
     #creditsDailyPopup button {
-        background-color: var(--highlight-colour);
+        background-color: rgba(0, 0, 0, 0.1);
+        width: 100%;
         color: white;
         padding: 10px;
         margin: 5px;
-        border: none;
         border-radius: 5px;
         cursor: pointer;
     }
@@ -162,7 +185,8 @@
     // when the creditsNav button is clicked, show the creditsDailyPopup: on the center of the screen:
     document.getElementById('creditsNav').addEventListener('click', () => {
         if (document.getElementById('creditsDailyPopup').style.display == 'none') {
-            document.getElementById('creditsDailyPopup').style.display = 'block';
+            // make it side by side the divs inside it:
+            document.getElementById('creditsDailyPopup').style.display = 'inline-block';
         } else {
             document.getElementById('creditsDailyPopup').style.display = 'none';
         }
@@ -193,9 +217,17 @@
     }, 100);
 </script>
 
+<span hidden style="display: none;" id="loggedIn"></span>
+
 <script>
 
     function sendDailiesRequest(type) {
+
+        // check if the user is logged in, if not then don't send the request:
+        if (document.getElementById('loggedIn').textContent == 'false') {
+            return;
+        }
+
         // make a request to post /dailies:
         fetch('/dailies', {
             method: 'POST',
@@ -221,22 +253,72 @@
     });
 
 
-    function updateUserProfile() {
-        fetch('/userProfile', {
+    async function updateUserProfile() {
+        let userProfileRaw = await fetch('/userProfile', {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
             }
-        }).then(response => response.json())
-            .then(data => {
-                document.getElementById('creditsDisplay').textContent = data.credits;
-            });
+        })
+
+        console.log(userProfileRaw)
+
+        // res.send({ userProfile: userProfile}) is what the server uses to send it back to the client:
+        let userProfile = await userProfileRaw.json();
+        userProfile = userProfile?.userProfile;
+
+        if (userProfile == null) {
+            document.getElementById('loggedIn').textContent = 'false';
+            // set the creditsDisplay to 0 if the userProfile is null AND the CreditsButtons to be "Log in to claim", hide the topTextCreditsButton:
+            document.getElementById('creditsDisplay').textContent = 0;
+            document.getElementById('3hrCreditsButton').textContent = 'Log in to claim';
+            document.getElementById('12hrCreditsButton').textContent = 'Log in to claim';
+            return;
+        } else {
+            document.getElementById('loggedIn').textContent = 'true';
+        }
+        
+        document.getElementById('creditsDisplay').textContent = userProfile?.credits ?? 0;
+
+        // update the time left on the buttons using current time and the dailies timestamps, convert it from ms to hours mins seconds left, if it's over 3 hours then show it as claimable:
+
+        timestamp3hr = userProfile?.dailies?.timestamp3hr ?? "0";
+        timestamp3hr = Number(timestamp3hr)
+        timestamp3hrDifferenceRequired = 10800000
+
+        timestamp12hr = userProfile?.dailies?.timestamp12hr ?? "0";
+        timestamp12hr = Number(timestamp12hr)
+        timestamp12hrDifferenceRequired = 43200000
+
+        currentTime = new Date().getTime();
+
+        if (timestamp3hr + timestamp3hrDifferenceRequired < currentTime || timestamp3hr == 0) {
+            document.getElementById('3hrCreditsButton').disabled = false;
+            document.getElementById('3hrCreditsButtonTimeLeft').textContent = 'Claimable';
+        } else {
+            timeLeft = timestamp3hr + timestamp3hrDifferenceRequired - currentTime;
+            timeLeftHours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            timeLeftMinutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+            timeLeftSeconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+            document.getElementById('3hrCreditsButtonTimeLeft').textContent = timeLeftHours + 'h ' + timeLeftMinutes + 'm ' + timeLeftSeconds + 's';
+        }
+
+        if (timestamp12hr + timestamp12hrDifferenceRequired < currentTime || timestamp12hr == 0) {
+            document.getElementById('12hrCreditsButton').disabled = false;
+            document.getElementById('12hrCreditsButtonTimeLeft').textContent = 'Claimable';
+        } else {
+            timeLeft = timestamp12hr + timestamp12hrDifferenceRequired - currentTime;
+            timeLeftHours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            timeLeftMinutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+            timeLeftSeconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+            document.getElementById('12hrCreditsButtonTimeLeft').textContent = timeLeftHours + 'h ' + timeLeftMinutes + 'm ' + timeLeftSeconds + 's';
+        }
     }
 
     updateUserProfile()
     setInterval(() => {
         updateUserProfile()
-    }, 5000);
+    }, 750);
 </script>
 
 <div class="center-fully-no-flex round-frosted" style="padding: 4px; border: none !important; border-radius: 0px !important;">

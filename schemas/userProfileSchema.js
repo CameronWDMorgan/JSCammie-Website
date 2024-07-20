@@ -20,12 +20,19 @@ const aiSaveSlotSchema = new Schema({
 })  
 
 const dailiesSchema = new Schema({
-    timestamp: { type: String, required: true },
-    type: { type: String, required: true },
+    timestamp3hr: { type: String, required: true, default: 0 },
+    timestamp12hr: { type: String, required: true, default: 0 },
+})
+
+const badgesSchema = new Schema({
+    owner: { type: Boolean, default: false },
+    moderator: { type: Boolean, default: false },
+    supporter: { type: Boolean, default: false },
+    contributor: { type: Boolean, default: false },
 })
 
 const userProfileSchema = new Schema({
-    badges: { type: Array, default: [] },
+    badges: badgesSchema,
     supporter: { type: Boolean, default: false },
     username: { type: String, required: true, unique: false },
     accountId: { type: String, required: true, unique: true },
@@ -34,7 +41,7 @@ const userProfileSchema = new Schema({
     level: { type: Number, default: 1 },
     aiSaveSlots: [aiSaveSlotSchema],
     credits: { type: Number, default: 250 },
-    dailies: [dailiesSchema],
+    dailies: dailiesSchema,
 })
 
 const name = 'userAccount'
