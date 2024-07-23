@@ -89,8 +89,6 @@
 <nav class="topNavBar">
     <div class="navContainer">
         <a href="/home" class="navLink">🏠</a>
-        <a href="/projects" class="navLink">Projects</a>
-        <a href="/" class="navLink">Generate</a>
         <a href="https://ko-fi.com/jscammie" class="navLink">Donate</a>
         <% if (session.loggedIn) { %>
             <a href="/logout" class="navLink">Logout</a>
@@ -239,7 +237,7 @@
             })
         }).then(response => response.json())
             .then(data => {
-                console.log(data);
+                // console.log(data);
             });
         updateUserProfile()
     }
@@ -261,7 +259,7 @@
             }
         })
 
-        console.log(userProfileRaw)
+        // console.log(userProfileRaw)
 
         // res.send({ userProfile: userProfile}) is what the server uses to send it back to the client:
         let userProfile = await userProfileRaw.json();
@@ -322,7 +320,7 @@
 </script>
 
 <div class="center-fully-no-flex round-frosted" style="padding: 4px; border: none !important; border-radius: 0px !important;">
-    <p>Checkout the contests on <a href="https://discord.gg/AvbQuRmh7t">Discord</a> to win a FastPass! </p>
+    <p>Checkout the contests on <a href="https://discord.gg/AvbQuRmh7t">Discord</a> to win credits! </p>
 </div>
 
 <!-- script to enable darkmode, change how a button looks with emoji on the navigation -->
@@ -331,7 +329,7 @@
     const darkModeIcon = document.getElementById('darkModeIcon');
 
     function toggleDarkMode(darkmodeStatus) {
-        console.log(darkmodeStatus + " darkmodeStatus")
+        // console.log(darkmodeStatus + " darkmodeStatus")
         if (darkmodeStatus == "false") {
             document.body.classList.remove('dark');
             document.getElementsByClassName('topNavBar')[0].classList.remove('dark');

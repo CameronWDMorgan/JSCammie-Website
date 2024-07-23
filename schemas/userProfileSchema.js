@@ -40,7 +40,7 @@ const userProfileSchema = new Schema({
     exp: { type: Number, default: 0, required: false },
     level: { type: Number, default: 1 },
     aiSaveSlots: [aiSaveSlotSchema],
-    credits: { type: Number, default: 250 },
+    credits: { type: Number, default: 500 },
     dailies: dailiesSchema,
 })
 

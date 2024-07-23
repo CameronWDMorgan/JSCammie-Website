@@ -31,7 +31,9 @@ document.getElementById('generateButton').addEventListener('click', async functi
     aspect_ratio = formData.get('aspectRatio')
 
 
-    targetQuantity = formData.get('quantity')
+    // targetQuantity = formData.get('quantity')
+
+    targetQuantity = 4
 
     targetQuantity = Number(targetQuantity)
     targetSteps = Number(targetSteps)
@@ -180,6 +182,11 @@ document.getElementById('generateButton').addEventListener('click', async functi
 
     creditsRequired = document.getElementById('currentCreditsPrice').innerText
 
+    extras = {
+        removeWatermark: document.getElementById('removeWatermarkCheckbox').checked ?? false,
+        upscale: document.getElementById('upscaleCheckbox').checked ?? false
+    }
+
     let data = {
         prompt: promptValue,
         negativeprompt: formData.get('negativeprompt'),
@@ -207,6 +214,7 @@ document.getElementById('generateButton').addEventListener('click', async functi
         scheduler: schedulerValue,
         fastqueue: fastqueue,
         creditsRequired: 0,
+        extras: extras
     };
 
     console.log(data)

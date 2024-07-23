@@ -2421,7 +2421,7 @@
                         <input form="generatorForm" type="number" class="sliderInputBox" id="stepsInput" name="stepsInput" value="15"><a id="stepsMax"></a>
                     </div>
     
-                    <div class="form-control inline-slider">
+                    <div hidden style="display: none;" class="form-control inline-slider">
                         <label for="quantity">Image Quantity:</label>
                         <input form="generatorForm" type="range" id="quantity" name="quantity" min="1" max="4" step="1" value="4">
                         <input form="generatorForm" type="number" class="sliderInputBox" id="quantityInput" name="quantityInput" value="4"><a id="quantityMax"></a>
@@ -2633,42 +2633,74 @@
             
             <div class="form-control">
 
-                <% if (session.loggedIn) { %>
-                <button class="fastqueueButton" form="generatorForm" id="fastqueueButton" type="submit">Fast Queue (<span id="currentCreditsPrice">25</span> Credits)</button>
 
-                <script>
-                    // even default button press:
-                    // for the fastqueueButton:
-                    document.getElementById('fastqueueButton').addEventListener('click', function() {
-                        event.preventDefault();
-                        if (this.classList.contains('active')) {
-    
-                            this.classList.remove('active');
-    
-                        } else {
-                            this.classList.add('active');
-                        }
-                    });
-                </script>
-                <% } else { %>
-                <button class="fastqueueButton" form="generatorForm" id="fastqueueButton" type="submit">Fast Queue (<span id="currentCreditsPrice">25</span> Credits|Login Required)</button>
+                <details open>
+                    <% if (session.loggedIn) { %>
+                        <summary>Credits Shop | <a class="costPElement">Cost: <span class="creditsPriceStyling"><span class="creditsPriceStyling" id="currentCreditsPrice">25</span> Credits</span></a></summary>
+                    <% } else { %>
+                        <summary>Credits Shop | <a class="costPElement">Cost: <span class="creditsPriceStyling"><span class="creditsPriceStyling" id="currentCreditsPrice">25</span> Credits</span> (Login Required)</a></summary>
+                    <% } %>
 
-                <script>
-                    // even default button press:
-                    // for the fastqueueButton:
-                    document.getElementById('fastqueueButton').addEventListener('click', function() {
-                        event.preventDefault();
-                    });
-                </script>
+                    <a>Cost: <span id="removeWatermarkCreditsPrice"></span> | Remove Watermark? <input type="checkbox" id="removeWatermarkCheckbox"></input></a>
+                    <br>
+                    <a>Cost: <span id="upscaleCreditsPrice"></span> | Upscale Image? <input type="checkbox" id="upscaleCheckbox"></input></a>
 
-                <% } %>
-                
+                    <% if (session.loggedIn) { %>
+                    <button class="fastqueueButton" form="generatorForm" id="fastqueueButton" type="submit">Fast Queue | Cost: <span id="fastqueueCreditsPrice"></span> Credits</button>
 
+                    <script>
+                        // even default button press:
+                        // for the fastqueueButton:
+                        document.getElementById('fastqueueButton').addEventListener('click', function() {
+                            event.preventDefault();
+                            if (this.classList.contains('active')) {
+        
+                                this.classList.remove('active');
+        
+                            } else {
+                                this.classList.add('active');
+                            }
+                        });
+                    </script>
+                    <% } else { %>
+                    <button class="fastqueueButton" form="generatorForm" id="fastqueueButton" type="submit">Fast Queue | Cost: <span id="fastqueueCreditsPrice"></span> Credits (Login Required)</button>
+
+                    <script>
+                        // even default button press:
+                        // for the fastqueueButton:
+                        document.getElementById('fastqueueButton').addEventListener('click', function() {
+                            event.preventDefault();
+                        });
+                    </script>
+
+                    <% } %>
+
+                </details>
                 <button form="generatorForm" type="submit" id="generateButton">Generate Image</button>
                 <button style="display: none;" id="cancelButton">Cancel Request</button>
             </div>
 
-            <script src="https://www.jscammie.com/scripts/ai-calculateCreditsPrice.js?v4"></script>
+            <style>
+                .costPElement {
+                    color: rgb(205, 130, 255);
+                    background-color: rgba(0, 0, 0, 0.33);
+                    padding:8px;
+                    border-radius:8px;
+                    margin:2px;
+                    font-size: large;
+                    width:fit-content;
+                    /* center it: */
+                    margin-left: auto;
+                    margin-right: auto;
+                    text-align: center;
+                }
+                .creditsPriceStyling {
+                    color: rgb(238, 212, 255) !important;
+                }
+                
+            </style>
+
+            <script src="https://www.jscammie.com/scripts/ai-calculateCreditsPrice.js?v7"></script>
             
             <script>
 
@@ -2692,10 +2724,45 @@
 
                     console.log(loraCount, model)
 
-                    document.getElementById('currentCreditsPrice').innerText = getCreditsPrice(loraCount, model)
+                    extras = {
+                        removeWatermark: true,
+                        upscale: true
+                    }
+
+                    let runningCost = 0
+
+                    fastqueueCost = getFastqueuePrice(loraCount, model)
+                    if (document.getElementById('fastqueueButton').classList.contains('active')) {
+                        runningCost += fastqueueCost
+                    }
+
+                    extrasCosts = getExtrasPrice(extras)
+
+                    if (document.getElementById('removeWatermarkCheckbox').checked) {
+                        runningCost += extrasCosts.removeWatermark
+                    }
+
+                    if (document.getElementById('upscaleCheckbox').checked) {
+                        runningCost += extrasCosts.upscale
+                    }
+                    
+                    document.getElementById('removeWatermarkCreditsPrice').innerText = extrasCosts.removeWatermark
+                    document.getElementById('upscaleCreditsPrice').innerText = extrasCosts.upscale
+
+
+                    document.getElementById('fastqueueCreditsPrice').innerText = fastqueueCost
+
+
+                    document.getElementById('currentCreditsPrice').innerText = runningCost
                 }
 
                 document.addEventListener('DOMContentLoaded', function() {
+                    prepareData()
+                });
+
+
+
+                document.getElementById('fastqueueButton').addEventListener('click', function() {
                     prepareData()
                 });
 
@@ -2703,9 +2770,17 @@
                 document.getElementById('model').addEventListener('change', function() {
                     prepareData()
                 });
-
                 // on lora change:
                 document.getElementById('loraSelectionsSummary').addEventListener('DOMSubtreeModified', function() {
+                    prepareData()
+                });
+
+
+
+                document.getElementById('removeWatermarkCheckbox').addEventListener('change', function() {
+                    prepareData()
+                });
+                document.getElementById('upscaleCheckbox').addEventListener('change', function() {
                     prepareData()
                 });
 
@@ -3438,7 +3513,7 @@
 
     </script>
     
-    <script src="https://www.jscammie.com/scripts/ai-form.js?v20"></script>
-    <script src="https://www.jscammie.com/scripts/ai-autocomplete.js?v20"></script>
+    <script src="https://www.jscammie.com/scripts/ai-form.js?v22"></script>
+    <script src="https://www.jscammie.com/scripts/ai-autocomplete.js?v19"></script>
 </body>
 </html>

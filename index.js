@@ -20,7 +20,9 @@ app.set('view engine', 'ejs');
 const ExifReader = require('exifreader');
 
 // load getCreditsPrice(loraCount, model) function from scripts/ai-calculateCreditsPrice.js
-const getCreditsPrice = require('./scripts/ai-calculateCreditsPrice.js')
+const customFunctions = require('./scripts/ai-calculateCreditsPrice.js')
+const getFastqueuePrice = customFunctions.getFastqueuePrice
+const getExtrasPrice = customFunctions.getExtrasPrice
 
 // dotenv for environment variables:
 require('dotenv').config();
@@ -75,6 +77,12 @@ function requireHTTPS(req, res, next) {
 }
   
 app.use(requireHTTPS);
+
+// add Clear-Site-Data: "cache" as a header to clear the cache on ANY page load:
+app.use((req, res, next) => {
+    res.setHeader('Clear-Site-Data', '"cache"');
+    next();
+});
 
 app.use(express.json());
 
@@ -484,12 +492,12 @@ app.post('/dailies', async (req, res) => {
 
     switch (dailyType) {
         case'3hr':
-            dailiesTime = timestamp3hr
+            dailiesTime = Number(timestamp3hr)
             differenceRequired = 10800000
             creditsEarned = 100
             break
         case'12hr':
-            dailiesTime = timestamp12hr
+            dailiesTime = Number(timestamp12hr)
             differenceRequired = 43200000
             creditsEarned = 250
             break
@@ -615,29 +623,59 @@ app.post('/generate', async function(req, res){
         };
         req.session.lastRequestSD = filteredLastRequest;
 
-        if (request.fastqueue == true) {
-            request.fastqueue = false
+
+
+        if (request.fastqueue == true || request.extras?.removeWatermark == true || request.extras?.upscale == true) {
 
             let userProfile = await userProfileSchema.findOne({accountId: req.session.accountId})
 
-            let creditsRequired = getCreditsPrice(request.lora.length, request.model)
-            request.creditsRequired = creditsRequired
+            let fastqueueCreditsRequired = null
 
-            if (userProfile !== null && userProfile.credits >= creditsRequired && userProfile != {}) {
+            if (request.fastqueue == true) {
+                fastqueueCreditsRequired = getFastqueuePrice(request.lora.length, request.model)
+                request.creditsRequired += fastqueueCreditsRequired
+            }
+
+            let extrasCreditsRequired = {removeWatermark: null}
+
+            // if any value in the extras object is true, then proceed with the if statement:
+            if (Object.values(request.extras).includes(true)) {
+                extrasCreditsRequired = getExtrasPrice(request.extras)
+                
+                // add all the values in the extrasCreditsRequired object to the request.creditsRequired:
+                for (const [key, value] of Object.entries(extrasCreditsRequired)) {
+                    request.creditsRequired += value
+                }
+            }
+
+            // console.log all the keys and values of fastqueueCreditsRequired and extrasCreditsRequired:
+            console.log("Fastqueue Credits required:")
+            for (const [key, value] of Object.entries(fastqueueCreditsRequired)) {
+                console.log(`${key}: ${value}`)
+            }
+
+            console.log("Extras Credits required:")
+            for (const [key, value] of Object.entries(extrasCreditsRequired)) {
+                console.log(`${key}: ${value}`)
+            }
+
+            if (userProfile.credits < request.creditsRequired) {
+                res.send({status: "error", message: "You do not have enough credits to generate an image with those settings!"})
+                return
+            }
+
+            if (userProfile == null) {
+                res.send({status: "error", message: "User not found"})
+                return
+            }
+
+            if (request.fastqueue == true) {
                 request.fastqueue = true
             } else {
                 request.fastqueue = false
             }
     
-            if (userProfile.credits < creditsRequired) {
-                res.send({status: "error", message: "You do not have enough credits to generate an image in the fastqueue."})
-                return
-            }
-            if (request.fastqueue == false) {
-                res.send({status: "error", message: "Fast queue not enabled OR profile not found."})
-                return
-            
-            }
+
         }
         
         
@@ -732,12 +770,10 @@ app.get('/result/:request_id', async function(req, res){
                 creditsCurrent = userProfile.credits
             }
 
-            // have a random change to get a credit, 1 in 10 chance:
+            // have a random change to get a credit, 1 in 2 chance:
             randomChance = Math.round(Math.floor(Math.random() * 2))
-            // random number, biased towards 1, can be up to 50:
-            randomCredits = Math.round(Math.floor(Math.random() * 1))
-
-            randomChance2 = Math.round(Math.floor(Math.random() * 10))
+            randomCredits = 1
+            randomChance2 = Math.round(Math.floor(Math.random() * 1000))
 
             if (randomChance2 == 1) {
                 randomCredits += 25

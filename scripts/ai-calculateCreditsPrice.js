@@ -1,30 +1,50 @@
-function getCreditsPrice(loraCount, model) {
+function getFastqueuePrice(loraCount, model) {
 
-	let dynamicGemsPrice = 0
-	const baseGemsPrice = 7
+	let dynamicCreditsPrice = 0
+	const baseCreditsPrice = 15
 
-	dynamicGemsPrice = baseGemsPrice
+	dynamicCreditsPrice = baseCreditsPrice
 
 	// is it a model with value starting sdxl?
 	if (model.startsWith('sdxl')) {
-		dynamicGemsPrice += 10
+		dynamicCreditsPrice = dynamicCreditsPrice * 2
 		loraModifier = 3
 	} else {
 		loraModifier = 1.5
 	}
 
-	// gems price before loras
-	priceBeforeLoras = dynamicGemsPrice
+	// credits price before loras
+	priceBeforeLoras = dynamicCreditsPrice
 
 	loraModifier = (loraModifier + (loraCount / 3))
 	loraModifier = loraModifier * (priceBeforeLoras / 20)
 
-	dynamicGemsPrice = Math.round(dynamicGemsPrice + (loraCount * loraModifier))
+	dynamicCreditsPrice = Math.round(dynamicCreditsPrice + (loraCount * loraModifier))
 
-	return dynamicGemsPrice
+	return dynamicCreditsPrice
 
 }
 
-// exort the function:
+function getExtrasPrice(extras) {
 
-module.exports = getCreditsPrice
+	let extrasPrice = {
+		removeWatermark: 0,
+		upscale: 0
+	}
+
+	// if { removeWatermark: true } is passed, add 150 credits
+	if (extras.removeWatermark) {
+		extrasPrice.removeWatermark += 100
+	}
+
+	if (extras.upscale) {
+		extrasPrice.upscale += 250
+	}
+
+	return extrasPrice
+}
+
+module.exports = {
+	getFastqueuePrice,
+	getExtrasPrice
+}
