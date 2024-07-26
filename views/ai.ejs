@@ -1712,7 +1712,7 @@
                             <!-- buttons that toggle which are visible, have an active and unactive state, default is style: -->
                             <% loraDataKeys.forEach(category => { %>
                                 <% if (lora_data[category]) { %>
-                                    <button type="button" class="category-btn" onclick="toggleCategory(event, '<%= category %>')"><%= category.charAt(0).toUpperCase() + category.slice(1) %></button>
+                                    <button id="<%= category %>CategoryButton" type="button" class="category-btn" onclick="toggleCategory(event, '<%= category %>')"><%= category.charAt(0).toUpperCase() + category.slice(1) %></button>
                                 <% } %>
                             <% }); %>
                             <% loraDataKeys.forEach(category => { %>
@@ -1949,6 +1949,16 @@
                             show_safe = document.getElementById('showSafeCheckbox').checked;
                             show_nsfw = document.getElementById('showNSFWCheckbox').checked;
                             show_suggestive = document.getElementById('showSuggestiveCheckbox').checked;
+
+                            let categoriesVisibleCount = {
+                                'style': 0,
+                                'effect': 0,
+                                'concept': 0,
+                                'clothing': 0,
+                                'character': 0,
+                                'pose': 0,
+                                'background': 0
+                            }
         
                             for (var j = 0; j < container.length; j++) {
                                 // checkbox-container class
@@ -2012,11 +2022,30 @@
                                         checkboxes[i].parentElement.style.display = "none";
                                     }
 
-                                    // modify the above to check if the lora is nsfw, suggestive or safe, and if the checkbox is checked for that type, also make sure that:
-                                    
-
+                                    if (checkboxes[i].parentElement.style.display == "") {
+                                        categoriesVisibleCount[`${container[j].id.replace('-loras', '')}`] += 1;
+                                    }
                                 }
                             }
+
+                            // update the category buttons to be hidden if there are no loras in the category:
+                            let categoryBtns = document.querySelectorAll('.category-btn');
+
+                            console.log(categoriesVisibleCount);
+
+
+
+                            categoryBtns.forEach(btn => {
+                                category = btn.id.toLowerCase();
+                                // remove CategoryButton from the id:
+                                category = category.replace('categorybutton', '');
+                                console.log(categoriesVisibleCount[`${category}`]);
+                                if (categoriesVisibleCount[`${category}`] > 0) {
+                                    btn.style.display = '';
+                                } else {
+                                    btn.style.display = 'none';
+                                }
+                            });
 
                         }
 
@@ -2575,64 +2604,7 @@
             
             <br>
 
-            
-            <details id="outputDetails" open>
-                <summary>Output(s)</summary>
-                <div id="advertisement" style="display: none;">
-            
-                </div>
-                <div id="imagesContainer" class="imagesContainer"></div>
-            </details>
-            <br>
-            
-            <!-- if the imagesContainer div is empty then hide the dropdown: -->
-            <script>
-                imagesContainer = document.getElementById('imagesContainer')
-                outputDetails = document.getElementById('outputDetails')
-                imagesContainer.addEventListener('DOMNodeInserted', function() {
-                    if (imagesContainer.children.length > 0) {
-                        outputDetails.open = true;
-                        outputDetails.style.display = 'block';
-                    } else {
-                        outputDetails.open = false;
-                        outputDetails.style.display = 'none';
-                    }
-                });
-                // trigger:
-                imagesContainer.dispatchEvent(new Event('DOMNodeInserted'));
-            </script>
-
-            <style>
-
-                /* blue button, space background with css magic, purple border: */
-                .fastqueueButton {
-                    background-image: linear-gradient(120deg, rgb(72, 72, 72) 0%, rgb(9, 9, 9) 100%);
-                    border: none;
-                    color: white;
-                    padding: 15px 32px;
-                    text-align: center;
-                    text-decoration: none;
-                    display: inline-block;
-                    font-size: 16px;
-                    margin: 4px 2px;
-                    cursor: pointer;
-                    transition: transform 0.7s, background-image 0.3s; /* Adjust time as needed */
-                    transform: scale(0.9) rotate(0deg); /* Default state */
-                    transform-origin: center; /* Ensures the scaling happens from the center */
-                }
-
-                /* when active class is added ontop of the fastqueueButton then have it be "activeated" looking: */
-                .fastqueueButton.active {
-                    transition: transform 0.7s, background-image 0.3s; /* Adjust time as needed */
-                    transform: scale(1); 
-                    background-image: linear-gradient(120deg, rgb(156, 199, 255) 0%, rgb(255, 151, 252) 100%);
-                    border: 2px solid rgb(255, 144, 144);
-                }
-
-            </style>
-            
             <div class="form-control">
-
 
                 <details open>
                     <% if (session.loggedIn) { %>
@@ -2679,6 +2651,60 @@
                 <button form="generatorForm" type="submit" id="generateButton">Generate Image</button>
                 <button style="display: none;" id="cancelButton">Cancel Request</button>
             </div>
+            
+            <details id="outputDetails" style="display: block;" open>
+                <summary>Output(s)</summary>
+                <div id="advertisement" style="display: none;">
+            
+                </div>
+                <div id="imagesContainer" class="imagesContainer"></div>
+            </details>
+            <br>
+            
+            <!-- if the imagesContainer div is empty then hide the dropdown: -->
+            <script>
+                imagesContainer = document.getElementById('imagesContainer')
+                outputDetails = document.getElementById('outputDetails')
+                imagesContainer.addEventListener('DOMNodeInserted', function() {
+                    if (imagesContainer.children.length > 0) {
+                        outputDetails.open = true;
+                        outputDetails.style.display = 'block';
+                    }
+                });
+                // trigger:
+                imagesContainer.dispatchEvent(new Event('DOMNodeInserted'));
+            </script>
+
+            <style>
+
+                /* blue button, space background with css magic, purple border: */
+                .fastqueueButton {
+                    background-image: linear-gradient(120deg, rgb(72, 72, 72) 0%, rgb(9, 9, 9) 100%);
+                    border: none;
+                    color: white;
+                    padding: 15px 32px;
+                    text-align: center;
+                    text-decoration: none;
+                    display: inline-block;
+                    font-size: 16px;
+                    margin: 4px 2px;
+                    cursor: pointer;
+                    transition: transform 0.7s, background-image 0.3s; /* Adjust time as needed */
+                    transform: scale(0.9) rotate(0deg); /* Default state */
+                    transform-origin: center; /* Ensures the scaling happens from the center */
+                }
+
+                /* when active class is added ontop of the fastqueueButton then have it be "activeated" looking: */
+                .fastqueueButton.active {
+                    transition: transform 0.7s, background-image 0.3s; /* Adjust time as needed */
+                    transform: scale(1); 
+                    background-image: linear-gradient(120deg, rgb(156, 199, 255) 0%, rgb(255, 151, 252) 100%);
+                    border: 2px solid rgb(255, 144, 144);
+                }
+
+            </style>
+            
+            
 
             <style>
                 .costPElement {
@@ -2700,7 +2726,9 @@
                 
             </style>
 
-            <script src="https://www.jscammie.com/scripts/ai-calculateCreditsPrice.js?v7"></script>
+            <script>
+                <%- scripts.calculateCreditsPrice %>
+            </script>
             
             <script>
 
@@ -3513,7 +3541,7 @@
 
     </script>
     
-    <script src="https://www.jscammie.com/scripts/ai-form.js?v22"></script>
+    <script> <%- scripts.aiForm %> </script>
     <script src="https://www.jscammie.com/scripts/ai-autocomplete.js?v19"></script>
 </body>
 </html>

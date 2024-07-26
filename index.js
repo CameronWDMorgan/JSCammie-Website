@@ -220,7 +220,7 @@ app.post('/get-metadata', (req, res) => {
     try {
         // Convert data URL to a buffer
         const base64 = dataUrl.split(',')[1];
-        const buffer = buffer.from(base64, 'base64');
+        let buffer = Buffer.from(base64, 'base64');
         
         // Load metadata from buffer
         const tags = ExifReader.load(buffer);
@@ -248,6 +248,7 @@ app.post('/get-metadata', (req, res) => {
         res.status(500).send(`Error processing image data: ${error.message}`);
     }
 });
+
 
 // ? ai stuffs:
 
@@ -499,7 +500,7 @@ app.post('/dailies', async (req, res) => {
         case'12hr':
             dailiesTime = Number(timestamp12hr)
             differenceRequired = 43200000
-            creditsEarned = 250
+            creditsEarned = 300
             break
     }
 
@@ -544,9 +545,28 @@ app.get('/', async function(req, res){
 
         let userProfile = await userProfileSchema.findOne({accountId: req.session.accountId})
 
+
+
+        scripts = {
+            calculateCreditsPrice: fs.readFileSync('./scripts/ai-calculateCreditsPrice.js', 'utf8'),
+            aiForm: fs.readFileSync('./scripts/ai-form.js', 'utf8'),
+        }
+
+        // remove the following from calculateCreditsPrice:
+        /* 
+        module.exports = {
+            getFastqueuePrice,
+            getExtrasPrice
+        }
+        */
+
+        scripts.calculateCreditsPrice = scripts.calculateCreditsPrice.replace("module.exports = { getFastqueuePrice, getExtrasPrice }", "")
+
+
         res.render('ai', { 
             userProfile,
             session: req.session,
+            scripts: scripts,
             lora_data: modifiedCachedYAMLData,
             aiSaveSlots: aiSaveSlots,
         });
@@ -628,6 +648,11 @@ app.post('/generate', async function(req, res){
         if (request.fastqueue == true || request.extras?.removeWatermark == true || request.extras?.upscale == true) {
 
             let userProfile = await userProfileSchema.findOne({accountId: req.session.accountId})
+
+            if (userProfile == null) {
+                res.send({status: "error", message: "User not found"})
+                return
+            }
 
             let fastqueueCreditsRequired = null
 
@@ -749,7 +774,7 @@ app.get('/result/:request_id', async function(req, res){
 
             // set credits to be the default value if it is not found:
             if (userProfile.credits == null || userProfile.credits == undefined) {
-                creditsCurrent = 250
+                creditsCurrent = 500
             } else {
                 creditsCurrent = userProfile.credits
             }
@@ -765,7 +790,7 @@ app.get('/result/:request_id', async function(req, res){
         if (json.accountId !== "0" && req.session.loggedIn) {
             let userProfile = await userProfileSchema.findOne({accountId: req.session.accountId})
             if (userProfile.credits == null || userProfile.credits == undefined) {
-                creditsCurrent = 250
+                creditsCurrent = 500
             } else {
                 creditsCurrent = userProfile.credits
             }
@@ -906,17 +931,16 @@ app.post('/ai-save-update', async function(req, res){
     // update the save slot using the saveSlotId to find it in the array of save slots: 
     await userProfileSchema.findOneAndUpdate({ accountId: req.session.accountId, "aiSaveSlots.saveSlotId": saveSlotId },
         {
-            $set: { "aiSaveSlots.$.prompt": req.body.prompt,
-                    "aiSaveSlots.$.negativeprompt": req.body.negativeprompt,
-                    "aiSaveSlots.$.aspectRatio": req.body.aspectRatio,
-                    "aiSaveSlots.$.model": req.body.model,
-                    "aiSaveSlots.$.loras": req.body.loras,
-                    "aiSaveSlots.$.lora_strengths": req.body.lora_strengths,
-                    "aiSaveSlots.$.steps": req.body.steps,
-                    "aiSaveSlots.$.quantity": req.body.quantity,
-                    "aiSaveSlots.$.cfg": req.body.cfg,
-                    "aiSaveSlots.$.seed": req.body.seed
-            }
+            "aiSaveSlots.$.prompt": req.body.prompt,
+            "aiSaveSlots.$.negativeprompt": req.body.negativeprompt,
+            "aiSaveSlots.$.aspectRatio": req.body.aspectRatio,
+            "aiSaveSlots.$.model": req.body.model,
+            "aiSaveSlots.$.loras": req.body.loras,
+            "aiSaveSlots.$.lora_strengths": req.body.lora_strengths,
+            "aiSaveSlots.$.steps": req.body.steps,
+            "aiSaveSlots.$.quantity": req.body.quantity,
+            "aiSaveSlots.$.cfg": req.body.cfg,
+            "aiSaveSlots.$.seed": req.body.seed
         }
     )
 

@@ -296,7 +296,6 @@ document.getElementById('generateButton').addEventListener('click', async functi
             document.getElementById('queuePosition').style.display = 'block';
             document.getElementById('positionNumber').innerText = jsonResponse.position;
             document.getElementById('response').innerText = "Your image is being generated, please wait...";
-            document.getElementById('cancelButton').style.display = 'block';
             
 
             // Replace setInterval with a while loop
@@ -317,6 +316,8 @@ document.getElementById('generateButton').addEventListener('click', async functi
                     const positionData = await positionResponse.json();
                     
                     console.log(positionData);
+
+                    document.getElementById('cancelButton').style.display = 'block';
 
                     if(positionData.status == "error") {
                         document.getElementById('response').innerText = "An error occurred: " + positionData.message;

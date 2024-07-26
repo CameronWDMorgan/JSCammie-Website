@@ -1,7 +1,7 @@
 function getFastqueuePrice(loraCount, model) {
 
 	let dynamicCreditsPrice = 0
-	const baseCreditsPrice = 15
+	const baseCreditsPrice = 20
 
 	dynamicCreditsPrice = baseCreditsPrice
 
@@ -34,11 +34,11 @@ function getExtrasPrice(extras) {
 
 	// if { removeWatermark: true } is passed, add 150 credits
 	if (extras.removeWatermark) {
-		extrasPrice.removeWatermark += 100
+		extrasPrice.removeWatermark += 125
 	}
 
 	if (extras.upscale) {
-		extrasPrice.upscale += 250
+		extrasPrice.upscale += 300
 	}
 
 	return extrasPrice
