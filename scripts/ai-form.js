@@ -220,7 +220,7 @@ document.getElementById('generateButton').addEventListener('click', async functi
     console.log(data)
 
     let nextCheckMSOG = 750
-    let nextCheckMS = nextCheckMSOG
+    var nextCheckMS = nextCheckMSOG
 
     try {
         document.getElementById('response').innerText = "Requesting Image, please wait...";
@@ -339,8 +339,8 @@ document.getElementById('generateButton').addEventListener('click', async functi
                     if (positionData.status == "waiting") {
                         retryCount = 0;
                         document.getElementById('positionNumber').innerText = `${positionData.position}/${positionData.queue_length}`;
-                        nextCheckMS = nextCheckMSOG * 2; // Increase the check interval
                         await new Promise(resolve => setTimeout(resolve, nextCheckMS)); // Wait for 1 second before the next check
+                        nextCheckMS = 1250
                     } else if (positionData.status === "completed") {
                         retryCount = 0;
                         document.getElementById('response').innerText = "Your image is ready and will be displayed shortly...";
