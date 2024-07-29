@@ -1,7 +1,7 @@
 function getFastqueuePrice(loraCount, model) {
 
 	let dynamicCreditsPrice = 0
-	const baseCreditsPrice = 20
+	const baseCreditsPrice = 15
 
 	dynamicCreditsPrice = baseCreditsPrice
 
@@ -16,8 +16,8 @@ function getFastqueuePrice(loraCount, model) {
 	// credits price before loras
 	priceBeforeLoras = dynamicCreditsPrice
 
-	loraModifier = (loraModifier + (loraCount / 3))
-	loraModifier = loraModifier * (priceBeforeLoras / 20)
+	loraModifier = (loraModifier + (loraCount / 2))
+	loraModifier = loraModifier * (priceBeforeLoras / 12)
 
 	dynamicCreditsPrice = Math.round(dynamicCreditsPrice + (loraCount * loraModifier))
 
@@ -38,7 +38,7 @@ function getExtrasPrice(extras) {
 	}
 
 	if (extras.upscale) {
-		extrasPrice.upscale += 300
+		extrasPrice.upscale += 500
 	}
 
 	return extrasPrice
