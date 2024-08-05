@@ -456,8 +456,30 @@ app.get('/beta/ai', async function(req, res){
             aiSaveSlots = []
         }
 
+        let userProfile = await userProfileSchema.findOne({accountId: req.session.accountId})
+
+
+
+        scripts = {
+            calculateCreditsPrice: fs.readFileSync('./scripts/ai-calculateCreditsPrice.js', 'utf8'),
+            aiForm: fs.readFileSync('./scripts/ai-form.js', 'utf8'),
+        }
+
+        // remove the following from calculateCreditsPrice:
+        /* 
+        module.exports = {
+            getFastqueuePrice,
+            getExtrasPrice
+        }
+        */
+
+        scripts.calculateCreditsPrice = scripts.calculateCreditsPrice.replace("module.exports = { getFastqueuePrice, getExtrasPrice }", "")
+
+
         res.render('beta/ai', { 
+            userProfile,
             session: req.session,
+            scripts: scripts,
             lora_data: modifiedCachedYAMLData,
             aiSaveSlots: aiSaveSlots,
         });
@@ -527,6 +549,22 @@ app.post('/dailies', async (req, res) => {
 })
 
 
+let aiScripts = {
+    calculateCreditsPrice: fs.readFileSync('./scripts/ai-calculateCreditsPrice.js', 'utf8'),
+    aiForm: fs.readFileSync('./scripts/ai-form.js', 'utf8'),
+}
+
+aiScripts.calculateCreditsPrice = aiScripts.calculateCreditsPrice.replace("module.exports = { getFastqueuePrice, getExtrasPrice }", "")
+
+// update the aiScripts every 15 seconds:
+setInterval(() => {
+    aiScripts = {
+        calculateCreditsPrice: fs.readFileSync('./scripts/ai-calculateCreditsPrice.js', 'utf8'),
+        aiForm: fs.readFileSync('./scripts/ai-form.js', 'utf8'),
+    }
+    aiScripts.calculateCreditsPrice = aiScripts.calculateCreditsPrice.replace("module.exports = { getFastqueuePrice, getExtrasPrice }", "")
+}, 15000)
+
 app.get('/', async function(req, res){
     try {
 
@@ -550,23 +588,7 @@ app.get('/', async function(req, res){
 
         let userProfile = await userProfileSchema.findOne({accountId: req.session.accountId})
 
-
-
-        scripts = {
-            calculateCreditsPrice: fs.readFileSync('./scripts/ai-calculateCreditsPrice.js', 'utf8'),
-            aiForm: fs.readFileSync('./scripts/ai-form.js', 'utf8'),
-        }
-
-        // remove the following from calculateCreditsPrice:
-        /* 
-        module.exports = {
-            getFastqueuePrice,
-            getExtrasPrice
-        }
-        */
-
-        scripts.calculateCreditsPrice = scripts.calculateCreditsPrice.replace("module.exports = { getFastqueuePrice, getExtrasPrice }", "")
-
+        scripts = aiScripts
 
         res.render('ai', { 
             userProfile,

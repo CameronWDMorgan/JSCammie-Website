@@ -1,0 +1,86 @@
+<!-- setup basic html template with metadata etc: -->
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Free PDXL/SDXL/SD1.5 Stable Diffusion AI Image Generator | JSCammie.com</title>
+    <meta name="description" content="Free PDXL/SDXL and SD 1.5 Stable Diffusion Generator | Generate free images SFW & NSFW with multiple models, loras & more!">
+    <meta name="keywords" content="inpainting, img2img, txt2img, stable diffusion, ai image generator, sdxl ai image generator, openpose, ai free online, sfw, nsfw, sdxl, sd1.5, loras, lora, embeddings, ">
+    <meta name="author" content="JSCammie">
+    <link rel='stylesheet' href='../../style.css'/>
+    
+
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-K3KJJKS1R4"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-K3KJJKS1R4');
+    </script>
+    
+</head>
+<body>
+
+    <!-- get partials/_navigation: -->
+    <%- include('../../partials/_navigation') %>
+
+    <div class="center-fully-no-flex" style="margin-bottom: 3rem;">
+        <%- include('../../partials/_bannerAdvert') %>
+    </div>
+
+    <div class="round-frosted page-content mw50-dynamic" style="padding: 40px; justify-content: center;">
+        <h1>Made this template EJS file a bit ago, so just using that, some stuff isnt setup proper, but eh</h1>
+
+        <p>THIS PAGE IS IN DEVELOPMENT!</p>
+
+        <h2>Click <a href="/ai">here</a> to get started generating images!</h2>
+
+
+        <input name="user-session" id="user-session" value="<%-session.accountId%>" hidden>
+
+        <form id="generatorForm">
+            <textarea id="prompt"></textarea>
+            <textarea id="negative_prompt"></textarea>
+            <select id="aspect_ratio" value="square">
+                <option value="square">Square</option>
+                <option value="portrait">Portrait</option>
+                <option value="landscape">Landscape</option>
+                <option value="16:9">16:9 (Wide)</option>
+                <option value="9:16">9:16 (Tall)</option>
+            </select>
+            <select id="model">
+                <option value="fluffysonic">(SD 1.5) FluffySonic (Sonic the Hedgehog by kitsune_sage)</option>
+                <option value="realisticVision">(SD 1.5) realisticVision (Realstic)</option>
+                <option value="furryblend">(SD 1.5) FurryBlend (Furry/Anime)</option>
+                <option value="sdxl-autismmix">(SDXL) Autism Mix ("Better" PonyXL, uses PonyXL Prompting)</option>
+                <option value="sdxl-sonichasautismmix">(SDXL) SonicHasAutismMix (SonicDiffusionXL & AutismMix merge, uses PonyXL Prompting)</option>
+                <option value="sdxl-ponyrealism">(SDXL) Pony Realism (Realistic, uses PonyXL Prompting)</option>
+            </select>
+            <input type="number" id="seed" placeholder="Seed" value="-1"></input>
+            <select id="scheduler">
+                <option value="eulera">EulerA</option>
+                <option value="dpm">DPM</option>
+                <option value="ddim">DDIM</option>
+            </select>
+            <input id="fastpass"></input>
+            <input type="number" id="guidance" step="0.5" min="3" max="8" value="4"></input>
+            <div id="additionalInfo"></div><br>
+            <button id="generateButton">Generate</button>
+            <div id="queuePosition" style="display: none;">Your position in queue: <span style="color: rgb(255, 158, 245);" id="positionNumber"></span></div>
+            <p id="response"></p>
+            <div id="imagesContainer"></div>
+
+        </form>
+
+    </div>
+
+    <!-- get partials/_footer: -->
+    <%- include('../../partials/_footer') %>
+
+    <script src="../../scripts/ai-scripts/ai-form.js"></script>
+    
+</body>
+</html>
