@@ -1,16 +1,16 @@
 function getFastqueuePrice(loraCount, model) {
 
 	let dynamicCreditsPrice = 0
-	const baseCreditsPrice = 10
+	const baseCreditsPrice = 40
 
 	dynamicCreditsPrice = baseCreditsPrice
 
 	// is it a model with value starting sdxl?
 	if (model.startsWith('sdxl')) {
-		dynamicCreditsPrice = dynamicCreditsPrice * 2.5
-		loraModifier = 5
+		dynamicCreditsPrice = dynamicCreditsPrice * 1.5
+		loraModifier = 3
 	} else {
-		loraModifier = 2
+		loraModifier = 1.25
 	}
 
 	// credits price before loras
@@ -34,11 +34,11 @@ function getExtrasPrice(extras) {
 
 	// if { removeWatermark: true } is passed, add 150 credits
 	if (extras.removeWatermark) {
-		extrasPrice.removeWatermark += 125
+		extrasPrice.removeWatermark += 250
 	}
 
 	if (extras.upscale) {
-		extrasPrice.upscale += 500
+		extrasPrice.upscale += 750
 	}
 
 	return extrasPrice
