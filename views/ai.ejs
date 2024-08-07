@@ -1391,55 +1391,6 @@
                             }
                         </script>
 
-                        <style>
-                            #enhancePrompt {
-                                background-color: #4caf4f95; /* Green */
-                                border: none;
-                                color: white;
-                                padding: 15px 32px;
-                                text-align: center;
-                                text-decoration: none;
-                                display: inline-block;
-                                font-size: 16px;
-                                margin: 4px 2px;
-                                cursor: pointer;
-                                transition: transform 0.7s, background-color 0.3s; /* Adjust time as needed */
-                                transform: scale(1) rotate(0deg); /* Default state */
-                                transform-origin: center; /* Ensures the scaling happens from the center */
-                            }
-
-                            #enhancePrompt:hover {
-                                transform: scale(1.08) rotate(1deg); 
-                                background-color: #4CAF50; /* Green */
-                            }
-
-                            #enhancePrompt:active {
-                                transform: scale(1.1);
-                                background-color: #ffe600; /* Red */
-                            }
-
-                            #enhancePrompt[disabled] {
-                                background-color: #ff880095; /* Green */
-                                border: none;
-                                color: white;
-                                padding: 15px 32px;
-                                text-align: center;
-                                text-decoration: none;
-                                display: inline-block;
-                                font-size: 16px;
-                                margin: 4px 2px;
-                                cursor: not-allowed;
-                                transition: transform 0.7s, background-color 0.3s; /* Adjust time as needed */
-                                transform: scale(1) rotate(0deg); /* Default state */
-                                transform-origin: center; /* Ensures the scaling happens from the center */
-                            }
-                        </style>
-
-                        <div class="form-control" hidden style="display: none;">
-                            <button type="button" id="enhancePrompt" onclick="enhancePromptFetch()">(experimental) Enhance w/ AI</button>
-                            <p id="enhancePromptStatus"></p>
-                        </div>
-
                         <div class="form-control">
                             <a for="negativeprompt">Negative Prompt: <a id="negativePromptWordCount">(70)</a></a>
                             <textarea id="negativeprompt" name="negativeprompt" rows="2">nsfw, monochrome, black and white, worst quality, low quality, watermark, signature, bad anatomy, bad hands, deformed limbs, blurry, cropped, cross-eyed, extra arms, extra legs, extra limbs, extra pupils, bad proportions, poorly drawn hands, simple background, bad background, bad lighting, bad perspective</textarea>
@@ -1693,10 +1644,6 @@
                             }
                             </style>
                             
-
-                        <!-- recreate the above loop with a 512w x 768h image in the background of the image, have it so when the image is clicked the invisible checkbox is enabled: -->
-                        <div class="loraContainer">
-                            <!-- showSafeCheckbox, showSuggestiveCheckbox, showNSFWCheckbox -->
                             <div>
                                 <label for="showNACheckbox" >N/A:</label>
                                 <input type="checkbox" id="showNACheckbox" name="showNACheckbox" value="showNACheckbox" checked>
@@ -1710,6 +1657,10 @@
                                 <label for="showNSFWCheckbox" style="color: red;"> NSFW:</label>
                                 <input type="checkbox" id="showNSFWCheckbox" name="showNSFWCheckbox" value="showNSFWCheckbox">
                             </div>
+
+                        <!-- recreate the above loop with a 512w x 768h image in the background of the image, have it so when the image is clicked the invisible checkbox is enabled: -->
+                        <div class="loraContainer">
+                            <!-- showSafeCheckbox, showSuggestiveCheckbox, showNSFWCheckbox -->
                             <br>
                             <!-- buttons that toggle which are visible, have an active and unactive state, default is style: -->
                             <% loraDataKeys.forEach(category => { %>
@@ -2650,6 +2601,34 @@
                     <% } %>
 
                 </details>
+
+                <style>
+                    /* have it be centered, text-align doesnt work */
+                    .suggestFL {
+                        text-align: center;
+                    }
+
+                    .suggestFL a {
+                        font-size: 24px;
+                        color: rgb(255, 255, 255);
+                        margin-left: auto;
+                        margin-right: auto;
+                        /* bold: */
+                        font-weight: bold;
+                    }
+
+                    /* add glow around the text: */
+                    .suggestFL a {
+                        text-shadow: 0 0 20px rgb(151, 236, 255);
+                    }
+                </style>
+
+                <div class="suggestFL">
+                    <br>
+                    <a href="https://www.jscammie.com/suggestions">Click Me To Suggest Features/Loras!</a>
+                    <br><br>
+                </div>
+
                 <button form="generatorForm" type="submit" id="generateButton">Generate Image</button>
                 <button style="display: none;" id="cancelButton">Cancel Request</button>
             </div>
@@ -2750,7 +2729,7 @@
                     }
 
 
-                    model = document.getElementById('model').value
+                    let model = document.getElementById('model').value
 
                     console.log(loraCount, model)
 
@@ -2932,6 +2911,35 @@
         const totalLorasSelected = document.getElementById('totalLorasSelected');
         const totalLoras = document.getElementById('totalLoras');
         const clearAllLorasButton = document.getElementById('clearAllLorasButton');
+
+        let model = document.getElementById('model');
+
+        // Function to update the total counts
+        function updateTotalCounts() {
+            let totalSelected = 0;
+            let total = 0;
+            loraContainers.forEach(container => {
+                const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+                checkboxes.forEach(checkbox => {
+                    // check that the first 4 characters after the - in the lora ID are "sdxl" or not:
+                    // and if the model is sdxl:
+                    checkboxFirstFour = checkbox.id.substring(checkbox.id.indexOf('-') + 1, checkbox.id.indexOf('-') + 5);
+                    if (model.value.startsWith('sdxl-') && checkboxFirstFour === 'sdxl') {
+                        total += 1;
+                        if (checkbox.checked) {
+                            totalSelected += 1;
+                        }
+                    } else if (!model.value.startsWith('sdxl-') && checkboxFirstFour !== 'sdxl') {
+                        total += 1;
+                        if (checkbox.checked) {
+                            totalSelected += 1;
+                        }
+                    }
+                });
+            });
+            totalLorasSelected.innerText = totalSelected;
+            totalLoras.innerText = total;
+        }
       
         // Event listener for clear all Loras button
         clearAllLorasButton.addEventListener('click', function() {
@@ -2947,9 +2955,14 @@
             });
             updateTotalCounts();
         });
+
+        // add event listener to the model select:
+        model.addEventListener('change', function() {
+            updateTotalCounts();
+        });
       
         // Call updateTotalCounts on page load to initialize the count
-        document.addEventListener('DOMContentLoaded', updateTotalCounts);
+        document.addEventListener('DOMContentLoaded', updateTotalCounts());
       </script>
 
 
