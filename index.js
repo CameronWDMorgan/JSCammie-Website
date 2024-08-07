@@ -87,6 +87,7 @@ app.use((req, res, next) => {
 app.use(express.json());
 
 const userProfileSchema = require('./schemas/userProfileSchema.js');
+const userSuggestionSchema = require('./schemas/userSuggestionSchema.js');
 const { type } = require('os');
 
 // setup views directory:
@@ -186,22 +187,285 @@ app.post('/receive-token', async (req, res) => {
         req.session.accountId = discordUser.id
         req.session.loggedIn = true
 
+        // make them join the discord server:
+        const addUserResponse = await fetch(`https://discord.com/api/guilds/${process.env.GUILD_ID}/members/${discordUser.id}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bot ${process.env.BOT_TOKEN}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                access_token: accessToken
+            })
+        });
+        
         res.sendStatus(200)
     })
 
 })
 
-app.get('/upload', (req, res) => {
+app.get('/suggestions', async (req, res) => {
+    let suggestions = await userSuggestionSchema.find()
+    // sort by upvotes - downvotes, then sort by wether the status is Pending, Approved, or Denied:
+    suggestions = suggestions.sort((a, b) => (b.upvotes.length - b.downvotes.length) - (a.upvotes.length - a.downvotes.length))
+    
 
+    // sort them by status, with the order being: Added in the middle, Pending at the top, Denied at the bottom:
+
+    suggestions = suggestions.sort((a, b) => {
+        if(a.status === 'Pending' && b.status !== 'Pending') {
+            return -1
+        } else if (a.status !== 'Pending' && b.status === 'Pending') {
+            return 1
+        } else if (a.status === 'Pending' && b.status === 'Pending') {
+            return 0
+        }
+    })
+
+    // userProfile:
+
+    if(req.session.loggedIn){
+        userProfile = await userProfileSchema.findOne({accountId: req.session.accountId})
+    } else {
+        userProfile = {}
+    }
+
+    console.log(userProfile.badges)
+
+    res.render('suggestions/suggestions', { suggestions: suggestions, session: req.session, userProfile: userProfile})
+})
+
+app.get('/submit-suggestion', (req, res) => {
+    // check they are logged in:
     if(!req.session.loggedIn){
         res.redirect('/login')
         return
     }
 
-    res.render('upload', {
-        session: req.session
-    })
+    res.render('suggestions/submit-suggestion', { session: req.session })
 })
+
+app.post('/toggle-suggestion-safety', async (req, res) => {
+
+    // check if they are logged in:
+    if(!req.session.loggedIn){
+        res.redirect('/login')
+        return
+    }
+
+    let suggestionId = req.body.suggestionId
+    let accountId = req.session.accountId
+
+    let suggestion = await userSuggestionSchema.findOne({suggestionId: suggestionId})
+
+    if(suggestion === null) {
+        res.send({status: 'error', message: 'Suggestion not found'})
+        return
+    }
+
+    let currentUser = await userProfileSchema.findOne({accountId: accountId})
+
+    // check if the user is the author of the suggestion, or a owner:
+    if (suggestion.accountId !== accountId && currentUser.badges?.owner !== true) {
+        res.send({status: 'error', message: 'You are not the author of this suggestion'})
+        return
+    }
+    
+
+    let newSafety = 'sfw'
+
+    if(suggestion.safety.toLowerCase() === 'sfw') {
+        newSafety = 'nsfw'
+    }
+
+    await userSuggestionSchema.findOneAndUpdate({suggestionId: suggestionId}, {safety: newSafety})
+
+    res.send({status: 'success', message: `Suggestion safety flipped to ${newSafety}`})
+})
+
+app.post('/submit-suggestion', async (req, res) => {
+
+    // check if they are logged in:
+    if(!req.session.loggedIn){
+        res.redirect('/login')
+        return
+    }
+
+    let text = req.body.text
+    let accountId = req.session.accountId
+
+    // make a unique suggestionId, 1, 2, 3 etc using the suggestion with the highest suggestionId as a base, then +1:
+    let allSuggestions = await userSuggestionSchema.find()
+    // get the highest one:
+    let highestSuggestion = allSuggestions.sort((a, b) => Number(b.suggestionId) - Number(a.suggestionId))[0]
+    let suggestionId = 1
+
+    if(highestSuggestion !== null) {
+        suggestionId = Number(highestSuggestion.suggestionId) + 1
+    }
+
+    let title = req.body.title
+
+    // type:
+    let type = req.body.type
+
+    let newSuggestion = {
+        title: title,
+        type: type,
+        suggestionId: String(suggestionId),
+        accountId: accountId,
+        text: text,
+        timestamp: Date.now(),
+        safety: req.body.safety,
+    }
+
+    await userSuggestionSchema.create(newSuggestion)
+
+    res.redirect('suggestions')
+})
+
+app.post('/vote-suggestion', async (req, res) => {
+
+    // check if they are logged in:
+    if(!req.session.loggedIn){
+        res.redirect('/login')
+        return
+    }
+
+    console.log(req.body)
+
+    let suggestionId = req.body.suggestionId
+    let accountId = req.session.accountId
+
+    let suggestion = await userSuggestionSchema.findOne({suggestionId: suggestionId})
+
+    if(suggestion === null) {
+        res.send({status: 'error', message: 'Suggestion not found'})
+        return
+    }
+
+    let upvoted = false
+    let downvoted = false
+
+    // check if the user has already upvoted or downvoted the suggestion:
+    if(suggestion.upvotes.includes(accountId)) {
+        upvoted = true
+    }
+
+    if(suggestion.downvotes.includes(accountId)) {
+        downvoted = true
+    }
+
+    // if the user has already downvoted and have chosen to downvote, do nothing:
+    if(downvoted && req.body.vote === 'downvote') {
+        res.send({status: 'error', message: 'You have already downvoted this suggestion'})
+        return
+    }
+
+    // if the user has already upvoted and have chosen to upvote, do nothing:
+    if(upvoted && req.body.vote === 'upvote') {
+        res.send({status: 'error', message: 'You have already upvoted this suggestion'})
+        return
+    }
+
+    // if the user has already upvoted and have chosen to downvote, remove the upvote:
+    if(upvoted && req.body.vote === 'downvote') {
+        await userSuggestionSchema.findOneAndUpdate({suggestionId: suggestionId}, { $pull: { upvotes: accountId } })
+    }
+
+    // if the user has already downvoted and have chosen to upvote, remove the downvote:
+    if(downvoted && req.body.vote === 'upvote') {
+        await userSuggestionSchema.findOneAndUpdate({suggestionId: suggestionId}, { $pull: { downvotes: accountId } })
+    }
+
+    if (req.body.vote === 'upvote') {
+        await userSuggestionSchema.findOneAndUpdate({suggestionId: suggestionId}, { $push: { upvotes: accountId } })
+    } else if (req.body.vote === 'downvote') {
+        await userSuggestionSchema.findOneAndUpdate({suggestionId: suggestionId}, { $push: { downvotes: accountId } })
+    }
+
+    suggestion = await userSuggestionSchema.findOne({suggestionId: suggestionId})
+
+    res.send({status: 'success', message: `${req.body.vote} Vote submitted`, votes: { upvotes: suggestion.upvotes.length, downvotes: suggestion.downvotes.length }})
+})
+
+app.post('/remove-suggestion', async (req, res) => {
+
+    // check if they are logged in:
+    if(!req.session.loggedIn){
+        res.redirect('/login')
+        return
+    }
+
+    let suggestionId = req.body.suggestionId
+    let accountId = req.session.accountId
+
+    let currentUser = await userProfileSchema.findOne({accountId: accountId})
+    let suggestion = await userSuggestionSchema.findOne({suggestionId: suggestionId})
+
+    if(suggestion === null) {
+        res.send({status: 'error', message: 'Suggestion not found'})
+        return
+    }
+
+    // check if the user is the author of the suggestion, or a owner:
+    if (suggestion.accountId !== accountId && currentUser.badges?.owner !== true) {
+        res.send({status: 'error', message: 'You are not the author of this suggestion'})
+        return
+    }
+
+    await userSuggestionSchema.findOneAndDelete({suggestionId: suggestionId})
+
+    res.send({status: 'success', message: 'Suggestion removed'})
+})
+
+app.post('/update-suggestion-status', async (req, res) => {
+
+    // check if they are logged in:
+    if(!req.session.loggedIn){
+        res.redirect('/login')
+        return
+    }
+
+    let suggestionId = req.body.suggestionId
+    let accountId = req.session.accountId
+
+    let currentUser = await userProfileSchema.findOne({accountId: accountId})
+    let suggestion = await userSuggestionSchema.findOne({suggestionId: suggestionId})
+
+    if(suggestion === null) {
+        res.send({status: 'error', message: 'Suggestion not found'})
+        return
+    }
+
+    // check if the user is a owner:
+    if(currentUser.badges?.owner !== true) {
+        res.send({status: 'error', message: 'You are not a owner'})
+        return
+    }
+
+    let newStatus = req.body.status
+
+    await userSuggestionSchema.findOneAndUpdate({suggestionId: suggestionId}, {status: newStatus})
+
+    res.send({status: 'success', message: 'Suggestion status updated'})
+})
+
+app.get('/suggestion/:suggestionId', async (req, res) => {
+    let suggestionId = req.params.suggestionId
+
+    let suggestion = await userSuggestionSchema.findOne({suggestionId: suggestionId})
+
+    if(suggestion === null) {
+        res.send('Suggestion not found')
+        return
+    }
+
+    res.render('suggestions/suggestion', { suggestion: suggestion, session: req.session })
+})
+
+
+
 
 app.get('/metadata', (req, res) => {
     res.render('metadata', {

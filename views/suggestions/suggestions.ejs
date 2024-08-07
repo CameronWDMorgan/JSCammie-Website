@@ -1,0 +1,356 @@
+<!-- setup basic html template with metadata etc: -->
+<html>
+<head>
+    <title>Suggestions | JSCammie.com</title>
+    <link rel='stylesheet' href='/style.css'/>
+    
+    <meta name="description" content="Suggest features or loras to be added to the site!">
+    <meta name="keywords" content="loras, features, jscammie suggestions, suggestion, upvote, downvote">
+    <meta name="author" content="JSCammie">
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-K3KJJKS1R4"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-K3KJJKS1R4');
+    </script>
+    
+</head>
+<body>
+
+    <!-- get partials/_navigation: -->
+    <%- include('../../partials/_navigation') %>
+
+    <div class="center-fully-no-flex" style="margin-bottom: 3rem;">
+        <%- include('../../partials/_bannerAdvert') %>
+    </div>
+
+    <style>
+        .suggestionTopBar {
+            display: inline;
+            justify-content: space-between;
+            font-size: 24px;
+        }
+
+        .votingButton {
+            /* remove border, background colour */
+            background-color: rgba(0, 0, 0, 0) !important;
+            /* make the cursor a pointer */
+            cursor: pointer;
+        }
+
+        .suggestionDiv {
+            border: 3px solid rgb(255, 150, 253);
+            padding: 10px;
+            margin: 10px;
+            border-radius: 10px;
+        }
+    </style>
+
+    <div class="container round-frosted page-content mw75-dynamic" style="margin-bottom: 12rem; padding: 24px">
+        <a class="submitSuggestionHyperlink" href="/submit-suggestion">Submit a Suggestion</a>
+        <h1 style="text-align: center;">Suggestions</h1>
+
+
+        <style>
+            .pendingSuggestion p {
+                color: yellow;
+            }
+            .pendingSuggestion div {
+                background-color: rgba(255, 255, 0, 0.5) !important;
+            }
+
+            .addedSuggestion p {
+                color: rgb(119, 200, 255);
+            }
+            .addedSuggestion div {
+                background-color: rgba(119, 200, 255, 0.5) !important;
+            }
+
+            .rejectedSuggestion p {
+                color: red;
+            }
+            .rejectedSuggestion div {
+                background-color: rgba(255, 0, 0, 0.5) !important;
+            }
+        </style>
+
+        <div>
+
+            <input type="checkbox" id="showSFW" checked>Show SFW</input><br>
+            <input type="checkbox" id="showNSFW">Show NSFW</input>
+            <% suggestions.forEach(suggestion => { %>
+
+                
+                <% if (suggestion.status.toLowerCase() == "pending") { %>
+                    <div class="suggestionDiv pendingSuggestion">
+                        <p style="font-size: 24px;">Pending</p>
+                <% } else if (suggestion.status.toLowerCase() == "added") { %>
+                    <div class="suggestionDiv addedSuggestion">
+                        <p style="font-size: 24px;">Added</p>
+                <% } else if (suggestion.status.toLowerCase() == "rejected") { %>
+                    <div class="suggestionDiv rejectedSuggestion">
+                        <p style="font-size: 24px;">Rejected</p>
+                <% } %>
+                    <span hidden id="suggestionId"><%=suggestion.suggestionId%></span>
+                    <%suggestionSafety = suggestion.safety === 'nsfw' ? 'NSFW' : 'SFW'%>
+                    <p id="<%=suggestion.suggestionId%>-safety"><%=suggestionSafety%></p>
+                    <% if (suggestion.type) { %>
+                        <% if (suggestion.type === 'lora') { %>
+                            <% suggestionType = '💜Lora' %>
+                        <% } else if (suggestion.type === 'feature') { %>
+                            <% suggestionType = '💚Feature' %>
+                        <% } %>
+                    <% } %>
+                    <a class="suggestionTopBar"><%=suggestionType%> | <%=suggestion.title%> | </a>
+                    <a class="suggestionTopBar"><button class="votingButton" id="upvote">Upvotes: <%=suggestion.upvotes.length%></button><button class="votingButton" id="downvote">Downvotes: <%=suggestion.downvotes.length%></button></button></a><br>
+                    <a><%= suggestion.text%></a>
+                    <br>
+                    <a>
+                        <% if (userProfile.accountId == suggestion.accountId || userProfile.badges?.owner) { %> <button id="removeSuggestion">Remove</button> <% } %>
+                        <% if (userProfile.badges?.owner) { %> <button id="addSuggestion">Add</button> <% } %>
+                        <% if (userProfile.badges?.owner) { %> <button id="rejectSuggestion">Reject</button> <% } %>
+                        <% if (userProfile.accountId == suggestion.accountId || userProfile.badges?.owner) { %> <button id="toggleSuggestionSafety">NSFW/SFW</button> <% } %>
+                    </a>
+                    <p id="<%=suggestion.suggestionId%>-response"></p>
+                </div>
+                <br>
+            <% }) %>
+            
+        </div>
+    </div>
+
+    <script>
+        // make any links in the text clickable:
+        document.querySelectorAll('a').forEach(a => {
+            a.innerHTML = a.innerHTML.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
+        });
+    </script>
+
+    <script>
+        // toggleSuggestionSafety logic:
+        document.querySelectorAll('#toggleSuggestionSafety').forEach(button => {
+            button.addEventListener('click', async (e) => {
+                const suggestionId = e.target.parentElement.parentElement.querySelector('#suggestionId').innerText;
+
+                // set request body:
+                let requestBody = {
+                    suggestionId: suggestionId
+                };
+
+                // send the update request to the server:
+                const response = await fetch(`/toggle-suggestion-safety`, {
+                    method: 'POST',
+                    body: JSON.stringify(requestBody),
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                console.log(data);
+
+                // update the response message:
+                responseElement = document.getElementById(`${suggestionId}-response`);
+                responseElement.innerText = data.message;
+            });
+        });
+    </script>
+
+    <script>
+        // toggle the nsfw/sfw the visibility of the suggestions, based on the checkboxes and if they are nsfw or sfw:
+        // get the checkboxes:
+
+        function toggleSuggestionVisibility() {
+            // get the checkboxes:
+            const showSFW = document.getElementById('showSFW');
+            const showNSFW = document.getElementById('showNSFW');
+
+            // check if they are checked into variables:
+            let showSFWChecked = showSFW.checked;
+            let showNSFWChecked = showNSFW.checked;
+
+            // get all the suggestions:
+            const suggestions = document.querySelectorAll('.suggestionDiv');
+
+            // loop through the suggestions and hide/show them based on the checkboxes:
+            suggestions.forEach(suggestion => {
+                // suggestionId:
+                const suggestionId = suggestion.querySelector('#suggestionId').innerText;
+                // get the safety of the suggestion:
+                const safety = document.getElementById(`${suggestionId}-safety`).innerText.toLocaleLowerCase();
+
+                // if the suggestion is sfw and the showSFW checkbox is not checked, hide the suggestion:
+                if (safety === 'sfw' && !showSFWChecked) {
+                    suggestion.style.display = 'none';
+                } else {
+                    suggestion.style.display = 'block';
+                }
+
+                // if the suggestion is nsfw and the showNSFW checkbox is not checked, hide the suggestion:
+                if (safety === 'nsfw' && !showNSFWChecked) {
+                    suggestion.style.display = 'none';
+                }
+            });
+        }
+
+        // add event listeners to the checkboxes:
+        document.getElementById('showSFW').addEventListener('change', toggleSuggestionVisibility);
+        document.getElementById('showNSFW').addEventListener('change', toggleSuggestionVisibility);
+
+        // run the function on page load:
+        toggleSuggestionVisibility();
+    </script>
+
+    <script>
+        // upvote and downvote buttons logic:
+        document.querySelectorAll('.votingButton').forEach(button => {
+            button.addEventListener('click', async (e) => {
+                const suggestionId = e.target.parentElement.parentElement.querySelector('#suggestionId').innerText;
+                const vote = e.target.id;
+
+                // set request body:
+                let requestBody = {
+                    suggestionId: suggestionId,
+                    vote: vote
+                };
+
+                console.log(requestBody);
+                // send the vote to the server:
+
+                const response = await fetch(`/vote-suggestion`, {
+                    method: 'POST',
+                    body: JSON.stringify(requestBody),
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                console.log(data);
+
+                // update the upvotes and downvotes on the page for the suggestion:
+                e.target.parentElement.querySelector('#upvote').innerText = `Upvotes: ${data.votes.upvotes}`;
+                e.target.parentElement.querySelector('#downvote').innerText = `Downvotes: ${data.votes.downvotes}`;
+
+                // update the response message:
+                responseElement = document.getElementById(`${suggestionId}-response`);
+                responseElement.innerText = data.message;
+            });
+        });
+    </script>
+
+    <script>
+        // allow authors and admins to remove suggestions:
+
+        document.querySelectorAll('#removeSuggestion').forEach(button => {
+            button.addEventListener('click', async (e) => {
+                const suggestionId = e.target.parentElement.parentElement.querySelector('#suggestionId').innerText;
+
+                // set request body:
+                let requestBody = {
+                    suggestionId: suggestionId
+                };
+
+                // send the remove request to the server:
+                const response = await fetch(`/remove-suggestion`, {
+                    method: 'POST',
+                    body: JSON.stringify(requestBody),
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                console.log(data);
+
+                // update the response message:
+                responseElement = document.getElementById(`${suggestionId}-response`);
+                responseElement.innerText = data.message;
+            });
+        });
+    </script>
+
+    <script>
+        // update-suggestion-status logic:
+
+        document.querySelectorAll('#addSuggestion').forEach(button => {
+            button.addEventListener('click', async (e) => {
+                const suggestionId = e.target.parentElement.parentElement.querySelector('#suggestionId').innerText;
+
+                // set request body:
+                let requestBody = {
+                    suggestionId: suggestionId,
+                    status: 'added'
+                };
+
+                // send the update request to the server:
+                const response = await fetch(`/update-suggestion-status`, {
+                    method: 'POST',
+                    body: JSON.stringify(requestBody),
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                console.log(data);
+
+                // set the class of the suggestion div to added:
+                suggestionDiv = e.target.parentElement.parentElement;
+                suggestionDiv.classList.remove('pendingSuggestion');
+                suggestionDiv.classList.remove('rejectedSuggestion');
+                suggestionDiv.classList.add('addedSuggestion');
+
+                // update the response message:
+                responseElement = document.getElementById(`${suggestionId}-response`);
+                responseElement.innerText = data.message;
+            });
+        });
+
+        document.querySelectorAll('#rejectSuggestion').forEach(button => {
+            button.addEventListener('click', async (e) => {
+                const suggestionId = e.target.parentElement.parentElement.querySelector('#suggestionId').innerText;
+
+                // set request body:
+                let requestBody = {
+                    suggestionId: suggestionId,
+                    status: 'rejected'
+                };
+
+                // send the update request to the server:
+                const response = await fetch(`/update-suggestion-status`, {
+                    method: 'POST',
+                    body: JSON.stringify(requestBody),
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                console.log(data);
+
+                // set the class of the suggestion div to rejected:
+                suggestionDiv = e.target.parentElement.parentElement;
+                suggestionDiv.classList.remove('addedSuggestion');
+                suggestionDiv.classList.remove('pendingSuggestion');
+                suggestionDiv.classList.add('rejectedSuggestion');
+
+                // update the response message:
+                responseElement = document.getElementById(`${suggestionId}-response`);
+                responseElement.innerText = data.message;
+            });
+        });
+
+    </script>
+
+    <script>
+        // reload the page every 5 seconds
+        // setInterval(() => {
+        //     location.reload();
+        // }, 5000);
+    </script>
+
+    <!-- get partials/_footer: -->
+    <%- include('../../partials/_footer') %>
+    
+</body>
+</html>
