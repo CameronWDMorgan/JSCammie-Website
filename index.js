@@ -210,16 +210,16 @@ app.get('/suggestions', async (req, res) => {
     suggestions = suggestions.sort((a, b) => (b.upvotes.length - b.downvotes.length) - (a.upvotes.length - a.downvotes.length))
     
 
-    // sort them by status, with the order being: Added in the middle, Pending at the top, Denied at the bottom:
+    // sort them by status, with the order being: Added in the middle, Pending at the top, Rejected at the bottom:
 
     suggestions = suggestions.sort((a, b) => {
-        if(a.status === 'Pending' && b.status !== 'Pending') {
-            return -1
-        } else if (a.status !== 'Pending' && b.status === 'Pending') {
-            return 1
-        } else if (a.status === 'Pending' && b.status === 'Pending') {
-            return 0
+        let statusOrder = {
+            'pending': 0,
+            'added': 1,
+            'rejected': 2
         }
+
+        return statusOrder[a.status.toLowerCase()] - statusOrder[b.status.toLowerCase()]
     })
 
     // userProfile:
@@ -319,7 +319,20 @@ app.post('/submit-suggestion', async (req, res) => {
         safety: req.body.safety,
     }
 
+    // check if the user has already submitted 2 or more suggestions, if they have they cannot submit another:
+    let userSuggestions = await userSuggestionSchema.find({accountId: accountId})
+    // remove any that dont have a status of pending:
+    userSuggestions = userSuggestions.filter(suggestion => suggestion.status.toLowerCase() === 'pending')
+    console.log(userSuggestions.length)
+    if(userSuggestions.length >= 2) {
+        res.send({status: 'error', message: 'You have already submitted 2 suggestions'})
+        return
+    }
+
     await userSuggestionSchema.create(newSuggestion)
+
+    // wait 2 seconds:
+    await new Promise(resolve => setTimeout(resolve, 2000))
 
     res.redirect('suggestions')
 })
