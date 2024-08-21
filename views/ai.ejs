@@ -2,9 +2,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Free Stable Diffusion AI Image Generator PDXL/SDXL/SD1.5 | JSCammie.com</title>
-    <meta name="description" content="Free PDXL/SDXL and SD 1.5 Stable Diffusion Generator | Generate free images SFW & NSFW with multiple models, loras & more!">
-    <meta name="keywords" content="nsfw, uncensored, free, online, inpainting, img2img, txt2img, stable diffusion, ai image generator, sdxl ai image generator, ai free online, sfw, nsfw, sdxl, sd1.5, loras, lora, embeddings, pdxl, pony diffusion">
+    <title>Free Stable Diffusion AI Image Generator FLUX/PDXL/SD1.5 | JSCammie.com</title>
+    <meta name="description" content="Free FLUX, PDXL and SD 1.5 Stable Diffusion Generator | Generate free images SFW & NSFW with multiple models, loras & more!">
+    <meta name="keywords" content="flux ai porn, flux ai nsfw, flux ai hentai, flux dev, flux schnell, flux loras, flux free, flux ai free, nsfw, uncensored, free, online, inpainting, img2img, txt2img, stable diffusion, ai image generator, sdxl ai image generator, ai free online, sfw, nsfw, sdxl, sd1.5, loras, lora, embeddings, pdxl, pony diffusion">
     <meta name="author" content="JSCammie">
 
     
@@ -932,7 +932,8 @@
                             }
 
                             // save it to a file and download it without jsyaml:
-                            let yamlString = `prompt: ${aiData.prompt}\nnegativeprompt: ${aiData.negativeprompt}\naspectRatio: ${aiData.aspectRatio}\nmodel: ${aiData.model}\nloras: ${aiData.loras}\nlora_strengths: ${aiData.lora_strengths}\nsteps: ${aiData.steps}\nquantity: ${aiData.quantity}\ncfg: ${aiData.cfg}\nseed: ${aiData.seed}`
+                            let yamlString = `${aiData.prompt}<SPLIT>${aiData.negativeprompt}<SPLIT>${aiData.aspectRatio}<SPLIT>${aiData.model}<SPLIT>${aiData.loras}<SPLIT>${aiData.lora_strengths}<SPLIT>${aiData.steps}<SPLIT>${aiData.quantity}<SPLIT>${aiData.cfg}<SPLIT>${aiData.seed}`
+
                             let blob = new Blob([yamlString], {type: 'text/yaml'});
                             let url = URL.createObjectURL(blob);
                             let a = document.createElement('a');
@@ -955,6 +956,21 @@
 
                             // Split data lines and then extract values after colon and trim spaces
                             let yamlData = data.split('\n').map(line => line.includes(':') ? line.split(':')[1].trim() : '');
+
+                            // yamlData.length() is not a function, use length instead
+
+                            // if there isnt 10 values then the data is invalid, use <SPLIT> to split it instead, making sure <SPLIT> is removed from the data:
+                            if (yamlData.length !== 10) {
+                                yamlData = data.split('<SPLIT>').map(line => line.trim());
+                            }
+
+                            console.log(`Yaml Data Length After:` + yamlData.length)
+
+                            // if there still isnt 10 values then the data is invalid:
+                            if (yamlData.length !== 10) {
+                                alert('Invalid data, could not load AI data!');
+                                return;
+                            }
 
                             let aiData = {
                                 prompt: yamlData[0],
@@ -1004,7 +1020,13 @@
                             document.getElementById('aspectRatio').dispatchEvent(new Event('change'));
 
                             // set all the loras to unchecked:
-                            document.querySelectorAll('.loraSelection input[type="checkbox"]').forEach(checkbox => {
+                            // document.querySelectorAll('.loraSelection input[type="checkbox"]').forEach(checkbox => {
+                            //     checkbox.checked = false;
+                            //     checkbox.dispatchEvent(new Event('change')); // Fire the change event if needed
+                            // });
+
+                            // ONLY UNCHECK THE CHECKBOX IF IT IS CHECKED, THIS ABOVE CODE IS TERRIBLE FOR PERFORMANCE:
+                            document.querySelectorAll('.loraSelection input[type="checkbox"]:checked').forEach(checkbox => {
                                 checkbox.checked = false;
                                 checkbox.dispatchEvent(new Event('change')); // Fire the change event if needed
                             });
@@ -1080,6 +1102,11 @@
                             document.getElementById('model').value = saveSlotModel;
                             // Assuming saveSlotLoras is a string of comma-separated Lora IDs
                             const saveSlotLorasArray = saveSlotLoras.split(', ');
+
+                            document.querySelectorAll('.loraSelection input[type="checkbox"]:checked').forEach(checkbox => {
+                                checkbox.checked = false;
+                                checkbox.dispatchEvent(new Event('change')); // Fire the change event if needed
+                            });
 
                             // check the checkboxes for the loras in the save slot:
                             saveSlotLorasArray.forEach(loraId => {
@@ -1453,12 +1480,10 @@
                             <option value="fluffysonic">(SD 1.5) FluffySonic (Sonic the Hedgehog by kitsune_sage)</option>
                             <option value="realisticVision">(SD 1.5) realisticVision (Realstic)</option>
                             <option value="furryblend">(SD 1.5) FurryBlend (Furry/Anime)</option>
-                            <option value="toonify">(SD 1.5) Toonify (2d Toon Style)</option>
-                            <option value="flat2danimerge">(SD 1.5) Flat2DAnimeMerge (2D Anime, unique style)</option>
                             <option value="sdxl-autismmix">(SDXL) Autism Mix ("Better" PonyXL, uses PonyXL Prompting)</option>
                             <option value="sdxl-sonichasautismmix">(SDXL) SonicHasAutismMix (SonicDiffusionXL & AutismMix merge, uses PonyXL Prompting)</option>
                             <option value="sdxl-ponyrealism">(SDXL) Pony Realism (Realistic, uses PonyXL Prompting)</option>
-                            <!-- <option value="sd3-medium">DISABLED (SD3) Medium (Stability AI) DISABLED</option> -->
+                            <option value="flux-unchained">(FLUX) Unchained (Everything, natural language prompting)</option>
                         </select>
                     </div>
                 </details>
@@ -1759,6 +1784,7 @@
                         function handleModelChange() {
                             const modelValue = document.getElementById('model').value;
                             const startsWithSdxl = modelValue.startsWith('sdxl');
+                            const startsWithFlux = modelValue.startsWith('flux');
                             const startsWithSD3 = modelValue.startsWith('sd3');
 
                             document.querySelectorAll('.loraSelection .lorabox').forEach(container => {
@@ -1790,8 +1816,21 @@
                                         // Show if it starts with 'sd3'
                                         container.style.display = '';
                                     }
+                                } else if (startsWithFlux) {
+                                    if (!key.startsWith('flux')) {
+                                        // Hide and uncheck if not starting with 'flux'
+                                        container.style.display = 'none';
+                                        if (checkbox.checked) {
+                                            checkbox.checked = false;
+                                            // fire event:
+                                            checkbox.dispatchEvent(new Event('change'));
+                                        }
+                                    } else {
+                                        // Show if it starts with 'flux'
+                                        container.style.display = '';
+                                    }
                                 } else {
-                                    if (key.startsWith('sdxl') || key.startsWith('sd3')) {
+                                    if (startsWithSdxl || startsWithSD3 || startsWithFlux) {
                                         // Hide and uncheck if starting with 'sdxl' or 'sd3'
                                         container.style.display = 'none';
                                         if (checkbox.checked) {
@@ -1927,6 +1966,8 @@
                                     let isTextMatch = txtValue.toUpperCase().indexOf(filter) > -1;
                                     let isModelSdxl = model_name.startsWith('sdxl');
                                     let isLoraSdxl = txtValue.startsWith('sdxl');
+                                    let isModelFlux = model_name.startsWith('flux');
+                                    let isLoraFlux = txtValue.startsWith('flux');
                                     let isModelSD3 = model_name.startsWith('sd3');
                                     let isLoraSD3 = txtValue.startsWith('sd3');
 
@@ -1959,6 +2000,12 @@
                                         }
                                     } else if (model_name.startsWith('sd3')) {
                                         if (isTextMatch && isLoraSD3) {
+                                            checkboxes[i].parentElement.style.display = ""
+                                        } else {
+                                            checkboxes[i].parentElement.style.display = "none";
+                                        }
+                                    } else if (model_name.startsWith('flux')) {
+                                        if (isTextMatch && isLoraFlux) {
                                             checkboxes[i].parentElement.style.display = ""
                                         } else {
                                             checkboxes[i].parentElement.style.display = "none";
@@ -2213,8 +2260,8 @@
                         <input type="file" id="uploadedImage" name="uploadedImage" accept="image/*">
                         <br>
                         <label for="img2imgStrength">img2img Strength:</label>
-                        <input type="range" id="img2imgStrength" name="img2imgStrength" min="0" max="100" step="1" value="50">
-                        <span id="img2imgStrengthValue" class="range-value">50%</span>
+                        <input type="range" id="img2imgStrength" name="img2imgStrength" min="0" max="100" step="1" value="70">
+                        <span id="img2imgStrengthValue" class="range-value">70%</span>
                     </div>
 
                     <style>
@@ -2269,14 +2316,12 @@
                     <div class="form-control" id="inpaintingControls" style="display: none;" >
 
                         <label for="inpaintingStrength">Inpainting Strength:</label>
-                        <input type="range" id="inpaintingStrength" name="inpaintingStrength" min="0" max="100" step="1" value="50">
-                        <span id="inpaintingStrengthValue" class="range-value">50%</span>
+                        <input type="range" id="inpaintingStrength" name="inpaintingStrength" min="0" max="100" step="1" value="70">
+                        <span id="inpaintingStrengthValue" class="range-value">70%</span>
 
                         <label for="inpaintingImage">Upload Image:</label>
                         <input type="file" id="inpaintingImage" id="inpaintingImage" name="inpaintingImage" accept="image/*">
 
-                        <label for="inpaintingOriginalCheckbox">Use Original Model:</label>
-                        <input type="checkbox" id="inpaintingOriginalCheckbox">
                         <!-- Pen Size Slider -->
                         <label for="penSize">Pen Size (<span id="penSizeValue">20</span>)</label>
                         <input type="range" id="penSize" min="20" max="200" value="20">
@@ -2435,116 +2480,177 @@
 
 
             <script>
-                // update the labels for the steps and quantity sliders on change and initially:
-                // function to update the stepsValue and quantityValue labels:
+                // Function to update the steps, quantity, and cfguidance labels based on the current slider values
                 function updateLabels() {
-
-                    let steps = document.getElementById('steps')
-                    let stepsInput = document.getElementById('stepsInput')
-                    let quantity = document.getElementById('quantity')
-                    let quantityInput = document.getElementById('quantityInput')
-                    let cfguidance = document.getElementById('cfguidance')
-                    let cfguidanceInput = document.getElementById('cfguidanceInput')
-                    let aspectRatio = document.getElementById('aspectRatio')
-                    let model = document.getElementById('model')
-
-                    function setSteps(min,max) {
-                        steps.min = min
-                        steps.max = max
-                        stepsInput.min = min
-                        stepsInput.max = max
+                    let steps = document.getElementById('steps');
+                    let stepsInput = document.getElementById('stepsInput');
+                    let quantity = document.getElementById('quantity');
+                    let quantityInput = document.getElementById('quantityInput');
+                    let cfguidance = document.getElementById('cfguidance');
+                    let cfguidanceInput = document.getElementById('cfguidanceInput');
+                    let model = document.getElementById('model');
+            
+                    function setSteps(min, max) {
+                        steps.min = min;
+                        steps.max = max;
+                        stepsInput.min = min;
+                        stepsInput.max = max;
                     }
-
+            
                     function maxQuantity(max) {
-                        quantity.max = max
-                        quantityInput.max = max
+                        quantity.max = max;
+                        quantityInput.max = max;
                     }
-
+            
                     function maxCfguidance(max) {
-                        cfguidance.max = max
-                        cfguidanceInput.max = max
+                        cfguidance.max = max;
+                        cfguidanceInput.max = max;
                     }
-
+            
+                    function minCfguidance(min) {
+                        cfguidance.min = min;
+                        cfguidanceInput.min = min;
+                    }
+            
                     if (model.value.includes('sdxl')) {
-                        if (quantity.value == 1) {
-                            setSteps(10,40)
-                        } else {
-                            setSteps(10,30)
-                        }
-                        maxCfguidance(8)
-                    } else if (model.value.includes('sd3')) {
-                        setSteps(10,40)
-                        maxQuantity(1)
-                        maxCfguidance(8)
+                        setSteps(10, 30);
+                        maxCfguidance(8);
+                        minCfguidance(3);
+                    } else if (model.value.includes('flux')) {
+                        setSteps(10, 20);
+                        maxQuantity(1);
+                        maxCfguidance(1);
+                        minCfguidance(1);
                     } else {
-                        if (quantity.value == 1) {
-                            setSteps(10,60)
-                        } else {
-                            setSteps(10,50)
-                        }
-                        maxCfguidance(12)
+                        setSteps(10, 40);
+                        maxCfguidance(12);
+                        minCfguidance(4);
                     }
-
-                    maxQuantity(4)
-
-
-                    document.getElementById('stepsMax').innerText = `/${steps.max}`
-                    document.getElementById('quantityMax').innerText = `/${quantity.max}`
-                    document.getElementById('cfguidanceMax').innerText = `/${cfguidance.max}`
-
-
+            
+                    maxQuantity(2);
+            
+                    document.getElementById('stepsMax').innerText = `/${steps.max}`;
+                    document.getElementById('quantityMax').innerText = `/${quantity.max}`;
+                    document.getElementById('cfguidanceMax').innerText = `/${cfguidance.max}`;
+            
+                    // Ensure values are within the min and max range, and update the inputs to reflect the slider values
+                    steps.value = clampValueToMinMax(steps.value, steps.min, steps.max);
+                    stepsInput.value = steps.value;
+            
+                    quantity.value = clampValueToMinMax(quantity.value, quantity.min, quantity.max);
+                    quantityInput.value = quantity.value;
+            
+                    cfguidance.value = clampValueToMinMax(cfguidance.value, cfguidance.min, cfguidance.max);
+                    cfguidanceInput.value = cfguidance.value;
                 }
+            
+                function clampValueToMinMax(value, min, max) {
+                    if (value > max) {
+                        return max;
+                    } else if (value < min) {
+                        return min;
+                    } else {
+                        return value;
+                    }
+                }
+            
+                // Event listeners for updating labels when sliders or inputs change
+                // document.getElementById('steps').addEventListener('input', function() {
+                //     this.value = clampValueToMinMax(this.value, this.min, this.max);
+                //     document.getElementById('stepsInput').value = this.value;
+                // });
+            
+                // document.getElementById('stepsInput').addEventListener('input', function() {
+                //     this.value = clampValueToMinMax(this.value, this.min, this.max);
+                //     document.getElementById('steps').value = this.value;
+                // });
+            
+                // document.getElementById('quantity').addEventListener('input', function() {
+                //     this.value = clampValueToMinMax(this.value, this.min, this.max);
+                //     document.getElementById('quantityInput').value = this.value;
+                // });
+            
+                // document.getElementById('quantityInput').addEventListener('input', function() {
+                //     this.value = clampValueToMinMax(this.value, this.min, this.max);
+                //     document.getElementById('quantity').value = this.value;
+                // });
+            
+                // document.getElementById('cfguidance').addEventListener('input', function() {
+                //     this.value = clampValueToMinMax(this.value, this.min, this.max);
+                //     document.getElementById('cfguidanceInput').value = this.value;
+                // });
+            
+                // document.getElementById('cfguidanceInput').addEventListener('input', function() {
+                //     this.value = clampValueToMinMax(this.value, this.min, this.max);
+                //     document.getElementById('cfguidance').value = this.value;
+                // });
+            
+                // // Update the labels on document load
+                // document.addEventListener('DOMContentLoaded', function() {
+                //     updateLabels();
+                // });
+            
+                // // Update the labels when the model changes
+                // document.getElementById('model').addEventListener('change', function() {
+                //     updateLabels();
+                // });
 
-
-                // checks when the steps slider changes and updates the label:
+                // limit the amount it can fire, make sure it doesnt fire several times per second:
+                let updateLabelsTimeout = null;
+                // Event listeners for updating labels when sliders or inputs change
                 document.getElementById('steps').addEventListener('input', function() {
-                    document.getElementById('stepsInput').value = document.getElementById('steps').value
-                    updateLabels()
-                })
-                document.getElementById('steps').dispatchEvent(new Event('input'));
+                    this.value = clampValueToMinMax(this.value, this.min, this.max);
+                    document.getElementById('stepsInput').value = this.value;
+                    clearTimeout(updateLabelsTimeout);
+                    updateLabelsTimeout = setTimeout(updateLabels, 100);
+                });
 
                 document.getElementById('stepsInput').addEventListener('input', function() {
-                    document.getElementById('steps').value = document.getElementById('stepsInput').value
-                    updateLabels()
-                })
-                document.getElementById('stepsInput').dispatchEvent(new Event('input'));
+                    this.value = clampValueToMinMax(this.value, this.min, this.max);
+                    document.getElementById('steps').value = this.value;
+                    clearTimeout(updateLabelsTimeout);
+                    updateLabelsTimeout = setTimeout(updateLabels, 100);
+                });
 
-
-
-                // checks when the quantity slider changes and updates the label:
                 document.getElementById('quantity').addEventListener('input', function() {
-                    document.getElementById('quantityInput').value = document.getElementById('quantity').value
-                    updateLabels()
-                })
-                document.getElementById('quantity').dispatchEvent(new Event('input'));
+                    this.value = clampValueToMinMax(this.value, this.min, this.max);
+                    document.getElementById('quantityInput').value = this.value;
+                    clearTimeout(updateLabelsTimeout);
+                    updateLabelsTimeout = setTimeout(updateLabels, 100);
+                });
 
                 document.getElementById('quantityInput').addEventListener('input', function() {
-                    document.getElementById('quantity').value = document.getElementById('quantityInput').value
-                    updateLabels()
-                })
-                document.getElementById('quantityInput').dispatchEvent(new Event('input'));
+                    this.value = clampValueToMinMax(this.value, this.min, this.max);
+                    document.getElementById('quantity').value = this.value;
+                    clearTimeout(updateLabelsTimeout);
+                    updateLabelsTimeout = setTimeout(updateLabels, 100);
+                });
 
-
-
-                // checks when the cfguidance slider changes and updates the label:
                 document.getElementById('cfguidance').addEventListener('input', function() {
-                    document.getElementById('cfguidanceInput').value = document.getElementById('cfguidance').value
-                    updateLabels()
-                })
-                document.getElementById('cfguidance').dispatchEvent(new Event('input'));
+                    this.value = clampValueToMinMax(this.value, this.min, this.max);
+                    document.getElementById('cfguidanceInput').value = this.value;
+                    clearTimeout(updateLabelsTimeout);
+                    updateLabelsTimeout = setTimeout(updateLabels, 100);
+                });
 
                 document.getElementById('cfguidanceInput').addEventListener('input', function() {
-                    document.getElementById('cfguidance').value = document.getElementById('cfguidanceInput').value
-                    updateLabels()
-                })
-                document.getElementById('cfguidanceInput').dispatchEvent(new Event('input'));
+                    this.value = clampValueToMinMax(this.value, this.min, this.max);
+                    document.getElementById('cfguidance').value = this.value;
+                    clearTimeout(updateLabelsTimeout);
+                    updateLabelsTimeout = setTimeout(updateLabels, 100);
+                });
 
+                // Update the labels on document load
+                document.addEventListener('DOMContentLoaded', function() {
+                    updateLabels();
+                });
 
-                setInterval(() => {
-                    updateLabels()
-                }, 1000);
-
+                // Update the labels when the model changes
+                document.getElementById('model').addEventListener('change', function() {
+                    updateLabels();
+                });
             </script>
+                
 
             <div id="additionalInfo"></div><br>
             <div id="response"></div>
@@ -2929,7 +3035,12 @@
                         if (checkbox.checked) {
                             totalSelected += 1;
                         }
-                    } else if (!model.value.startsWith('sdxl-') && checkboxFirstFour !== 'sdxl') {
+                    } if (model.value.startsWith('flux-') && checkboxFirstFour !== 'flux') {
+                        total += 1;
+                        if (checkbox.checked) {
+                            totalSelected += 1;
+                        }
+                    } if (!model.value.startsWith('sdxl-') && !model.value.startsWith('flux-')) {
                         total += 1;
                         if (checkbox.checked) {
                             totalSelected += 1;
@@ -3038,6 +3149,14 @@
                     if (wordCount > 90) {
                         element.classList.add('wordCountRed');
                     } else if (wordCount > 75) {
+                        element.classList.add('wordCountYellow');
+                    } else {
+                        element.classList.add('wordCountGreen');
+                    }
+                } else if (document.getElementById('model').value.startsWith('flux-')) {
+                    if (wordCount > 300) {
+                        element.classList.add('wordCountRed');
+                    } else if (wordCount > 135) {
                         element.classList.add('wordCountYellow');
                     } else {
                         element.classList.add('wordCountGreen');
