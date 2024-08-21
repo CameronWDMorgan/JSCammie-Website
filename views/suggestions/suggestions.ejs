@@ -103,6 +103,8 @@
                             <% suggestionType = '💜Lora' %>
                         <% } else if (suggestion.type === 'feature') { %>
                             <% suggestionType = '💚Feature' %>
+                        <% } else if (suggestion.type == 'bug') { %>
+                            <% suggestionType = '❤️Bug' %>
                         <% } %>
                     <% } %>
                     <a class="suggestionTopBar"><%=suggestionType%> | <%=suggestion.title%> | </a>
