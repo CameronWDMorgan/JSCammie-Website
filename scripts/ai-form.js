@@ -9,6 +9,8 @@ function getDefaultHeaders() {
 document.getElementById('generateButton').addEventListener('click', async function(event) {
     event.preventDefault();
 
+    console.log("test")
+
     // get the formData from the form:
     const formData = new FormData(document.getElementById('generatorForm'));
 
@@ -33,7 +35,7 @@ document.getElementById('generateButton').addEventListener('click', async functi
 
     // targetQuantity = formData.get('quantity')
 
-    targetQuantity = 4
+    targetQuantity = 2
 
     targetQuantity = Number(targetQuantity)
     targetSteps = Number(targetSteps)
@@ -132,12 +134,6 @@ document.getElementById('generateButton').addEventListener('click', async functi
         imageBase64 = await getBase64(file)
     }
 
-    if(document.getElementById('inpaintingOriginalCheckbox').checked) {
-        inpainting_original_option = true
-    } else {
-        inpainting_original_option = false
-    }
-
     let request_type = "txt2img"
 
     if(document.getElementById('img2imgCheckbox').checked) {
@@ -207,7 +203,6 @@ document.getElementById('generateButton').addEventListener('click', async functi
         inpainting: inpaintingCheckbox,
         inpaintingMask: formData.get('mask'),
         accountId: accountId,
-        inpainting_original_option: inpainting_original_option,
         fastpass: formData.get('fastpass'),
         strengthenabled: strengthenabled,
         autocompleteenabled: autocompleteenabled,
@@ -306,6 +301,10 @@ document.getElementById('generateButton').addEventListener('click', async functi
 
             // Existing code before the while loop remains unchanged
 
+            let everHiddenCancel = false
+
+            let queueLoops = 0
+
             while (!isCompleted) {
                 try {
                     const positionResponse = await fetch(`${API_BASE}/queue_position/${jsonResponse.request_id}`, {
@@ -317,7 +316,21 @@ document.getElementById('generateButton').addEventListener('click', async functi
                     
                     console.log(positionData);
 
-                    document.getElementById('cancelButton').style.display = 'block';
+                    if (Number(positionData.position) < 3 ) {
+                        everHiddenCancel = true
+                    }
+
+                    
+
+                    if (everHiddenCancel) {
+                        document.getElementById('cancelButton').style.display = 'none';
+                    } else {
+                        if (queueLoops > 2) {
+                            document.getElementById('cancelButton').style.display = 'block';
+                        }
+                    }
+
+                    queueLoops += 1
 
                     if(positionData.status == "error") {
                         document.getElementById('response').innerText = "An error occurred: " + positionData.message;

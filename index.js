@@ -230,8 +230,6 @@ app.get('/suggestions', async (req, res) => {
         userProfile = {}
     }
 
-    console.log(userProfile.badges)
-
     res.render('suggestions/suggestions', { suggestions: suggestions, session: req.session, userProfile: userProfile})
 })
 
@@ -324,8 +322,8 @@ app.post('/submit-suggestion', async (req, res) => {
     // remove any that dont have a status of pending:
     userSuggestions = userSuggestions.filter(suggestion => suggestion.status.toLowerCase() === 'pending')
     console.log(userSuggestions.length)
-    if(userSuggestions.length >= 2) {
-        res.send({status: 'error', message: 'You have already submitted 2 suggestions'})
+    if(userSuggestions.length >= 10) {
+        res.send({status: 'error', message: 'You have already submitted 10 suggestions'})
         return
     }
 
@@ -668,7 +666,7 @@ setTimeout(() => {
     updateYAMLCache()
 }, 1000)
 
-setInterval(updateYAMLCache, 60000);
+setInterval(updateYAMLCache, 5000);
 
 async function loraImagesCache() {
 
@@ -685,6 +683,9 @@ async function loraImagesCache() {
             if (!fs.existsSync(`.\\loraimages\\sdxl\\${category}`)) {
                 fs.mkdirSync(`.\\loraimages\\sdxl\\${category}`, { recursive: true })
             }
+            if (!fs.existsSync(`.\\loraimages\\flux\\${category}`)) {
+                fs.mkdirSync(`.\\loraimages\\flux\\${category}`, { recursive: true })
+            }
 
             // set the image path in the loraData:
             if(lora.includes('sdxl')) {
@@ -693,6 +694,12 @@ async function loraImagesCache() {
                     fs.writeFileSync(`.\\loraimages\\sdxl\\${category}\\${lora}.png`, defaultImage)
                 }
                 loraData.image = `http://www.jscammie.com/loraimages/sdxl/${category}/${lora}.png`
+            } else if (lora.includes('flux')) {
+                // if there is no lora image then set it to the default image:
+                if (!fs.existsSync(`.\\loraimages\\flux\\${category}\\${lora}.png`)) {
+                    fs.writeFileSync(`.\\loraimages\\flux\\${category}\\${lora}.png`, defaultImage)
+                }
+                loraData.image = `http://www.jscammie.com/loraimages/flux/${category}/${lora}.png`
             } else {
                 // if there is no lora image then set it to the default image:
                 if (!fs.existsSync(`.\\loraimages\\${category}\\${lora}.png`)) {
@@ -768,6 +775,11 @@ app.get('/beta/ai', async function(req, res){
 
 app.get('/userProfile', async (req, res) => {
     let userProfile = await userProfileSchema.findOne({ accountId: req.session.accountId });
+    // check if the user exists, its a mongodb document that is returned:
+    if (userProfile == null) {
+        res.send({ status: 'error', message: 'User not found' })
+        return
+    }
     res.send({ userProfile: userProfile})
 })
 
@@ -794,6 +806,8 @@ app.post('/dailies', async (req, res) => {
 
     timestamp3hr = userProfile?.dailies?.timestamp3hr ?? "0";
     timestamp12hr = userProfile?.dailies?.timestamp12hr ?? "0";
+    timestamp24hr = userProfile?.dailies?.timestamp24hr ?? "0";
+    timestamp168hr = userProfile?.dailies?.timestamp168hr ?? "0";
 
     switch (dailyType) {
         case'3hr':
@@ -805,6 +819,16 @@ app.post('/dailies', async (req, res) => {
             dailiesTime = Number(timestamp12hr)
             differenceRequired = 43200000
             creditsEarned = 300
+            break
+        case'24hr':
+            dailiesTime = Number(timestamp24hr)
+            differenceRequired = 86400000
+            creditsEarned = 500
+            break
+        case'168hr':
+            dailiesTime = Number(timestamp168hr)
+            differenceRequired = 604800000
+            creditsEarned = 1000
             break
     }
 
@@ -820,8 +844,11 @@ app.post('/dailies', async (req, res) => {
         await userProfileSchema.findOneAndUpdate({ accountId: req.session.accountId }, { 'dailies.timestamp3hr': currentTimestamp, credits: userProfile.credits + creditsEarned })
     } else if (dailyType == '12hr') {
         await userProfileSchema.findOneAndUpdate({ accountId: req.session.accountId }, { 'dailies.timestamp12hr': currentTimestamp, credits: userProfile.credits + creditsEarned })
+    } else if (dailyType == '24hr') {
+        await userProfileSchema.findOneAndUpdate({ accountId: req.session.accountId }, { 'dailies.timestamp24hr': currentTimestamp, credits: userProfile.credits + creditsEarned })
+    } else if (dailyType == '168hr') {
+        await userProfileSchema.findOneAndUpdate({ accountId: req.session.accountId }, { 'dailies.timestamp168hr': currentTimestamp, credits: userProfile.credits + creditsEarned })
     }
-
     res.send({ status: 'success', message: 'Dailies claimed' })
 })
 
@@ -914,13 +941,13 @@ app.post('/generate', async function(req, res){
         let cleanedPrompt = prompt.replace(loraPattern, '').trim().replace(/, , /g, ", ");
 
         // if the prompt contains any : then alert the user that they need to remove them:
-        if(cleanedPrompt.includes(":")) {
-            res.send({status: "error", message: "Please remove any ':' from the prompt. To apply strengths (both positive or negative), use this format: 'word+', 'word++', '(word1, word2)+', '(word1, word2)++' or 'word1-', 'word2--', '(word1, word2)-', '(word1, word2)--'."})
+        if(cleanedPrompt.includes("<SPLIT>")) {
+            res.send({status: "error", message: "BRUH LMAO"})
             return
         }
 
-        if (request.negativeprompt.includes(":")) {
-            res.send({status: "error", message: "Please remove any ':' from the negative prompt. To apply strengths (both positive or negative), use this format: 'word+', 'word++', '(word1, word2)+', '(word1, word2)++' or 'word1-', 'word2--', '(word1, word2)-', '(word1, word2)--'."})
+        if(request.negativeprompt.includes("<SPLIT>")) {
+            res.send({status: "error", message: "BRUH LMAO"})
             return
         }
 
@@ -958,14 +985,14 @@ app.post('/generate', async function(req, res){
                 return
             }
 
-            let fastqueueCreditsRequired = null
+            let fastqueueCreditsRequired
 
             if (request.fastqueue == true) {
                 fastqueueCreditsRequired = getFastqueuePrice(request.lora.length, request.model)
                 request.creditsRequired += fastqueueCreditsRequired
             }
 
-            let extrasCreditsRequired = {removeWatermark: null}
+            let extrasCreditsRequired
 
             // if any value in the extras object is true, then proceed with the if statement:
             if (Object.values(request.extras).includes(true)) {
@@ -975,17 +1002,6 @@ app.post('/generate', async function(req, res){
                 for (const [key, value] of Object.entries(extrasCreditsRequired)) {
                     request.creditsRequired += value
                 }
-            }
-
-            // console.log all the keys and values of fastqueueCreditsRequired and extrasCreditsRequired:
-            console.log("Fastqueue Credits required:")
-            for (const [key, value] of Object.entries(fastqueueCreditsRequired)) {
-                console.log(`${key}: ${value}`)
-            }
-
-            console.log("Extras Credits required:")
-            for (const [key, value] of Object.entries(extrasCreditsRequired)) {
-                console.log(`${key}: ${value}`)
             }
 
             if (userProfile.credits < request.creditsRequired) {

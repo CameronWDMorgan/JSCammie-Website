@@ -106,31 +106,22 @@
 
 <div id="creditsDailyPopup" style="display: none;">
     <div class="dailiesDivSideBySide">
-        <p class="topTextCreditsButton">3 Hour Reward (100)</p>
-        <button id="3hrCreditsButton"><a id="3hrCreditsButtonTimeLeft"></a>/3 Hours</button>
+        <p class="topTextCreditsButton">3 Hours Rewards (100 Credits)</p>
+        <button id="3hrCreditsButton" class="creditsButton"><span id="3hrCreditsButtonTimeLeft"></span> / 3 Hours</button>
     </div>
     <div class="dailiesDivSideBySide">
-        <p class="topTextCreditsButton">12 Hour Reward (300)</p>
-        <button id="12hrCreditsButton"><a id="12hrCreditsButtonTimeLeft"></a>/12 Hours</button>
+        <p class="topTextCreditsButton">12 Hours Rewards (300 Credits)</p>
+        <button id="12hrCreditsButton" class="creditsButton"><span id="12hrCreditsButtonTimeLeft"></span> / 12 Hours</button>
+    </div>
+    <div class="dailiesDivSideBySide">
+        <p class="topTextCreditsButton">24 Hours Rewards (500 Credits)</p>
+        <button id="24hrCreditsButton" class="creditsButton"><span id="24hrCreditsButtonTimeLeft"></span> / 24 Hours</button>
+    </div>
+    <div class="dailiesDivSideBySide">
+        <p class="topTextCreditsButton">7 Days Rewards (1000 Credits)</p>
+        <button id="168hrCreditsButton" class="creditsButton"><span id="168hrCreditsButtonTimeLeft"></span> / 168 Hours</button>
     </div>
 </div>
-
-<style>
-    /* styles from dailiesDivSideBySide and topTextCreditsButton */
-    .dailiesDivSideBySide {
-        display: block;
-        justify-content: space-between;
-        align-items: center;
-        margin: 10px;
-    }
-    
-    .topTextCreditsButton {
-        font-size: 18px;
-        margin: 0;
-    }
-
-</style>
-
 
 <style>
     #creditsDailyPopup {
@@ -140,43 +131,62 @@
         transform: translate(-50%, -50%);
         background-color: var(--background-colour);
         color: white;
-        padding: 20px;
-        border-radius: 10px;
+        padding: 8px;
+        border-radius: 12px;
         border: 2px solid rgb(255, 143, 246);
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
         z-index: 1000;
+        max-width: 400px;
+        width: 90%;
     }
 
-    #creditsDailyPopup button {
-        background-color: rgba(0, 0, 0, 0.1);
-        width: 100%;
+    .dailiesDivSideBySide {
+        display: flex;
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .topTextCreditsButton {
+        font-size: 18px;
+        margin-bottom: 2px;
+        color: #ff9dfc;
+    }
+
+    .creditsButton {
+        background-color: rgba(0, 0, 0, 0.2);
         color: white;
-        padding: 10px;
-        margin: 5px;
-        border-radius: 5px;
+        padding: 12px;
+        border: none;
+        border-radius: 8px;
         cursor: pointer;
+        font-size: 16px;
+        /* center: */
+        margin: 0 auto;
+        width: 100%;
+        transition: background-color 0.3s ease, transform 0.2s ease;
     }
 
-    #creditsDailyPopup button:hover {
+    .creditsButton:hover {
         background-color: var(--highlight-colour-hover);
+        transform: translateY(-2px);
     }
 
-    #creditsDailyPopup button:active {
+    .creditsButton:active {
         background-color: var(--highlight-colour-active);
+        transform: translateY(0);
     }
 
-    #creditsDailyPopup button:disabled {
+    .creditsButton:disabled {
         background-color: var(--highlight-colour-disabled);
+        cursor: not-allowed;
+        opacity: 0.6;
     }
 
-    #creditsDailyPopup button:disabled:hover {
-        background-color: var(--highlight-colour-disabled);
-    }
-
-    #creditsDailyPopup button:disabled:active {
-        background-color: var(--highlight-colour-disabled);
+    .creditsButton span {
+        font-weight: bold;
     }
 </style>
+
 
 <script>
 
@@ -250,6 +260,14 @@
         sendDailiesRequest('12hr');
     });
 
+    document.getElementById('24hrCreditsButton').addEventListener('click', () => {
+        sendDailiesRequest('24hr');
+    });
+
+    document.getElementById('168hrCreditsButton').addEventListener('click', () => {
+        sendDailiesRequest('168hr');
+    });
+
 
     async function updateUserProfile() {
         let userProfileRaw = await fetch('/userProfile', {
@@ -271,6 +289,8 @@
             document.getElementById('creditsDisplay').textContent = 0;
             document.getElementById('3hrCreditsButton').textContent = 'Log in to claim';
             document.getElementById('12hrCreditsButton').textContent = 'Log in to claim';
+            document.getElementById('24hrCreditsButton').textContent = 'Log in to claim';
+            document.getElementById('168hrCreditsButton').textContent = 'Log in to claim';
             return;
         } else {
             document.getElementById('loggedIn').textContent = 'true';
@@ -288,12 +308,21 @@
         timestamp12hr = Number(timestamp12hr)
         timestamp12hrDifferenceRequired = 43200000
 
+        timestamp24hr = userProfile?.dailies?.timestamp24hr ?? "0";
+        timestamp24hr = Number(timestamp24hr)
+        timestamp24hrDifferenceRequired = 86400000
+
+        timestamp168hr = userProfile?.dailies?.timestamp168hr ?? "0";
+        timestamp168hr = Number(timestamp168hr)
+        timestamp168hrDifferenceRequired = 604800000
+
         currentTime = new Date().getTime();
 
         if (timestamp3hr + timestamp3hrDifferenceRequired < currentTime || timestamp3hr == 0) {
             document.getElementById('3hrCreditsButton').disabled = false;
             document.getElementById('3hrCreditsButtonTimeLeft').textContent = 'Claimable';
         } else {
+            document.getElementById('3hrCreditsButton').disabled = true;
             timeLeft = timestamp3hr + timestamp3hrDifferenceRequired - currentTime;
             timeLeftHours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
             timeLeftMinutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
@@ -305,11 +334,38 @@
             document.getElementById('12hrCreditsButton').disabled = false;
             document.getElementById('12hrCreditsButtonTimeLeft').textContent = 'Claimable';
         } else {
+            document.getElementById('12hrCreditsButton').disabled = true;
             timeLeft = timestamp12hr + timestamp12hrDifferenceRequired - currentTime;
             timeLeftHours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
             timeLeftMinutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
             timeLeftSeconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
             document.getElementById('12hrCreditsButtonTimeLeft').textContent = timeLeftHours + 'h ' + timeLeftMinutes + 'm ' + timeLeftSeconds + 's';
+        }
+
+        if (timestamp24hr + timestamp24hrDifferenceRequired < currentTime || timestamp24hr == 0) {
+            document.getElementById('24hrCreditsButton').disabled = false;
+            document.getElementById('24hrCreditsButtonTimeLeft').textContent = 'Claimable';
+        } else {
+            document.getElementById('24hrCreditsButton').disabled = true;
+            timeLeft = timestamp24hr + timestamp24hrDifferenceRequired - currentTime;
+            timeLeftHours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            timeLeftMinutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+            timeLeftSeconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+            document.getElementById('24hrCreditsButtonTimeLeft').textContent = timeLeftHours + 'h ' + timeLeftMinutes + 'm ' + timeLeftSeconds + 's';
+        }
+
+        if (timestamp168hr + timestamp168hrDifferenceRequired < currentTime || timestamp168hr == 0) {
+            document.getElementById('168hrCreditsButton').disabled = false;
+            document.getElementById('168hrCreditsButtonTimeLeft').textContent = 'Claimable';
+        } else {
+            // show it as D H M S left:
+            document.getElementById('168hrCreditsButton').disabled = true;
+            timeLeft = timestamp168hr + timestamp168hrDifferenceRequired - currentTime;
+            timeLeftDays = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+            timeLeftHours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            timeLeftMinutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+            timeLeftSeconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+            document.getElementById('168hrCreditsButtonTimeLeft').textContent = timeLeftDays + 'd ' + timeLeftHours + 'h ' + timeLeftMinutes + 'm ' + timeLeftSeconds + 's';
         }
     }
 

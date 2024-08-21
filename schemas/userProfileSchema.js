@@ -22,6 +22,8 @@ const aiSaveSlotSchema = new Schema({
 const dailiesSchema = new Schema({
     timestamp3hr: { type: String, required: true, default: 0 },
     timestamp12hr: { type: String, required: true, default: 0 },
+    timestamp24hr: { type: String, required: true, default: 0 },
+    timestamp168hr: { type: String, required: true, default: 0 },
 })
 
 const badgesSchema = new Schema({

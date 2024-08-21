@@ -9,6 +9,9 @@ function getFastqueuePrice(loraCount, model) {
 	if (model.startsWith('sdxl')) {
 		dynamicCreditsPrice = dynamicCreditsPrice * 1.5
 		loraModifier = 3
+	} else if (model.startsWith('flux')) {
+		dynamicCreditsPrice = dynamicCreditsPrice * 2.5
+		loraModifier = 3
 	} else {
 		loraModifier = 1.25
 	}
@@ -34,7 +37,7 @@ function getExtrasPrice(extras) {
 
 	// if { removeWatermark: true } is passed, add 150 credits
 	if (extras.removeWatermark) {
-		extrasPrice.removeWatermark += 250
+		extrasPrice.removeWatermark += 500
 	}
 
 	if (extras.upscale) {
