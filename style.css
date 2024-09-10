@@ -16,6 +16,22 @@
 
 }
 
+select {
+    width: 100%;
+    padding: 12px 20px;
+    margin: 8px 0;
+    display: inline-block;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+    background-color: #000000;
+}
+
+select option {
+    background-color: #000000;
+    color: white;
+}
+
 body {
     background-color: var(--background-colour);
     /* Create a linear gradient at 45 degrees from pink to blue */
