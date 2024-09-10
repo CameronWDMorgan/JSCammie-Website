@@ -3,127 +3,147 @@
 <script id="aclib" type="text/javascript" src="//acscdn.com/script/aclib.js"></script>
 
 <style>
-    .topNavBar {
-        background-color: var(--background-colour);
-        color: #fff;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-        height: 60px;
-        width: 100%;
-        position: relative;
-        z-index: 100;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        margin-top: 0px;
-        transition: background-color 1s;
-    }
 
-    .navContainer {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        flex-wrap: wrap;
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 0 15px;
-    }
+/* Navigation Bar */
+.topNavBar {
+    color: #fff;
+    padding: 10px 20px;
+}
 
+.navContainer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Links Wrapper */
+.navLinksWrapper {
+    display: flex;
+    align-items: center;
+}
+
+.navLink {
+    color: #fff;
+    text-decoration: none;
+    padding: 10px 15px;
+    margin: 0 5px;
+    border-radius: 5px;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.navLink:hover,
+.navLink:focus {
+    background-color: var(--highlight-colour);
+}
+
+/* Button Styling */
+#creditsNav {
+    background-color: var(--highlight-colour);
+    border: none;
+    color: #fff;
+    padding: 10px 15px;
+    margin-left: 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: background-color 0.3s;
+}
+
+#creditsNav:hover {
+    background-color: rgba(9, 255, 0, 0.199)
+}
+
+#creditsDisplay {
+    margin-left: 5px;
+    font-weight: bold;
+}
+
+/* Dark Mode Button */
+#darkModeButton {
+    background: none;
+    border: 2px solid #fff;
+    color: #fff;
+    font-size: 1.25em;
+    cursor: pointer;
+    transition: color 0.3s;
+}
+
+#darkModeButton:hover {
+    color: #ddd;
+}
+
+#darkModeIcon {
+    display: inline-block;
+    transition: transform 0.3s;
+}
+
+/* Optional: Add responsive design for mobile view */
+@media (max-width: 768px) {
+    .navLinksWrapper {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
     .navLink {
-        color: white;
-        text-decoration: none;
-        font-size: 18px;
-        padding: 7px 5px;
-        margin: 0 2px;
-        border-radius: 4px;
+        padding: 8px 10px;
+        margin: 5px 0;
     }
+    
+    #creditsNav {
+        margin: 10px 0;
+    }
+}
 
-    .navLink:hover {
-        background-color: var(--highlight-colour);
-    }
-
-    .vertical-line {
-        display: none; /* Optional: hide vertical lines */
-    }
-
-    @media screen and (max-width: 900px) {
-        .navLink {
-            font-size: 14px; /* Adjust font size for smaller screens */
-            padding: 2px 4px; /* Adjust padding for smaller screens */
-        }
-        .topNavBar {
-            height: 50px; /* Adjusted for smaller screens */
-        }
-    }
-
-    @media screen and (max-width: 600px) {
-        .navLink {
-            margin: 0; /* Remove margin for smaller screens */
-        }
-    }
-
-    #darkModeButton {
-        background-color: transparent;
-        color: white;
-        border: 4px solid rgba(0, 0, 0, 0);
-        font-size: 18px;
-        padding: 6px;
-        margin: 0 5px;
-        /* transition border and background-colour: */
-        transition: border 1s, background-color 1s;
-    }
-
-    @media screen and (max-width: 900px) {
-        #darkModeButton {
-            font-size: 14px; /* Adjust font size for smaller screens */
-            padding: 1px
-        }
-        
-    }
-
-    #darkModeButton:hover {
-        border: 4px solid var(--highlight-colour);
-        transition: border 1s, background-color 1s;
-    }
 </style>
 
+
+
 <nav class="topNavBar">
-    <div class="navContainer">
-        <a href="/home" class="navLink">🏠</a>
-        <a href="https://ko-fi.com/jscammie" class="navLink">Donate</a>
-        <% if (session.loggedIn) { %>
-            <a href="/logout" class="navLink">Logout</a>
-        <% } else { %>
-            <a href="/login" class="navLink">Login</a>
-        <% } %>
-        <a href="https://discord.gg/AvbQuRmh7t" class="navLink">Discord</a>
-        <!-- darkmode button & emoji that toggles, also make it stuck to the right: -->
-        <button id="darkModeButton" class="navLink" style="margin-left: auto;">
+    <div class="navContainer" id="navContainer">
+        <div class="navLinksWrapper">
+            <a href="/home" class="navLink">🏠 Home</a>
+            <a href="/" class="navLink">🖥️ AI Generator</a>
+            <a href="https://ko-fi.com/jscammie" class="navLink">🥺 Donate</a>
+            <% if (session.loggedIn) { %>
+                <a href="/logout" class="navLink">Logout</a>
+            <% } else { %>
+                <a href="/login" class="navLink">Login</a>
+            <% } %>
+            <a href="https://discord.gg/AvbQuRmh7t" class="navLink">💬 Discord</a>
+            <button id="creditsNav" class="navLink">Credits: <a id="creditsDisplay" style="transition: all 0.3s;">0</a></button>
+        </div>
+        <button id="darkModeButton">
             <span id="darkModeIcon">🌙</span>
         </button>
-        <button id="creditsNav">Credits: <a id="creditsDisplay" style="transition: all 1s;">0</a></button>
     </div>
 </nav>
 
+
 <div id="creditsDailyPopup" style="display: none;">
     <div class="dailiesDivSideBySide">
-        <p class="topTextCreditsButton">3 Hours Rewards (100 Credits)</p>
+        <p class="topTextCreditsButton">3 Hours Rewards (50 Credits)</p>
         <button id="3hrCreditsButton" class="creditsButton"><span id="3hrCreditsButtonTimeLeft"></span> / 3 Hours</button>
     </div>
     <div class="dailiesDivSideBySide">
-        <p class="topTextCreditsButton">12 Hours Rewards (300 Credits)</p>
+        <p class="topTextCreditsButton">12 Hours Rewards (100 Credits)</p>
         <button id="12hrCreditsButton" class="creditsButton"><span id="12hrCreditsButtonTimeLeft"></span> / 12 Hours</button>
     </div>
     <div class="dailiesDivSideBySide">
-        <p class="topTextCreditsButton">24 Hours Rewards (500 Credits)</p>
+        <p class="topTextCreditsButton">24 Hours Rewards (200 Credits)</p>
         <button id="24hrCreditsButton" class="creditsButton"><span id="24hrCreditsButtonTimeLeft"></span> / 24 Hours</button>
     </div>
     <div class="dailiesDivSideBySide">
-        <p class="topTextCreditsButton">7 Days Rewards (1000 Credits)</p>
-        <button id="168hrCreditsButton" class="creditsButton"><span id="168hrCreditsButtonTimeLeft"></span> / 168 Hours</button>
+        <p class="topTextCreditsButton">7 Days Rewards (500 Credits)</p>
+        <button id="168hrCreditsButton" class="creditsButton"><span id="168hrCreditsButtonTimeLeft"></span> / 7 Days</button>
     </div>
 </div>
 
 <style>
+
+/* add a blur and darken effect to anything behind the creditsDailyPopup, also add a clean transition: */
     #creditsDailyPopup {
         position: fixed;
         top: 50%;
@@ -199,6 +219,23 @@
             document.getElementById('creditsDailyPopup').style.display = 'none';
         }
     });
+
+    // when the user clicks outside of the creditsDailyPopup, hide it:
+    document.addEventListener('click', function (event) {
+        var isClickInside = document.getElementById('creditsDailyPopup').contains(event.target);
+        var isClickOnButton = document.getElementById('creditsNav').contains(event.target);
+        if (!isClickInside && !isClickOnButton) {
+            document.getElementById('creditsDailyPopup').style.display = 'none';
+        }
+    });
+
+    // when the user presses the escape key, hide the creditsDailyPopup:
+    document.addEventListener('keydown', function (event) {
+        if (event.key === "Escape") {
+            document.getElementById('creditsDailyPopup').style.display = 'none';
+        }
+    });
+
 </script>
 
 <script>
@@ -283,7 +320,7 @@
         let userProfile = await userProfileRaw.json();
         userProfile = userProfile?.userProfile;
 
-        if (userProfile == null) {
+        if (userProfile == null || userProfile == undefined) {
             document.getElementById('loggedIn').textContent = 'false';
             // set the creditsDisplay to 0 if the userProfile is null AND the CreditsButtons to be "Log in to claim", hide the topTextCreditsButton:
             document.getElementById('creditsDisplay').textContent = 0;
@@ -375,9 +412,29 @@
     }, 750);
 </script>
 
-<div class="center-fully-no-flex round-frosted" style="padding: 4px; border: none !important; border-radius: 0px !important;">
-    <p>Checkout the contests on <a href="https://discord.gg/AvbQuRmh7t">Discord</a> to win credits! </p>
-</div>
+<!-- <div class="center-fully-no-flex round-frosted" style="padding: 4px; border: none !important; border-radius: 0px !important;">
+    <p>Donate</p> 
+</div> -->
+
+<!-- create a shadow only going down: -->
+
+<style>
+    .dividingLine {
+        width: 100%;
+        height: 4px;
+        background-color: rgba(0, 0, 0, 0.5);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 1);
+    }
+
+    .dividingLine.dark {
+        background-color: rgba(255, 255, 255, 0.5);
+        box-shadow: 0 4px 15px rgba(255, 255, 255, 1);
+    }
+</style>
+
+<div class="dividingLine"></div>
+
+
 
 <!-- script to enable darkmode, change how a button looks with emoji on the navigation -->
 <script>
@@ -389,10 +446,12 @@
         if (darkmodeStatus == "false") {
             document.body.classList.remove('dark');
             document.getElementsByClassName('topNavBar')[0].classList.remove('dark');
+            document.getElementsByClassName('dividingLine')[0].classList.remove('dark');
             darkModeIcon.textContent = '☀️';
         } if (darkmodeStatus == "true") {
             document.body.classList.add('dark');
             document.getElementsByClassName('topNavBar')[0].classList.add('dark');
+            document.getElementsByClassName('dividingLine')[0].classList.add('dark');
             darkModeIcon.textContent = '🌙';
         }
     }
