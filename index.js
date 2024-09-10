@@ -78,16 +78,12 @@ function requireHTTPS(req, res, next) {
   
 app.use(requireHTTPS);
 
-// add Clear-Site-Data: "cache" as a header to clear the cache on ANY page load:
-app.use((req, res, next) => {
-    res.setHeader('Clear-Site-Data', '"cache"');
-    next();
-});
-
 app.use(express.json());
 
 const userProfileSchema = require('./schemas/userProfileSchema.js');
 const userSuggestionSchema = require('./schemas/userSuggestionSchema.js');
+const userHistorySchema = require('./schemas/userHistorySchema.js');
+
 const { type } = require('os');
 
 // setup views directory:
@@ -206,8 +202,8 @@ app.post('/receive-token', async (req, res) => {
 
 app.get('/suggestions', async (req, res) => {
     let suggestions = await userSuggestionSchema.find()
-    // sort by upvotes - downvotes, then sort by wether the status is Pending, Approved, or Denied:
-    suggestions = suggestions.sort((a, b) => (b.upvotes.length - b.downvotes.length) - (a.upvotes.length - a.downvotes.length))
+    // sort by timestamp:
+    suggestions = suggestions.sort((a, b) => b.timestamp - a.timestamp)
     
 
     // sort them by status, with the order being: Added in the middle, Pending at the top, Rejected at the bottom:
@@ -476,6 +472,44 @@ app.get('/suggestion/:suggestionId', async (req, res) => {
 })
 
 
+app.get('/image-history', async (req, res) => {
+    let userProfile = await userProfileSchema.findOne({accountId: req.session.accountId})
+
+    if (userProfile == null) {
+        res.send('User not found')
+        return
+    }
+
+    if(req.session.accountId == "1039574722163249233") {
+        // make sure its sorted by _id getTimestamp:
+        userHistory = await userHistorySchema.find({account_id: req.session.accountId}).sort({ _id: -1 })
+    } else {
+        userHistory = await userHistorySchema.find({account_id: req.session.accountId}).sort({ _id: -1 })
+    }
+        
+    res.render('image-history', { userHistory: userHistory, session: req.session })
+    
+})
+
+app.post('/image-history/delete-image', async (req, res) => {
+    let image_id = req.body.image_id
+
+    let image = await userHistorySchema.findOne({image_id: image_id, account_id: req.session.accountId})
+
+    if(image === null) {
+        res.send({status: 'error', message: 'Image not found'})
+        return
+    }
+
+    if(image.account_id !== req.session.accountId) {
+        res.send({status: 'error', message: 'You are not the author of this image'})
+        return
+    }
+
+    await userHistorySchema.findOneAndDelete({image_id: image_id})
+
+    res.send({status: 'success', message: 'Image removed'})
+})
 
 
 app.get('/metadata', (req, res) => {
@@ -602,9 +636,9 @@ try {
         body: JSON.stringify({ query: 'large' })
     })
     .then(res => res.json())
-    .then(json => console.log(json));
+    // .then(json => console.log(json));
     timeAfterTest = Date.now()
-    console.log(`1st ATTEMPT: Time taken: ${timeAfterTest - timeBeforeTest}ms`)
+    // console.log(`1st ATTEMPT: Time taken: ${timeAfterTest - timeBeforeTest}ms`)
 
     // test again:
     timeBeforeTest = Date.now()
@@ -614,9 +648,9 @@ try {
         body: JSON.stringify({ query: 'small' })
     })
     .then(res => res.json())
-    .then(json => console.log(json));
+    // .then(json => console.log(json));
     timeAfterTest = Date.now()
-    console.log(`2nd ATTEMPT: Time taken: ${timeAfterTest - timeBeforeTest}ms`)
+    // console.log(`2nd ATTEMPT: Time taken: ${timeAfterTest - timeBeforeTest}ms`)
 
 } catch (error) {
     console.log(error)
@@ -712,12 +746,28 @@ async function loraImagesCache() {
             cachedYAMLData[category][lora] = loraData
         }
         // console.log the index:
-        console.log(`Cached YAML data updated with images for ${category}`)
+        // console.log(`Cached YAML data updated with images for ${category}`)
     }
     console.log('Cached YAML data updated with images')
     modifiedCachedYAMLData = cachedYAMLData
     // console.log(cachedYAMLData)
 }
+
+let aiScripts = {
+    calculateCreditsPrice: fs.readFileSync('./scripts/ai-calculateCreditsPrice.js', 'utf8'),
+    aiForm: fs.readFileSync('./scripts/ai-form.js', 'utf8'),
+}
+
+// split on module.exports to remove it and everything after:
+aiScripts.calculateCreditsPrice = aiScripts.calculateCreditsPrice.split('module.exports')[0]
+
+let betaAiScripts = {
+    calculateCreditsPrice: fs.readFileSync('./scripts/ai-calculateCreditsPrice.js', 'utf8'),
+    aiForm: fs.readFileSync('./scripts/ai-form-beta.js', 'utf8'),
+}
+
+// split on module.exports to remove it and everything after:
+betaAiScripts.calculateCreditsPrice = betaAiScripts.calculateCreditsPrice.split('module.exports')[0]
 
 app.get('/beta/ai', async function(req, res){
     try {
@@ -742,25 +792,11 @@ app.get('/beta/ai', async function(req, res){
 
         let userProfile = await userProfileSchema.findOne({accountId: req.session.accountId})
 
+        let scripts = ""
 
+        scripts = betaAiScripts
 
-        scripts = {
-            calculateCreditsPrice: fs.readFileSync('./scripts/ai-calculateCreditsPrice.js', 'utf8'),
-            aiForm: fs.readFileSync('./scripts/ai-form.js', 'utf8'),
-        }
-
-        // remove the following from calculateCreditsPrice:
-        /* 
-        module.exports = {
-            getFastqueuePrice,
-            getExtrasPrice
-        }
-        */
-
-        scripts.calculateCreditsPrice = scripts.calculateCreditsPrice.replace("module.exports = { getFastqueuePrice, getExtrasPrice }", "")
-
-
-        res.render('beta/ai', { 
+        res.render('aibeta', { 
             userProfile,
             session: req.session,
             scripts: scripts,
@@ -813,22 +849,22 @@ app.post('/dailies', async (req, res) => {
         case'3hr':
             dailiesTime = Number(timestamp3hr)
             differenceRequired = 10800000
-            creditsEarned = 100
+            creditsEarned = 50
             break
         case'12hr':
             dailiesTime = Number(timestamp12hr)
             differenceRequired = 43200000
-            creditsEarned = 300
+            creditsEarned = 100
             break
         case'24hr':
             dailiesTime = Number(timestamp24hr)
             differenceRequired = 86400000
-            creditsEarned = 500
+            creditsEarned = 200
             break
         case'168hr':
             dailiesTime = Number(timestamp168hr)
             differenceRequired = 604800000
-            creditsEarned = 1000
+            creditsEarned = 500
             break
     }
 
@@ -851,14 +887,6 @@ app.post('/dailies', async (req, res) => {
     }
     res.send({ status: 'success', message: 'Dailies claimed' })
 })
-
-
-let aiScripts = {
-    calculateCreditsPrice: fs.readFileSync('./scripts/ai-calculateCreditsPrice.js', 'utf8'),
-    aiForm: fs.readFileSync('./scripts/ai-form.js', 'utf8'),
-}
-
-aiScripts.calculateCreditsPrice = aiScripts.calculateCreditsPrice.replace("module.exports = { getFastqueuePrice, getExtrasPrice }", "")
 
 // update the aiScripts every 15 seconds:
 setInterval(() => {
@@ -1076,6 +1104,8 @@ app.get('/queue_position/:request_id', async function(req, res){
     }
 })
 
+let imagesHistorySaveLocation = "E:/JSCammie/imagesHistory/"
+
 app.get('/result/:request_id', async function(req, res){
     try {
         request_id = req.param('request_id')
@@ -1086,7 +1116,59 @@ app.get('/result/:request_id', async function(req, res){
 
         const json = await response.json();
 
-        if (json.accountId !== "0" && json.fastqueue === true && json.status !== "error") {
+        if (json.historyData.account_id != "0") {
+
+            console.log(json.historyData)
+
+            if (!fs.existsSync(imagesHistorySaveLocation)) {
+                fs.mkdirSync(imagesHistorySaveLocation, { recursive: true });
+            }
+            if (!fs.existsSync(`${imagesHistorySaveLocation}${json.historyData.account_id}/`)) {
+                fs.mkdirSync(`${imagesHistorySaveLocation}${json.historyData.account_id}/`, { recursive: true });
+            }
+        
+            let nextImageId = BigInt(Date.now());
+                
+            for (const image of json.images) {
+                try {
+                    // Check if the image object contains a base64 key
+                    if (image.hasOwnProperty('base64')) {
+                        let base64Data = image.base64;
+            
+                        // Save the image to the file system
+                        fs.writeFileSync(`${imagesHistorySaveLocation}${json.historyData.account_id}/${nextImageId}.png`, base64Data, 'base64');
+            
+                        // Prepare the new image history document
+                        let newImageHistory = {
+                            account_id: json.historyData.account_id,
+                            image_id: BigInt(nextImageId),
+                            prompt: json.historyData.prompt,
+                            negative_prompt: json.historyData.negative_prompt,
+                            model: json.historyData.model,
+                            aspect_ratio: json.historyData.aspect_ratio,
+                            loras: json.historyData.loras,
+                            lora_strengths: json.historyData.lora_strengths,
+                            steps: json.historyData.steps,
+                            cfg: json.historyData.cfg,
+                            seed: json.historyData.seed,
+                            image_url: `http://www.jscammie.com/imagesHistory/${json.historyData.account_id}/${nextImageId}.png`
+                        };
+            
+                        // Insert the new image history document into the database
+                        await userHistorySchema.create(newImageHistory);
+            
+                        // Increment the image ID for the next iteration
+                        nextImageId = BigInt(nextImageId) + BigInt(1);
+                    }
+                } catch (err) {
+                    console.error('Error saving image or updating database:', err);
+                }
+            }
+            
+        }
+        
+
+        if (json.historyData.account_id !== "0" && json.fastqueue === true && json.status !== "error") {
             // get the user profile:
             let userProfile = await userProfileSchema.findOne({accountId: req.session.accountId})
 
@@ -1103,11 +1185,11 @@ app.get('/result/:request_id', async function(req, res){
 
             await userProfileSchema.findOneAndUpdate({ accountId: req.session.accountId }, { credits: creditsFinal })
 
-            console.log(`${userProfile.username} credits decremented by ${creditsRequired}`)
+            // console.log(`${userProfile.username} credits decremented by ${creditsRequired}`)
             json.credits = userProfile.credits - creditsRequired
         }
 
-        if (json.accountId !== "0" && req.session.loggedIn) {
+        if (json.historyData.account_id !== "0" && req.session.loggedIn && json.status !== "error") {
             let userProfile = await userProfileSchema.findOne({accountId: req.session.accountId})
             if (userProfile.credits == null || userProfile.credits == undefined) {
                 creditsCurrent = 500
@@ -1128,10 +1210,12 @@ app.get('/result/:request_id', async function(req, res){
             if (randomChance == 1) {
                 creditsCurrent += randomCredits
             }
-            console.log(`${userProfile.username} credits incremented by ${randomCredits}`)
-                await userProfileSchema.findOneAndUpdate({ accountId: req.session.accountId }, { credits: creditsCurrent })
-                json.credits = creditsCurrent
-        }
+            // console.log(`${userProfile.username} credits incremented by ${randomCredits}`)
+            await userProfileSchema.findOneAndUpdate({ accountId: req.session.accountId }, { credits: creditsCurrent })
+            json.credits = creditsCurrent
+        }        
+
+        historyData = json.historyData
 
         res.send(json);
     } catch (error) {
