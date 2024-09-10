@@ -1,0 +1,88 @@
+.lora-details {
+    background-color: rgba(0, 0, 0, 0.5); /* Original light grey background */
+    border: 1px solid #ddd; /* Light grey border */
+    border-radius: 4px; /* Rounded corners */
+    padding: 10px; /* Padding inside the div */
+    margin-bottom: 10px; /* Space between each lora detail div */
+    font-size: small;
+}
+
+.lora-details p {
+    margin: 1px 0; /* Space between paragraphs */
+}
+
+.lora-name-label {
+    position: relative;
+    top: -5px;
+    left: 0px; /* Moved the label 20px up as originally intended */
+    display: block; /* Ensure label is on its own line */
+    font-weight: bold; /* Emphasize the label */
+}
+
+.lora-category {
+    color: rgb(255, 144, 144);
+}
+
+.lora-description {
+    color: rgb(255, 216, 144);
+}
+
+.lora-strength {
+    color: rgb(150, 255, 144);
+}
+
+.lora-words {
+    color: rgb(144, 225, 255);
+}
+
+.lora-id {
+    color: rgb(242, 144, 255);
+}
+
+.lora-link {
+    color: #ff9900; /* Orange color for link */
+    text-decoration: none; /* No underline for a clean look */
+}
+
+.lora-link:hover {
+    text-decoration: underline; /* Underline on hover for interactivity */
+}
+
+.lora-grayed-out {
+    color: #60606095; /* Light grey color */
+    font-style: italic; /* Italicized for notes */
+}
+
+/* Additional styles for better layout and readability */
+.lora-details div {
+    margin-bottom: 10px; /* Space between container divs */
+}
+
+.lora-toggle input[type="checkbox"] {
+    margin-right: 5px; /* Space between checkbox and label */
+}
+
+.lora-note {
+    color: #666; /* Greyed out note text for less emphasis */
+    font-style: italic; /* Italicized for notes */
+}
+
+.lora-strength-slider {
+    color: rgb(150, 255, 144);
+}
+
+.lora-words-copy-button {
+    background-color: #4caf4f95; /* Green */
+    border: none;
+    color: white;
+    padding: 4px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin: 4px 2px;
+    cursor: pointer;
+    transition: transform 0.7s, background-color 0.3s; /* Adjust time as needed */
+    transform: scale(1) rotate(0deg); /* Default state */
+    transform-origin: center; /* Ensures the scaling happens from the center */
+}
