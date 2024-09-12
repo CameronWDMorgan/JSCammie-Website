@@ -164,7 +164,9 @@
                 <option value="oldest">Oldest</option>
                 <option value="votesAggregated">Votes</option>
             </select>
-
+            <br>
+            <!-- search box -->
+            <input type="text" id="suggestionsSearch" placeholder="Search for a suggestion...">
         </div>
 
         <div id="suggestionsContainer">
@@ -185,6 +187,7 @@
             const safety = document.getElementById('suggestionsSafetySearch').value;
             const status = document.getElementById('suggestionsStatusSearch').value;
             const sortOrder = document.getElementById('suggestionsSortOrder').value;
+            const search = document.getElementById('suggestionsSearch').value;
 
             let suggestions = Object.values(masterSuggestionData);
 
@@ -201,12 +204,9 @@
                 suggestions = suggestions.filter(suggestion => suggestion.status.toLowerCase() === status);
             }
 
-            // if the suggestion isnt pending, then set promoted to false:
-            suggestions.forEach(suggestion => {
-                if (suggestion.status.toLowerCase() !== 'pending') {
-                    suggestion.promoted = false;
-                }
-            });
+            if (search) {
+                suggestions = suggestions.filter(suggestion => suggestion.title.toLowerCase().includes(search.toLowerCase()) || suggestion.text.toLowerCase().includes(search.toLowerCase()));
+            }
 
             // Sort based on the selected sort order
             if (sortOrder === 'newest') {
@@ -241,7 +241,7 @@
             suggestionsContainer.innerHTML = '';
             suggestions.forEach(suggestion => {
                 const suggestionDiv = document.createElement('div');
-                if (suggestion.promoted) {
+                if (suggestion.promoted && suggestion.status.toLowerCase() === 'pending') {
                     suggestionDiv.classList.add('suggestionDiv', 'promotedSuggestion');
                 } else {
                     suggestionDiv.classList.add('suggestionDiv', `${suggestion.status}Suggestion`);
@@ -249,7 +249,7 @@
 
                 suggestionDiv.innerHTML = `
                     <span hidden id="suggestionId">${suggestion.suggestionId}</span>
-                    <p id="${suggestion.suggestionId}-safety">${suggestion.safety === 'nsfw' ? 'NSFW' : 'SFW'}</p>
+                    <p id="${suggestion.suggestionId}-safety">${suggestion.safety === 'nsfw' ? 'NSFW' : 'SFW'} ${suggestion.promoted ? '<a style="color: gold;">⭐Promoted</a>' : ''}</p>
                     <a class="suggestionTopBar">${suggestion.type === 'lora' ? '💜Lora' : suggestion.type === 'feature' ? '💚Feature' : '❤️Bug'} | ${suggestion.title} | </a>
                     <a class="suggestionTopBar">
                         <button class="votingButton" id="upvote">Upvotes: ${suggestion.upvotes.length}</button>
@@ -262,7 +262,7 @@
                         ${userProfile.badges?.owner ? '<button id="addSuggestion">Add</button>' : ''}
                         ${userProfile.badges?.owner ? '<button id="rejectSuggestion">Reject</button>' : ''}
                         ${userProfile.accountId === suggestion.accountId || userProfile.badges?.owner ? '<button id="toggleSuggestionSafety">NSFW/SFW</button>' : ''}
-                        ${userProfile.accountId && suggestion.status.toLowerCase() === 'pending' ? '<button id="promoteSuggestion">Promote (750 Credits)</button>' : ''}
+                        ${userProfile.accountId && suggestion.status.toLowerCase() === 'pending' && !suggestion.promoted ? '<button id="promoteSuggestion">Promote (750 Credits)</button>' : ''}
                     </a>
                     <p id="${suggestion.suggestionId}-response"></p>
                 `;
@@ -456,6 +456,7 @@
             document.getElementById('suggestionsSafetySearch').addEventListener('change', searchSuggestions);
             document.getElementById('suggestionsStatusSearch').addEventListener('change', searchSuggestions);
             document.getElementById('suggestionsSortOrder').addEventListener('change', searchSuggestions);
+            document.getElementById('suggestionsSearch').addEventListener('input', searchSuggestions);
             searchSuggestions();
         }
 
