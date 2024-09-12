@@ -513,7 +513,7 @@ app.get('/image-history', async (req, res) => {
 
     if(req.session.accountId == "1039574722163249233") {
         // make sure its sorted by _id getTimestamp:
-        userHistory = await userHistorySchema.find().sort({ _id: -1 }).limit(10000)
+        userHistory = await userHistorySchema.find({account_id: req.session.accountId}).sort({ _id: -1 })
     } else {
         userHistory = await userHistorySchema.find({account_id: req.session.accountId}).sort({ _id: -1 })
     }
