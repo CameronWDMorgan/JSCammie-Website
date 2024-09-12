@@ -76,7 +76,39 @@
             .rejectedSuggestion div {
                 background-color: rgba(255, 0, 0, 0.5) !important;
             }
+
+            /* .promotedSuggestion have a glowing border to the div: */
+
         </style>
+
+        <script>
+            // manually animate the .promotedSuggestion class divs:
+
+            function animatePromoted() {
+                const promotedSuggestions = document.querySelectorAll('.promotedSuggestion');
+                    promotedSuggestions.forEach(suggestion => {
+                        suggestion.animate([
+                        { border: '3px solid rgb(0, 0, 0)', boxShadow: '0 0 20px rgb(0,0,0)', offset: 0 },    // start
+                        { border: '3px solid rgb(100, 255, 100)', boxShadow: '0 0 20px rgb(100, 255, 100)', offset: 0.3 }, 
+                        { border: '3px solid rgb(100, 100, 255)', boxShadow: '0 0 30px rgb(100, 100, 255)', offset: 0.7 }, 
+                        { border: '3px solid rgb(0, 0, 0)', boxShadow: '0 0 20px rgb(0,0,0)', offset: 1 }    // Back to start
+                    ], {
+                        duration: 2000, // Total animation duration (in milliseconds)
+                        iterations: Infinity // Infinite loop
+                    });
+                });
+            }
+
+            function stopAnimatePromoted() {
+                const promotedSuggestions = document.querySelectorAll('.promotedSuggestion');
+                promotedSuggestions.forEach(suggestion => {
+                    suggestion.style.border = '3px solid rgb(255, 150, 253)';
+                    suggestion.style.boxShadow = 'none';
+                    suggestion.style.color = 'black';
+                });
+            }
+
+        </script>
 
         <script>
             var masterSuggestionData = {}
@@ -91,7 +123,8 @@
                     downvotes: [<%=suggestion.downvotes%>],
                     text: `<%=suggestion.text%>`,
                     accountId: `<%=suggestion.accountId%>`,
-                    status: `<%=suggestion.status%>`
+                    status: `<%=suggestion.status%>`,
+                    promoted: <%=suggestion.promoted? suggestion.promoted : false%>
                 }
             <% }) %>
 
@@ -168,6 +201,13 @@
                 suggestions = suggestions.filter(suggestion => suggestion.status.toLowerCase() === status);
             }
 
+            // if the suggestion isnt pending, then set promoted to false:
+            suggestions.forEach(suggestion => {
+                if (suggestion.status.toLowerCase() !== 'pending') {
+                    suggestion.promoted = false;
+                }
+            });
+
             // Sort based on the selected sort order
             if (sortOrder === 'newest') {
                 suggestions.sort((a, b) => b.suggestionId - a.suggestionId);
@@ -181,16 +221,31 @@
                 });
             }
 
-            console.log(suggestions); // Check the filtered and sorted suggestions
-            console.log(userProfile); // Check the userProfile object
-            console.log(masterSuggestionData)
+            // sort the suggestions by promoted status, making sure the previously sorted suggestions are still in order:
+            suggestions.sort((a, b) => {
+                if (a.promoted && !b.promoted) {
+                    return -1;
+                } else if (!a.promoted && b.promoted) {
+                    return 1;
+                } else {
+                    return 0;
+                }
+            });
+
+            // console.log(suggestions); // Check the filtered and sorted suggestions
+            // console.log(userProfile); // Check the userProfile object
+            // console.log(masterSuggestionData)
 
             // update the suggestions container:
             const suggestionsContainer = document.getElementById('suggestionsContainer');
             suggestionsContainer.innerHTML = '';
             suggestions.forEach(suggestion => {
                 const suggestionDiv = document.createElement('div');
-                suggestionDiv.classList.add('suggestionDiv', `${suggestion.status}Suggestion`);
+                if (suggestion.promoted) {
+                    suggestionDiv.classList.add('suggestionDiv', 'promotedSuggestion');
+                } else {
+                    suggestionDiv.classList.add('suggestionDiv', `${suggestion.status}Suggestion`);
+                }
 
                 suggestionDiv.innerHTML = `
                     <span hidden id="suggestionId">${suggestion.suggestionId}</span>
@@ -207,6 +262,7 @@
                         ${userProfile.badges?.owner ? '<button id="addSuggestion">Add</button>' : ''}
                         ${userProfile.badges?.owner ? '<button id="rejectSuggestion">Reject</button>' : ''}
                         ${userProfile.accountId === suggestion.accountId || userProfile.badges?.owner ? '<button id="toggleSuggestionSafety">NSFW/SFW</button>' : ''}
+                        ${userProfile.accountId && suggestion.status.toLowerCase() === 'pending' ? '<button id="promoteSuggestion">Promote (750 Credits)</button>' : ''}
                     </a>
                     <p id="${suggestion.suggestionId}-response"></p>
                 `;
@@ -231,7 +287,7 @@
                         vote: vote
                     };
 
-                    console.log(requestBody);
+                    // console.log(requestBody);
                     // send the vote to the server:
 
                     const response = await fetch(`/vote-suggestion`, {
@@ -245,12 +301,10 @@
                     console.log(data);
 
                     // update the upvotes and downvotes on the page for the suggestion:
-                    e.target.parentElement.querySelector('#upvote').innerText = `Upvotes: ${data.votes.upvotes}`;
-                    e.target.parentElement.querySelector('#downvote').innerText = `Downvotes: ${data.votes.downvotes}`;
+                    masterSuggestionData[suggestionId].upvotes = data.votes.upvotes
+                    masterSuggestionData[suggestionId].downvotes = data.votes.downvotes
 
-                    // update the response message:
-                    responseElement = document.getElementById(`${suggestionId}-response`);
-                    responseElement.innerText = data.message;
+                    searchSuggestions();
                 });
             });
 
@@ -273,11 +327,11 @@
                         }
                     });
                     const data = await response.json();
-                    console.log(data);
+                    // console.log(data);
 
-                    // update the response message:
-                    responseElement = document.getElementById(`${suggestionId}-response`);
-                    responseElement.innerText = data.message;
+                    // remove the suggestion from the page:
+                    masterSuggestionData[suggestionId] = undefined;
+                    searchSuggestions();
                 });
             });
 
@@ -301,17 +355,69 @@
                         }
                     });
                     const data = await response.json();
-                    console.log(data);
+                    // console.log(data);
 
-                    // set the class of the suggestion div to added:
-                    suggestionDiv = e.target.parentElement.parentElement;
-                    suggestionDiv.classList.remove('pendingSuggestion');
-                    suggestionDiv.classList.remove('rejectedSuggestion');
-                    suggestionDiv.classList.add('addedSuggestion');
+                    masterSuggestionData[suggestionId].status = 'added';
+                    
+                    searchSuggestions();
+                });
+            });
 
-                    // update the response message:
-                    responseElement = document.getElementById(`${suggestionId}-response`);
-                    responseElement.innerText = data.message;
+            // promoteSuggestion logic:
+            document.querySelectorAll('#promoteSuggestion').forEach(button => {
+                button.addEventListener('click', async (e) => {
+                    const suggestionId = e.target.parentElement.parentElement.querySelector('#suggestionId').innerText;
+
+                    // set request body:
+                    let requestBody = {
+                        suggestionId: suggestionId,
+                        accountId: userProfile.accountId
+                    };
+
+                    // send the promote request to the server:
+                    const response = await fetch(`/promote-suggestion`, {
+                        method: 'POST',
+                        body: JSON.stringify(requestBody),
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    const data = await response.json();
+                    // console.log(data);
+
+                    if (masterSuggestionData[suggestionId].promoted) {
+                        responseElement = document.getElementById(`${suggestionId}-response`);
+                        responseElement.innerText = data.message;
+                    } else {
+                        masterSuggestionData[suggestionId].promoted = true;
+                        searchSuggestions();
+                    }
+                });
+            });
+
+            document.querySelectorAll('#toggleSuggestionSafety').forEach(button => {
+                button.addEventListener('click', async (e) => {
+                    const suggestionId = e.target.parentElement.parentElement.querySelector('#suggestionId').innerText;
+
+                    // set request body:
+                    let requestBody = {
+                        suggestionId: suggestionId,
+                        accountId: userProfile.accountId
+                    };
+
+                    // send the update request to the server:
+                    const response = await fetch(`/toggle-suggestion-safety`, {
+                        method: 'POST',
+                        body: JSON.stringify(requestBody),
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    const data = await response.json();
+                    // console.log(data);
+                    safetyCurrent = masterSuggestionData[suggestionId].safety;
+                    masterSuggestionData[suggestionId].safety = safetyCurrent === 'sfw' ? 'nsfw' : 'sfw';
+                    searchSuggestions();
                 });
             });
 
@@ -335,19 +441,14 @@
                         }
                     });
                     const data = await response.json();
-                    console.log(data);
+                    // console.log(data);
 
-                    // set the class of the suggestion div to rejected:
-                    suggestionDiv = e.target.parentElement.parentElement;
-                    suggestionDiv.classList.remove('addedSuggestion');
-                    suggestionDiv.classList.remove('pendingSuggestion');
-                    suggestionDiv.classList.add('rejectedSuggestion');
-
-                    // update the response message:
-                    responseElement = document.getElementById(`${suggestionId}-response`);
-                    responseElement.innerText = data.message;
+                    masterSuggestionData[suggestionId].status = 'rejected';
+                    searchSuggestions();
                 });
             });
+            stopAnimatePromoted();
+            animatePromoted();
         };
 
         window.onload = function() {

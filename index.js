@@ -84,7 +84,7 @@ const userProfileSchema = require('./schemas/userProfileSchema.js');
 const userSuggestionSchema = require('./schemas/userSuggestionSchema.js');
 const userHistorySchema = require('./schemas/userHistorySchema.js');
 
-const { type } = require('os');
+const { type, networkInterfaces } = require('os');
 
 // setup views directory:
 app.set('views', './views')
@@ -202,22 +202,7 @@ app.post('/receive-token', async (req, res) => {
 
 app.get('/suggestions', async (req, res) => {
     let suggestions = await userSuggestionSchema.find()
-    // sort by timestamp:
-    suggestions = suggestions.sort((a, b) => b.timestamp - a.timestamp)
     
-
-    // sort them by status, with the order being: Added in the middle, Pending at the top, Rejected at the bottom:
-
-    suggestions = suggestions.sort((a, b) => {
-        let statusOrder = {
-            'pending': 0,
-            'added': 1,
-            'rejected': 2
-        }
-
-        return statusOrder[a.status.toLowerCase()] - statusOrder[b.status.toLowerCase()]
-    })
-
     // userProfile:
 
     if(req.session.loggedIn){
@@ -237,6 +222,46 @@ app.get('/submit-suggestion', (req, res) => {
     }
 
     res.render('suggestions/submit-suggestion', { session: req.session })
+})
+
+app.post('/promote-suggestion', async (req, res) => {
+    // check if they are logged in:
+    if(!req.session.loggedIn){
+        res.redirect('/login')
+        return
+    }
+
+    let suggestionId = req.body.suggestionId
+    let accountId = req.session.accountId
+
+    let currentUser = await userProfileSchema.findOne({accountId: accountId})
+    let suggestion = await userSuggestionSchema.findOne({suggestionId: suggestionId})
+
+    if(suggestion === null) {
+        res.send({status: 'error', message: 'Suggestion not found'})
+        return
+    }
+
+    // check if the suggestion is already promoted:
+    if(suggestion.promoted === true) {
+        res.send({status: 'error', message: 'Suggestion already promoted'})
+        return
+    }
+
+    creditsRequired = BigInt(750)
+
+    // check if the user has more than 300 credits:
+    if(BigInt(currentUser.credits) < creditsRequired) {
+        res.send({status: 'error', message: `You do not have enough credits to promote this suggestion (${creditsRequired} credits)`})
+        return
+    }
+
+    // promote the suggestion:
+    await userSuggestionSchema.findOneAndUpdate({suggestionId: suggestionId}, {promoted: true})
+    let newCredits = BigInt(currentUser.credits) - creditsRequired
+    await userProfileSchema.findOneAndUpdate({accountId: accountId}, {credits: newCredits})
+
+    res.send({status: 'success', message: 'Suggestion promoted (refresh to see changes)'})
 })
 
 app.post('/toggle-suggestion-safety', async (req, res) => {
@@ -393,7 +418,13 @@ app.post('/vote-suggestion', async (req, res) => {
 
     suggestion = await userSuggestionSchema.findOne({suggestionId: suggestionId})
 
-    res.send({status: 'success', message: `${req.body.vote} Vote submitted`, votes: { upvotes: suggestion.upvotes.length, downvotes: suggestion.downvotes.length }})
+    // if suggestion doesnt exist, send error:
+    if(suggestion === null) {
+        res.send({status: 'error', message: 'Suggestion not found', votes: { upvotes: "Doesnt exist", downvotes: "Doesnt exist" }})
+        return
+    }
+
+    res.send({status: 'success', message: `${req.body.vote} Vote submitted`, votes: { upvotes: suggestion.upvotes, downvotes: suggestion.downvotes }})
 })
 
 app.post('/remove-suggestion', async (req, res) => {
@@ -482,7 +513,7 @@ app.get('/image-history', async (req, res) => {
 
     if(req.session.accountId == "1039574722163249233") {
         // make sure its sorted by _id getTimestamp:
-        userHistory = await userHistorySchema.find({account_id: req.session.accountId}).sort({ _id: -1 })
+        userHistory = await userHistorySchema.find().sort({ _id: -1 }).limit(10000)
     } else {
         userHistory = await userHistorySchema.find({account_id: req.session.accountId}).sort({ _id: -1 })
     }
@@ -876,14 +907,17 @@ app.post('/dailies', async (req, res) => {
         return
     }
 
-    if (dailyType == '3hr') {
-        await userProfileSchema.findOneAndUpdate({ accountId: req.session.accountId }, { 'dailies.timestamp3hr': currentTimestamp, credits: userProfile.credits + creditsEarned })
+    newCredits = BigInt(userProfile.credits) + BigInt(creditsEarned)
+    newCredits = newCredits.toString()
+
+    if (dailyType == '3hr') {        
+        await userProfileSchema.findOneAndUpdate({ accountId: req.session.accountId }, { 'dailies.timestamp3hr': currentTimestamp, credits: newCredits })
     } else if (dailyType == '12hr') {
-        await userProfileSchema.findOneAndUpdate({ accountId: req.session.accountId }, { 'dailies.timestamp12hr': currentTimestamp, credits: userProfile.credits + creditsEarned })
+        await userProfileSchema.findOneAndUpdate({ accountId: req.session.accountId }, { 'dailies.timestamp12hr': currentTimestamp, credits: newCredits })
     } else if (dailyType == '24hr') {
-        await userProfileSchema.findOneAndUpdate({ accountId: req.session.accountId }, { 'dailies.timestamp24hr': currentTimestamp, credits: userProfile.credits + creditsEarned })
+        await userProfileSchema.findOneAndUpdate({ accountId: req.session.accountId }, { 'dailies.timestamp24hr': currentTimestamp, credits: newCredits })
     } else if (dailyType == '168hr') {
-        await userProfileSchema.findOneAndUpdate({ accountId: req.session.accountId }, { 'dailies.timestamp168hr': currentTimestamp, credits: userProfile.credits + creditsEarned })
+        await userProfileSchema.findOneAndUpdate({ accountId: req.session.accountId }, { 'dailies.timestamp168hr': currentTimestamp, credits: newCredits })
     }
     res.send({ status: 'success', message: 'Dailies claimed' })
 })
@@ -1181,7 +1215,9 @@ app.get('/result/:request_id', async function(req, res){
                 creditsCurrent = userProfile.credits
             }
 
-            creditsFinal = creditsCurrent - creditsRequired
+            // creditsFinal = creditsCurrent - creditsRequired
+            creditsFinal = BigInt(creditsCurrent) - BigInt(creditsRequired)
+            creditsFinal = creditsFinal.toString()
 
             await userProfileSchema.findOneAndUpdate({ accountId: req.session.accountId }, { credits: creditsFinal })
 
@@ -1208,8 +1244,9 @@ app.get('/result/:request_id', async function(req, res){
 
             // if the random number is 1, add the credits to the user:
             if (randomChance == 1) {
-                creditsCurrent += randomCredits
+                creditsCurrent = BigInt(creditsCurrent) + BigInt(randomCredits)
             }
+            creditsCurrent = creditsCurrent.toString()
             // console.log(`${userProfile.username} credits incremented by ${randomCredits}`)
             await userProfileSchema.findOneAndUpdate({ accountId: req.session.accountId }, { credits: creditsCurrent })
             json.credits = creditsCurrent

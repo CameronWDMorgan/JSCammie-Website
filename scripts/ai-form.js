@@ -102,7 +102,7 @@ document.getElementById('generateButton').addEventListener('click', async functi
     // lora strengths (.strength) are stored in the masterLoraData object:
     let lora_strengths = []
     selectedLoras.forEach(lora => {
-        lora_strengths.push(masterLoraData[lora].strength)
+        lora_strengths.push(Number(masterLoraData[lora].strength))
     });
 
     function getBase64(file) {

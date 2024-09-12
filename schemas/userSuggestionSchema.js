@@ -13,6 +13,7 @@ const userSuggestionSchema = new Schema({
     type: { type: String, default: "lora" },
     status: { type: String, default: "Pending" },
     safety: { type: String, default: "sfw" },
+    promoted: { type: Boolean, default: false },
 })
 
 const name = 'userSuggestion'

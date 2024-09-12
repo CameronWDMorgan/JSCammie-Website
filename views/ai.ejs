@@ -901,13 +901,15 @@
                                 return;
                             }
 
+                            // loras and lora_strengths are strings of arrays like: "['lora1','lora2']" and "['1','2']", make sure to remove the brackets and split by comma, also remove the quotes:
+
                             let aiData = {
                                 prompt: yamlData[0],
                                 negativeprompt: yamlData[1],
                                 aspectRatio: yamlData[2],
                                 model: yamlData[3],
-                                loras: yamlData[4] ? yamlData[4].split(',').map(s => s.trim()) : [],
-                                lora_strengths: yamlData[5] ? yamlData[5].split(',').map(s => s.trim()) : [],
+                                loras: yamlData[4].replace('[','').replace(']','').split(',').map(lora => lora.replace(/'/g, '').trim()),
+                                lora_strengths: yamlData[5].replace('[','').replace(']','').split(',').map(strength => strength.replace(/'/g, '').trim()),
                                 steps: yamlData[6],
                                 cfg: yamlData[8],
                                 seed: yamlData[9]
@@ -964,14 +966,20 @@
                                 masterLoraData[loraId].strength = masterLoraData[loraId].defaultStrength;
                             }
 
-                            // new new whonack code (use masterLoraData to set the elements to .selected ALSO do the lora_strengths settings (its just an array so have some kind of counter or index to set the value of the slider to the value in the array)):
-                            
-                            for (let i = 0; i < aiData.loras.length; i++) {
-                                let loraId = aiData.loras[i];
-                                let loraStrength = aiData.lora_strengths[i];
+                            // if there are no loras then dont do anything:
+                            if (aiData.loras.length > 0) {
+                                // check the checkboxes for the loras in the save slot:
+                                for (let i = 0; i < aiData.loras.length;) {
+                                    let loraId = aiData.loras[i];
+                                    let loraStrength = aiData.lora_strengths[i];
 
-                                masterLoraData[loraId].selected = true;
-                                masterLoraData[loraId].strength = loraStrength;
+                                    console.log(`loraId: ${loraId}\nloraStrength: ${loraStrength}`)
+
+                                    masterLoraData[loraId].selected = true;
+                                    masterLoraData[loraId].strength = Number(loraStrength);
+                                
+                                    i++
+                                }
                             }
 
                             loadLoras();
@@ -1262,6 +1270,8 @@
                             <div class="setting">
                                 <label for="autocompleteCheckbox">Disable Autocomplete:</label>
                                 <input type="checkbox" id="autocompleteCheckbox">
+                                <span class="tooltip" onclick="showTooltip(this)">❓</span>
+                                <div class="tooltiptext">If you find the random scrolling etc annoying, this disables the autocomplete feature for the prompt and negative prompt fields which should help with that.</div>
                             </div>
                         </div>
                         
@@ -1829,11 +1839,11 @@
 
                                     if (Object.keys(categoryLorasArrays).length === 0) {
                                         button.classList.add('deactive');
-                                        button.classList.remove('active');
+                                        // button.classList.remove('active');
                                         button.disabled = true;
                                     } else {
                                         button.classList.remove('deactive');
-                                        button.classList.add('active');
+                                        // button.classList.add('active');
                                         button.disabled = false;
                                     }
                                     
@@ -1846,11 +1856,11 @@
 
                                 // Set form values to the last request values
                                 document.getElementById('prompt').value = lastRequestSD.prompt || '';
-                                document.getElementById('negativeprompt').value = lastRequestSD.negativeprompt || '';
-                                document.getElementById('aspectRatio').value = lastRequestSD.aspectRatio || '';
-                                document.getElementById('model').value = lastRequestSD.model || '';
-                                document.getElementById('steps').value = lastRequestSD.steps || '15';
-                                document.getElementById('cfguidance').value = lastRequestSD.cfguidance || '7.5';
+                                document.getElementById('negativeprompt').value = lastRequestSD.negativeprompt || 'nsfw, monochrome, black and white, worst quality, low quality, watermark, signature, bad anatomy, bad hands, deformed limbs, blurry, cropped, cross-eyed, extra arms, extra legs, extra limbs, extra pupils, bad proportions, poorly drawn hands, simple background, bad background, bad lighting, bad perspective';
+                                document.getElementById('aspectRatio').value = lastRequestSD.aspectRatio || 'square';
+                                document.getElementById('model').value = lastRequestSD.model || 'fluffysonic';
+                                document.getElementById('steps').value = lastRequestSD.steps || '20';
+                                document.getElementById('cfguidance').value = lastRequestSD.cfguidance || '6';
                                 document.getElementById('seed').value = lastRequestSD.seed || '-1';
                                 document.getElementById('scheduler').value = lastRequestSD.scheduler || "eulera";
 
@@ -1869,13 +1879,6 @@
                                     document.getElementById('autocompleteCheckbox').checked = false;
                                 }
 
-                                let strengthenabled = lastRequestSD.strengthenabled || false;
-                                if (strengthenabled === true) {
-                                    document.getElementById('strengthArrowkeysCheckbox').checked = true;
-                                } else {
-                                    document.getElementById('strengthArrowkeysCheckbox').checked = false;
-                                }
-
                                 // set the loras as selected inside of the masterLoraData object:
                                 if (!lastRequestSD.loras) {
                                     lastRequestSD.loras = [];
@@ -1888,6 +1891,11 @@
                                 document.querySelectorAll('.category-btn').forEach(button => {
                                     button.addEventListener('click', function() {
                                         lastSelectedCategory = button.innerText;
+                                        // set class to active for the button that was clicked:
+                                        document.querySelectorAll('.category-btn').forEach(button => {
+                                            button.classList.remove('active');
+                                        })
+                                        button.classList.add('active');
                                         // load the loras:
                                         loadLoras();
                                     })
@@ -1913,10 +1921,12 @@
                                     checkbox.addEventListener('change', function() {
                                         // load the loras:
                                         loadLoras();
+                                        updateLoraSelectionsSummary()
                                     })
                                 })
 
                                 document.getElementById('sortAlphaBtn').classList.add('active');
+                                document.getElementById('style-CategoryButton').classList.add('active');
 
                                 // on model change:
                                 document.getElementById('model').addEventListener('change', function() {
@@ -1946,10 +1956,46 @@
                                 loraSelectionsSummary = document.getElementById('loraSelectionsSummary');
                                 loraSelectionsSummary.innerHTML = '';
                                 selectedLoras = Object.entries(masterLoraData).filter(([key, value]) => value.selected);
-                                totalLoras = Object.entries(masterLoraData).length;
+                                // total loras needs to respect the model type ("doesnt have sdxl or flux in the key", "sdxl in key", "flux in key")
+
+                                totalLoras = Object.entries(masterLoraData).filter(([key, value]) => {
+                                    if (document.getElementById('model').value.startsWith("sdxl")) {
+                                        return key.includes("-sdxl");
+                                    } else if (document.getElementById('model').value.startsWith("flux")) {
+                                        return key.includes("-flux");
+                                    } else {
+                                        return !key.includes("-sdxl") && !key.includes("-flux");
+                                    }
+                                }).length;
+
+                                totalRatingLoraCount = 0
+
+                                // now have a seperate totalLoras for the safety ratings checkboxes, make sure it also follows the model:
+                                totalRatingLoraCount = Object.entries(masterLoraData).filter(([key, value]) => {
+                                    if (document.getElementById('model').value.startsWith("sdxl")) {
+                                        return key.includes("-sdxl");
+                                    } else if (document.getElementById('model').value.startsWith("flux")) {
+                                        return key.includes("-flux");
+                                    } else {
+                                        return !key.includes("-sdxl") && !key.includes("-flux");
+                                    }
+                                }).filter(([key, value]) => {
+                                    if (document.getElementById('showSafeCheckbox').checked && value.rating === 'safe') {
+                                        return true;
+                                    } else if (document.getElementById('showSuggestiveCheckbox').checked && value.rating === 'suggestive') {
+                                        return true;
+                                    } else if (document.getElementById('showNSFWCheckbox').checked && value.rating === 'nsfw') {
+                                        return true;
+                                    } else if (document.getElementById('showNACheckbox').checked && value.rating === 'n/a') {
+                                        return true;
+                                    } else {
+                                        return false;
+                                    }
+                                }).length;
+
 
                                 document.getElementById('totalLorasSelected').innerText = selectedLoras.length;
-                                document.getElementById('totalLoras').innerText = totalLoras;
+                                document.getElementById('totalLoras').innerText = `${totalRatingLoraCount} (${totalLoras})`;
 
                                 if (selectedLoras.length === 0) {
                                     loraSelectionsSummary.innerHTML = '<p>No Loras selected</p>';
@@ -1986,6 +2032,7 @@
                                             </label>
                                         </div>
                                         <div class="lora-info">
+                                            <a class="lora-id"><strong>ID:</strong> ${key}<br><button class="lora-words-copy-button" onclick="copyXWordsToClipboard(\`${key}\`)">Copy ID</button></a>
                                             <p class="lora-description"><strong>Description:</strong> ${value.description || 'Null'}</p>
                                             <p class="lora-strength"><strong>Default Strength:</strong> ${value.strength || 'Null'}</p>
                                             ${wordsFormatted}
@@ -2752,16 +2799,11 @@
                     
                     loraCount = 0
 
-                    let loraSelections = document.querySelectorAll('.loraGridContainer')
-
-                    for (let i = 0; i < loraSelections.length; i++) {
-                        let checkboxes = loraSelections[i].querySelectorAll('input[type="checkbox"]')
-                        for (let j = 0; j < checkboxes.length; j++) {
-                            if (checkboxes[j].checked) {
-                                loraCount += 1
-                            }
+                    Object.entries(masterLoraData).forEach(([key, value]) => {
+                        if (value.selected) {
+                            loraCount += 1
                         }
-                    }
+                    });
 
 
                     let model = document.getElementById('model').value

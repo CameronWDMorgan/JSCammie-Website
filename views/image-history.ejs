@@ -254,7 +254,7 @@
         <details open>
             <summary style="font-size: xx-large;">Search for images by prompt, model, or LORA(s)</summary>
             <br>
-            <input type="text" id="searchInputPrompt" placeholder="Search for prompts.."></input>
+            <input type="text" id="searchInputPrompt" placeholder="Search for prompts.." onkeydown="if (event.keyCode == 13) {search()}"></input>
             <br>
             <br>
             <select id="searchInputModel" name="model">
@@ -269,7 +269,10 @@
             </select>
             <br>
             <br>
-            <input type="text" id="searchInputLora" placeholder="Search for LORAs.."></input>
+            <!-- on enter key input search -->
+            <input type="text" id="searchInputLora" placeholder="Search for LORAs.." onkeydown="if (event.keyCode == 13) {search()}"></input>
+            <!-- search button: -->
+            <button onclick="search()">Search</button>
         </details>
         <br>
         <br>
@@ -499,11 +502,6 @@
                 timeout = setTimeout(() => func.apply(this, args), delay);
             };
         }
-
-        // Combine the event listeners for input fields into one handler
-        document.querySelectorAll('#searchInputPrompt, #searchInputModel, #searchInputLora').forEach(input => {
-            input.addEventListener('input', debounce(search, 1500));
-        });
 
         // Hide all images initially
         function search() {
