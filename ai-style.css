@@ -32,6 +32,9 @@
 }
 
 .lora-words {
+    user-select: text !important; /* Allow text selection */
+    cursor: text;
+    z-index: 999;
     color: rgb(144, 225, 255);
 }
 
