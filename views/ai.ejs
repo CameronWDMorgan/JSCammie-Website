@@ -4,7 +4,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Free Stable Diffusion AI Image Generator FLUX/PDXL/SD1.5 | JSCammie.com</title>
     <meta name="description" content="Free FLUX, PDXL and SD 1.5 Stable Diffusion Generator | Generate free images SFW & NSFW with multiple models, loras & more!">
-    <meta name="keywords" content="flux ai porn, flux ai nsfw, flux ai hentai, flux dev, flux schnell, flux loras, flux free, flux ai free, nsfw, uncensored, free, online, inpainting, img2img, txt2img, stable diffusion, ai image generator, sdxl ai image generator, ai free online, sfw, nsfw, sdxl, sd1.5, loras, lora, embeddings, pdxl, pony diffusion">
+    <meta name="keywords" content="flux ai, flux dev, flux schnell, flux loras, flux free, flux ai free, nsfw, uncensored, free, online, inpainting, img2img, txt2img, stable diffusion, ai image generator, sdxl ai image generator, ai free online, sfw, nsfw, sdxl, sd1.5, loras, lora, embeddings, pdxl, pony diffusion">
     <meta name="author" content="JSCammie">
 
     <%- include('../partials/_headerAll') %>
@@ -411,6 +411,10 @@
 
 </head>
 <body>
+
+    <div id="description" style="display: none;">
+        JSCammie is a Free FLUX, PDXL and SD 1.5 Stable Diffusion Generator | Generate free images SFW & NSFW with multiple models, loras & more!
+    </div>
 
     <style>
         .loadingGradient {
@@ -944,8 +948,25 @@
                             document.getElementById('prompt').dispatchEvent(new Event('change'));
                             document.getElementById('negativeprompt').dispatchEvent(new Event('change'));
 
+                            // if the model value starts sdxl- AND isnt in the select box then default to sdxl-autismmix:
+                            if (!document.getElementById('model').querySelector(`option[value="${aiData.model}"]`)) {
+                                if (aiData.model.startsWith('sdxl-')) {
+                                    document.getElementById('model').value = 'sdxl-autismmix';
+                                }
+                                if (aiData.model.startsWith('flux-')) {
+                                    document.getElementById('model').value = 'flux-unchained';
+                                }
+                                if (!aiData.model.startsWith('sdxl-') && !aiData.model.startsWith('flux-')) {
+                                    document.getElementById('model').value = 'fluffysonic';
+                                }
+                            } else {
+                                document.getElementById('model').value = aiData.model;
+                            }
+
                             // fire the change event for the model select box and the aspect ratio select box:
                             document.getElementById('model').dispatchEvent(new Event('change'));
+
+
                             document.getElementById('aspectRatio').dispatchEvent(new Event('change'));
 
                             // set all the loras to unchecked:
@@ -1031,7 +1052,21 @@
                             document.getElementById('prompt').value = saveSlotPrompt;
                             document.getElementById('negativeprompt').value = saveSlotNegativePrompt;
                             document.getElementById('aspectRatio').value = saveSlotAspectRatio;
-                            document.getElementById('model').value = saveSlotModel;
+                            
+                            // if the model value starts sdxl- AND isnt in the select box then default to sdxl-autismmix:
+                            if (!document.getElementById('model').querySelector(`option[value="${saveSlotModel}"]`)) {
+                                if (saveSlotModel.startsWith('sdxl-')) {
+                                    document.getElementById('model').value = 'sdxl-autismmix';
+                                }
+                                if (saveSlotModel.startsWith('flux-')) {
+                                    document.getElementById('model').value = 'flux-unchained';
+                                }
+                                if (!saveSlotModel.startsWith('sdxl-') && !saveSlotModel.startsWith('flux-')) {
+                                    document.getElementById('model').value = 'fluffysonic';
+                                }
+                            } else {
+                                document.getElementById('model').value = saveSlotModel
+                            }
                             
                             // convert the loras string into an array:
                             saveSlotLorasArray = saveSlotLoras.split(',');
@@ -1197,64 +1232,6 @@
                     }
 
                 </style>
-
-                <style>
-                    .tooltiptext {
-                        visibility: hidden;
-                        opacity: 0;
-                        transition: visibility 0s, opacity 0.3s;
-                        /* make it take up no room on the page by default: */
-                        position: absolute;
-                        padding: 10px;
-                        margin: 10px;
-                        background-color: rgba(0, 0, 0, 0.5);
-                        color: rgb(255, 144, 144);
-                        
-                    }
-
-                    /* have a round border around the thingy: */
-
-                    .tooltip {
-                        cursor: pointer;
-                        border-radius: 50%;
-                        border: 1px solid rgb(255, 255, 255);
-                        width: 20px;
-                        height: 20px;
-                        display: inline-block;
-                        text-align: center;
-                        line-height: 20px;
-                    }
-
-                </style>
-
-                <script>
-                    function showTooltip(element) {
-                        const tooltip = element.nextElementSibling;
-
-                        // tooltip state:
-                        if (tooltip.style.visibility === 'visible') {
-                            tooltip.style.opacity = '0';
-                            // wait 0.3 seconds then hide the tooltip:
-                            setTimeout(() => {
-                                tooltip.style.visibility = 'hidden';
-                                tooltip.style.position = 'absolute';
-                            }, 300)
-                            return;
-                        } else {
-                            tooltip.style.position = 'relative';
-                            tooltip.style.visibility = 'visible';
-                            tooltip.style.opacity = '1';
-                            // wait 5 seconds then hide the tooltip, but if they toggle the tooltip on and off reset the timeout:
-                            setTimeout(() => {
-                                tooltip.style.opacity = '0';
-                                setTimeout(() => {
-                                    tooltip.style.visibility = 'hidden';
-                                    tooltip.style.position = 'absolute';
-                                }, 300)
-                            }, 15000)
-                        }
-                    }
-                </script>
 
                 <details open>
                     
@@ -1503,9 +1480,9 @@
                             /* styling for the sorting buttons, make sure they are next to eachother horizontally and not above/below! 
                             use purple colours and active class to show which one is selected! */
                             
-                            #sortAlphaBtn, #sortNewestBtn {
-                                background-color: #8c4caf40;
-                                border: 3px solid #8c4caf !important;
+                            .sorting-btn {
+                                background-color: #4caf6a40;
+                                border: 3px solid #4caf6a !important;
                                 color: white;
                                 padding: 7px 15px;
                                 text-align: center;
@@ -1518,15 +1495,15 @@
                                 transform-origin: center;
                             }
 
-                            #sortAlphaBtn:hover, #sortNewestBtn:hover {
-                                background-color: #ce9be9;
+                            .sorting-btn:hover {
+                                background-color: #4CAF50;
                                 transform: scale(1.08) rotate(1deg);
                             }
 
                             /* detect active class and apply style: */
 
-                            #sortAlphaBtn.active, #sortNewestBtn.active {
-                                background-color: #8C4CAF;
+                            .sorting-btn.active {
+                                background-color: #4CAF50;
                                 transform: scale(1.08)
                             }
 
@@ -1577,8 +1554,10 @@
                                     Use these buttons to sort the Loras alphabetically or by newest added/updated.
                                 </div>
                             </div>
-                            <button id="sortAlphaBtn" type="button">Sort Alphabetically</button>
-                            <button id="sortNewestBtn" type="button">Sort by Newest</button>
+                            <button class="sorting-btn" id="sortAlphaBtn" type="button">Sort Alphabetically</button>
+                            <button class="sorting-btn" id="sortNewestBtn" type="button">Sort by Newest</button>
+                            <button class="sorting-btn" id="sortUsesBtn" type="button">Sort by Uses</button>
+                            <button class="sorting-btn" id="sortLastUsedBtn" type="button">Sort by Last Used</button>
                         </div>
 
                         <!-- showSafeCheckbox, showSuggestiveCheckbox, showNSFWCheckbox -->
@@ -1680,7 +1659,9 @@
                                             rating: `<%= value.rating || 'n/a' %>`,
                                             image: `<%= value.image %>`,
                                             selected: false,
-                                            defaultStrength: <%= value.strength || 'Null' %>
+                                            defaultStrength: <%= value.strength || 'Null' %>,
+                                            usesCount: BigInt(`<%= value.usesCount || '0' %>`),
+                                            lastUsed: `<%= value.lastUsed || '0' %>`
                                         }
                                     <% }); %>
                                 <% } %>
@@ -1725,8 +1706,16 @@
                                 }
 
                                 // Check if the Lora .name or any .words matches the search query:
-                                if (!name.includes(loraSearch) && !value.words.includes(loraSearch)) {
-                                    return false; 
+                                // if (!name.includes(loraSearch) && !value.words.includes(loraSearch) && !key.includes(loraSearch) && !value.description.includes(loraSearch)) {
+                                //     return false; 
+                                // }
+
+                                // split the loraSearch into an array of words by spaces and commas:
+                                loraSearchArray = loraSearch.split(/[\s,]+/);
+                                
+                                // check if the lora .name, .words, .description, key, have all of the words in the loraSearchArray anywhere in them:
+                                if (!loraSearchArray.every(word => name.includes(word) || value.words.includes(word) || key.includes(word) || value.description.includes(word))) {
+                                    return false;
                                 }
 
                                 return true
@@ -1752,6 +1741,8 @@
                                 // sorting logic:
                                 let sortAlphaBtn = document.getElementById('sortAlphaBtn');
                                 let sortNewestBtn = document.getElementById('sortNewestBtn');
+                                let sortUsesBtn = document.getElementById('sortUsesBtn');
+                                let sortLastUsedBtn = document.getElementById('sortLastUsedBtn');
 
                                 if (sortAlphaBtn.classList.contains('active')) {
                                     // sort the loras alphabetically:
@@ -1760,6 +1751,16 @@
                                     // sort the loras by newest ms timestamp "1717352144698.4163" as example:
                                     masterLoraData = Object.fromEntries(Object.entries(masterLoraData).sort((a, b) => {
                                         return parseFloat(b[1].dateCreated) - parseFloat(a[1].dateCreated);
+                                    }));
+                                } else if(sortUsesBtn.classList.contains('active')) {
+                                    // sort the loras by uses count:
+                                    masterLoraData = Object.fromEntries(Object.entries(masterLoraData).sort((a, b) => {
+                                        return parseFloat(b[1].usesCount) - parseFloat(a[1].usesCount);
+                                    }));
+                                } else if (sortLastUsedBtn.classList.contains('active')) {
+                                    // sort the loras by last used ms timestamp "1717352144698" as example:
+                                    masterLoraData = Object.fromEntries(Object.entries(masterLoraData).sort((a, b) => {
+                                        return parseFloat(b[1].lastUsed) - parseFloat(a[1].lastUsed);
                                     }));
                                 }
 
@@ -1902,18 +1903,30 @@
                                 })
 
                                 // sorting button logic, if the button is clicked then sort the loras alphabetically or by newest:
-                                document.getElementById('sortAlphaBtn').addEventListener('click', function() {
-                                    document.getElementById('sortAlphaBtn').classList.add('active');
-                                    document.getElementById('sortNewestBtn').classList.remove('active');
-                                    // load the loras:
-                                    loadLoras();
-                                })
+                                // document.getElementById('sortAlphaBtn').addEventListener('click', function() {
+                                //     document.getElementById('sortAlphaBtn').classList.add('active');
+                                //     document.getElementById('sortNewestBtn').classList.remove('active');
+                                //     // load the loras:
+                                //     loadLoras();
+                                // })
 
-                                document.getElementById('sortNewestBtn').addEventListener('click', function() {
-                                    document.getElementById('sortNewestBtn').classList.add('active');
-                                    document.getElementById('sortAlphaBtn').classList.remove('active');
-                                    // load the loras:
-                                    loadLoras();
+                                // document.getElementById('sortNewestBtn').addEventListener('click', function() {
+                                //     document.getElementById('sortNewestBtn').classList.add('active');
+                                //     document.getElementById('sortAlphaBtn').classList.remove('active');
+                                //     // load the loras:
+                                //     loadLoras();
+                                // })
+
+                                // new code that uses the class of .sorting-btn to add event listeners to all of them:
+                                document.querySelectorAll('.sorting-btn').forEach(button => {
+                                    button.addEventListener('click', function() {
+                                        document.querySelectorAll('.sorting-btn').forEach(button => {
+                                            button.classList.remove('active');
+                                        })
+                                        button.classList.add('active');
+                                        // load the loras:
+                                        loadLoras();
+                                    })
                                 })
 
                                 // using class="safetyRatingCheckbox" to filter the loras by their safety ratings:
@@ -2008,27 +2021,25 @@
 
                                     let wordsFormatted = ""
 
-                                    // trimmmedWord = word.trim()
-                                        // `<a class="lora-words">
-                                        //     <strong>Words ${index + 1}:</strong> ${trimmmedWord.trim()}<br>
-                                        //     <br>
-                                        //     <button class="lora-words-copy-button" onclick="copyXWordsToClipboard(\`${trimmmedWord}\`)">Copy Words</button>
-                                        // </a><br>`
-
                                     value.words.split(';').map((word, index) => {
                                         noWhitespaceWord = word.trim()
                                         wordsFormatted += `<a class="lora-words">
-                                            <strong>Words ${index + 1}:</strong> ${noWhitespaceWord}<br>
-                                            <br>
+                                            Words ${index + 1}: ${noWhitespaceWord}<br>
                                             <button class="lora-words-copy-button" onclick="copyXWordsToClipboard(\`${noWhitespaceWord}\`)">Copy Words</button>
                                         </a><br>`
                                     })
 
+                                    if (value.lastUsed == '0') {
+                                        value.lastUsed = 'Never Used'
+                                    } else {
+                                        value.lastUsed = new Date(parseFloat(value.lastUsed)).toLocaleString()
+                                    }
+
                                     loraSummary.innerHTML = `
                                         <div class="lora-toggle">
-                                            <input type="checkbox" value="${key}" checked onchange="masterLoraData['${key}'].selected = this.checked; loadLoras(); updateLoraSelectionsSummary();">
+                                            <input id="enable-${key}" type="checkbox" value="${key}" checked onchange="masterLoraData['${key}'].selected = this.checked; loadLoras(); updateLoraSelectionsSummary();">
                                             <label for="enable-${key}">
-                                                <span class="lora-category">${key.split('-')[0].charAt(0).toUpperCase() + key.split('-')[0].slice(1)}</span> | ${value.name || 'Null'}
+                                                <span class="lora-category">${key.split('-')[0].charAt(0).toUpperCase() + key.split('-')[0].slice(1)}</span> | ${value.name || 'Null'} | Uses: ${value.usesCount}
                                             </label>
                                         </div>
                                         <div class="lora-info">
@@ -2041,7 +2052,8 @@
                                                 <a id="strength-${key}-value" style="transform: translateY(-32px) !important; margin: 4px; font-size: 28px">${value.strength}</a>
                                             </p>
                                             <button class="lora-reset-strength-button" onclick="setStrength('${key}', '${value.defaultStrength}')">Reset Strength</button>
-                                            <p class="lora-date"><strong>Date Created/Updated:</strong> ${new Date(parseFloat(value.dateCreated)).toLocaleString()}</p>
+
+                                            <p class="lora-date"><strong>Date Created/Updated:</strong> ${new Date(parseFloat(value.dateCreated)).toLocaleString()} | Last Used: ${value.lastUsed}</p>
                                             <p class="lora-link"><strong>Link:</strong> <a href="${value.link || '#'}">Clickable Link</a></p>
                                         </div>
                                     `;
@@ -2156,7 +2168,7 @@
                 </style>
 
             
-                <details id="extrasDetails" class="left-align-no-flex">
+                <details id="extrasDetails" class="left-align-no-flex" open>
                     <summary>Image2Image, Inpainting</summary>
 
                     <div class="form-control">
@@ -2543,20 +2555,6 @@
                 }
             </script>
                 
-
-            <div id="additionalInfo"></div><br>
-            <div id="response"></div>
-            <div id="queuePosition" style="display: none;">
-                Your position in queue: <span style="color: gold;" id="positionNumber"></span>
-                <span class="tooltip" onclick="showTooltip(this)">❓</span>
-                    <div class="tooltiptext">
-                        This is your position in the queue, you will be notified by a sound when your image is ready<br>
-                        The number in brackets () is the total queue length, as the queue is split into 2 parts
-                    </div>
-            </div>
-            
-            <br>
-
             <div class="form-control">
 
                 <label for="creditsShop">
@@ -2700,7 +2698,29 @@
                             </div>
                     </label>
                     <a target="_blank" href="https://www.jscammie.com/image-history">View Image History</a>
-                    <br><br>
+                    <br>
+                    <label>
+                        Booru Page:
+                        <span class="tooltip" onclick="showTooltip(this)">❓</span>
+                            <div class="tooltiptext">
+                                Use this link to view the booru page for the AI Image Generator<br>
+                                You can view the images generated by the AI Image Generator, and download them<br>
+                                This will open in a new tab!
+                            </div>
+                    </label>
+                    <a target="_blank" href="https://www.jscammie.com/booru">View Image Board/ Booru</a>
+                    <br>
+                </div>
+
+                <div id="additionalInfo"></div><br>
+                <div id="response"></div>
+                <div id="queuePosition" style="display: none;">
+                    Your position in queue: <span style="color: gold;" id="positionNumber"></span>
+                    <span class="tooltip" onclick="showTooltip(this)">❓</span>
+                        <div class="tooltiptext">
+                            This is your position in the queue, you will be notified by a sound when your image is ready<br>
+                            The number in brackets () is the total queue length, as the queue is split into 2 parts
+                        </div>
                 </div>
 
                 <label>
