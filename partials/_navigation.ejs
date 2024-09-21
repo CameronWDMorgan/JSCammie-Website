@@ -106,6 +106,7 @@
         <div class="navLinksWrapper">
             <a href="/home" class="navLink">🏠 Home</a>
             <a href="/" class="navLink">🖥️ AI Generator</a>
+            <a href="/booru" class="navLink">🖼️ Booru</a>
             <a href="https://ko-fi.com/jscammie" class="navLink">🥺 Donate</a>
             <% if (session.loggedIn) { %>
                 <a href="/logout" class="navLink">Logout</a>
@@ -500,4 +501,63 @@
         }, 50); // 50 milliseconds is usually enough, but this can be adjusted as needed
     });
 
+</script>
+
+
+<style>
+    .tooltiptext {
+        visibility: hidden;
+        opacity: 0;
+        transition: visibility 0s, opacity 0.3s;
+        /* make it take up no room on the page by default: */
+        position: absolute;
+        padding: 10px;
+        margin: 10px;
+        background-color: rgba(0, 0, 0, 0.5);
+        color: rgb(255, 144, 144);
+        
+    }
+
+    /* have a round border around the thingy: */
+
+    .tooltip {
+        cursor: pointer;
+        border-radius: 50%;
+        border: 1px solid rgb(255, 255, 255);
+        width: 20px;
+        height: 20px;
+        display: inline-block;
+        text-align: center;
+        line-height: 20px;
+    }
+
+</style>
+
+<script>
+    function showTooltip(element) {
+        const tooltip = element.nextElementSibling;
+
+        // tooltip state:
+        if (tooltip.style.visibility === 'visible') {
+            tooltip.style.opacity = '0';
+            // wait 0.3 seconds then hide the tooltip:
+            setTimeout(() => {
+                tooltip.style.visibility = 'hidden';
+                tooltip.style.position = 'absolute';
+            }, 300)
+            return;
+        } else {
+            tooltip.style.position = 'relative';
+            tooltip.style.visibility = 'visible';
+            tooltip.style.opacity = '1';
+            // wait 5 seconds then hide the tooltip, but if they toggle the tooltip on and off reset the timeout:
+            setTimeout(() => {
+                tooltip.style.opacity = '0';
+                setTimeout(() => {
+                    tooltip.style.visibility = 'hidden';
+                    tooltip.style.position = 'absolute';
+                }, 300)
+            }, 15000)
+        }
+    }
 </script>
