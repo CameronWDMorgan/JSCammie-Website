@@ -6,7 +6,7 @@ const userHistorySchema = new Schema({
     image_id: { type: String, required: true },
     prompt: { type: String, default: "" },
     negative_prompt: { type: String, default: "" },
-    model: { type: String, default: "furrybelnd" },
+    model: { type: String, default: "furryblend" },
     aspect_ratio: { type: String, default: "square" },
     loras: { type: Array, default: [] },
     lora_strengths: { type: Array, default: [] },
