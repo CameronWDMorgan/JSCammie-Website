@@ -62,7 +62,7 @@
             width: 100%;
             height: 100%;
             background-color: rgba(0, 0, 0, 0.5);
-            z-index: 9998;
+            z-index: 999;
             display: none; /* Hidden by default */
         }
     
@@ -77,7 +77,25 @@
             padding: 20px;
             border-radius: 10px;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
-            z-index: 9999;
+            z-index: 2000;
+            max-width: 90%;
+            max-height: 90%;
+            overflow-y: auto;
+            display: none; /* Hidden by default */
+        }
+
+        .booruPopupContent {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgb(0, 0, 0);
+            background-image: linear-gradient(315deg, #2f6094 0%, #862e7f 74%);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            z-index: 2100;
+            width: 90%;
             max-width: 90%;
             max-height: 90%;
             overflow-y: auto;
@@ -108,10 +126,22 @@
             cursor: pointer;
         }
 
+        .popupGeneratedImage {
+            width: auto;
+            height: 70%;
+            object-fit: cover;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
     </style>
     
 
     <div class="overlay" id="overlay"></div>
+    <div class="booruPopupContent" id="booruPopupContent">
+        <button class="closeButton" onclick="closeBooruPopup()">×</button>
+        <!-- The content of the popup will be inserted here by JavaScript -->
+    </div>
     <div class="generationPopupContent" id="generationPopupContent">
         <button class="closeButton" onclick="closeGenerationPopup()">×</button>
         <!-- The content of the popup will be inserted here by JavaScript -->
@@ -120,7 +150,89 @@
     <div class="container round-frosted page-content mw75-dynamic" style="padding: 40px; justify-content: center;">
         <h1>Image History</h1>
     
-        <script>
+        <script>  
+
+            function uploadToBooru(image_id) {
+
+                console.log(`Uploading image ${image_id} to booru`);
+
+                // get the imageData from the masterImageData object:
+                const imageData = masterImageData[image_id];
+
+                let booruData = {
+                    prompt: `${imageData.prompt}`,
+                    negative_prompt: `${imageData.negative_prompt}`,
+                    aspect_ratio: `${imageData.aspect_ratio}`,
+                    model: `${imageData.model}`,
+                    loras: `${imageData.loras}`,
+                    lora_strengths: `${imageData.lora_strengths}`,
+                    steps: `${imageData.steps}`,
+                    cfg: `${imageData.cfg}`,
+                    seed: `${imageData.seed}`,
+                    image_url: `${imageData.image_url}`
+                }
+
+                // post req to create-booru-image:
+
+                fetch('/create-booru-image', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(booruData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data);
+                    alert(data.message);
+                    // open the booru/post/booru_id page in a new tab:
+                    window.open(`/booru/post/${data.booru_id}`, '_blank');
+                })
+
+            }
+
+            // show fullscreen popup to confirm upload to booru, showing rules etc:
+            function showBooruPopup(image_id) {
+                // get the imageData from the masterImageData object:
+                const imageData = masterImageData[image_id];
+    
+                const booruPopupContent = document.getElementById('booruPopupContent');
+                const overlay = document.getElementById('overlay');
+
+                // if they click off the popup, close it:
+                overlay.onclick = function() {
+                    closeGenerationPopup();
+                    closeBooruPopup();
+                }
+
+                // 4a. While "Aged Up" content is allowed it needs to be clear from just looking at the image that they are over 18 with their proportions, outfit & general looks, they also MUST be 100% fictional and not based on anyone from real-life.
+    
+                booruPopupContent.innerHTML = `
+                    <button class="closeButton" onclick="closeBooruPopup()">×</button>
+                    <h1>Upload to Booru</h1>
+                    <p>By uploading to the booru you agree to the following:</p>
+                    <ul>
+                        <li>Child/Cub/Loli NSFW content are NOT ALLOWED!!!</li>
+                        <br>
+                        <li>Aged-Up Characters that look over the age of 18 are allowed, if they do not look over 18, the post will be removed!</li>
+                        <br>
+                        <li>By default all content is hidden until a moderator approves it and gives it a safety rating (sfw, suggestive, nsfw).</li>
+                        <br>
+                        <li>ALL SETTINGS used to create an image are visible, if your content shows a word like "loli", even if its sfw, it will be removed!</li>
+                        <br>
+                        <li>Quality Generations are prefered! (Don't upload a billion variations ^-^;)
+                    </ul>
+                    <p>If you agree to these rules/terms then feel free to click below</p>
+                    <button id="uploadToBooruButton" onclick="uploadToBooru('${image_id}')">Upload to Booru</button>
+                `;
+
+                document.getElementById('overlay').style.display = 'block';
+                document.getElementById('booruPopupContent').style.display = 'block';
+    
+                // Listen for the ESC key to close the popup
+                document.addEventListener('keydown', escCloseBooruPopup);
+            }
+
             // Function to show the popup
             function showGenerationPopup(image_id) {
                 // get the imageData from the masterImageData object:
@@ -128,15 +240,22 @@
     
                 const generationPopupContent = document.getElementById('generationPopupContent');
                 const overlay = document.getElementById('overlay');
+
+                // if they click off the popup, close it:
+                overlay.onclick = function() {
+                    closeGenerationPopup();
+                }
     
                 generationPopupContent.innerHTML = `
                     <button class="closeButton" onclick="closeGenerationPopup()">×</button>
-                    <img class="generatedImage" src="${imageData.image_url}"></img>
+                    <img class="popupGeneratedImage" src="${imageData.image_url}"></img>
                     
                     <br>
                     <br>
-                    <button id="exportAIDataButton" onclick="exportAIData(${image_id})">Export AI Data</button>
+                    <button id="exportAIDataButton" onclick="exportAIData('${image_id}')">Export AI Data</button>
                     <br>
+                    <br>
+                    <button id="uploadToBooruButton" onclick="showBooruPopup('${image_id}')">Upload to Booru</button>
                     <br>
 
                     <a>Prompt: </a>
@@ -174,6 +293,18 @@
                 // Listen for the ESC key to close the popup
                 document.addEventListener('keydown', escClosePopup);
             }
+
+            // close booru popup:
+            function closeBooruPopup() {
+                const booruPopupContent = document.getElementById('booruPopupContent');
+                const overlay = document.getElementById('overlay');
+    
+                booruPopupContent.style.display = 'none';
+                overlay.style.display = 'none';
+    
+                // Remove the ESC key event listener
+                document.removeEventListener('keydown', escCloseBooruPopup);
+            }
     
             // Function to close the popup
             function closeGenerationPopup() {
@@ -182,12 +313,19 @@
     
                 generationPopupContent.style.display = 'none';
                 overlay.style.display = 'none';
-    
+
                 // Remove the ESC key event listener
                 document.removeEventListener('keydown', escClosePopup);
             }
     
             // Function to close the popup with the ESC key
+
+            function escCloseBooruPopup(event) {
+                if (event.key === 'Escape') {
+                    closeBooruPopup();
+                }
+            }
+
             function escClosePopup(event) {
                 if (event.key === 'Escape') {
                     closeGenerationPopup();
@@ -361,7 +499,7 @@
         }
     </style>
 
-    <div class="generationsControls" id="generationsControls"></div>
+    
 
     <div class="generationsGrid">
         <% userHistory.forEach((imageData, index) => { %>
@@ -380,10 +518,12 @@
         <% }); %>
     </div>
 
+    <div class="generationsControls" id="generationsControls"></div>
+
     <style>
         .pageButton {
-            background-color: #f1f1f1;
-            color: black;
+            background-color: #f1f1f11f;
+            color: rgb(255, 255, 255);
             border: 1px solid black;
             padding: 8px 16px;
             text-align: center;
@@ -396,12 +536,12 @@
         }
 
         .pageButton:hover {
-            background-color: #ddd;
+            background-color: #0084ff;
         }
 
         .pageButton.active {
-            background-color: #000000;
-            color: white;
+            background-color: #ffffff;
+            color: rgb(0, 0, 0);
         }
         .generationsControls {
             text-align: center;
@@ -419,7 +559,7 @@
             // get the number of visible images by checking if they have the class "visible":
             let visibleImages = document.querySelectorAll('.visible');
 
-            let imagesPerPage = 40;
+            let imagesPerPage = 24;
 
             // calculate the number of pages:
             let numberOfPagesAll = Math.ceil(allImages.length / imagesPerPage);
@@ -470,19 +610,82 @@
                 pageButton.classList.add('pageButton');
                 pageButton.classList.add(`page${i + 1}`);
                 pageButton.onclick = function() {
-                    // hide all images:
-                    allImages.forEach(image => {
-                        image.style.display = 'none';
-                    });
 
-                    // show the images on the page:
-                    let pageImages = document.querySelectorAll(`.page${i + 1}`);
-                    pageImages.forEach(image => {
-                        // make sure its not a button:
-                        if (image.tagName != 'BUTTON') {
-                            image.style.display = 'block';
-                        }
+                    // set the button to have the class active, removing active from all other buttons:
+                    let allPageButtons = document.querySelectorAll('.pageButton');
+                    allPageButtons.forEach(button => {
+                        button.classList.remove('active');
                     });
+                    // add the active class to the button:
+                    pageButton.classList.add('active');
+
+                    // scroll the user to the top of the page gradually over time:
+                    // const duration = 500;
+
+                    // const start = window.scrollY;
+                    // const startTime = performance.now();
+
+                    // function scrollStep(currentTime) {
+                    //     const timeElapsed = currentTime - startTime;
+                    //     const progress = Math.min(timeElapsed / duration, 1);
+                    //     window.scrollTo(0, start * (1 - progress));
+
+                    //     if (progress < 1) {
+                    //     requestAnimationFrame(scrollStep);
+                    //     }
+                    // }
+                    // requestAnimationFrame(scrollStep);
+
+                    // add lerping to the scroll:
+                    const duration = 1400;
+                    const start = window.scrollY;
+                    const end = 220; // End position you want to scroll to
+                    let start_time = null;
+
+                    // Calculate change in position (c)
+                    const change = end - start;
+
+                    function step(timestamp) {
+                        if (!start_time) start_time = timestamp;
+                        const progress = timestamp - start_time;
+                        
+                        // Ensure the progress doesn't exceed the duration
+                        const newPosition = easeInOutQuad(progress, start, change, duration);
+                        window.scrollTo(0, newPosition);
+
+                        if (progress < duration) {
+                            window.requestAnimationFrame(step);
+                        } else {
+                            // Ensure we end exactly at the end position
+                            window.scrollTo(0, end);
+                        }
+                    }
+
+                    function easeInOutQuad(t, b, c, d) {
+                        t /= d / 2;
+                        if (t < 1) return c / 2 * t * t + b;
+                        t--;
+                        return -c / 2 * (t * (t - 2) - 1) + b;
+                    }
+
+                    window.requestAnimationFrame(step);
+
+                    // wait 0.5s:
+                    setTimeout(() => {
+                        // hide all images:
+                        allImages.forEach(image => {
+                            image.style.display = 'none';
+                        });
+
+                        // show the images on the page:
+                        let pageImages = document.querySelectorAll(`.page${i + 1}`);
+                        pageImages.forEach(image => {
+                            // make sure its not a button:
+                            if (image.tagName != 'BUTTON') {
+                                image.style.display = 'block';
+                            }
+                        });
+                    }, duration);
                 }
                 generationsControls.appendChild(pageButton);
             }
@@ -490,6 +693,8 @@
             // show the first page by default:
             let page1Button = document.querySelector('.page1.pageButton');
             page1Button.click();
+            // add the active class to the first page button:
+            page1Button.classList.add('active');
 
         }
 

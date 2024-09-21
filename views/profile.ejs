@@ -1,9 +1,9 @@
 <!-- setup basic html template with metadata etc: -->
 <html>
 <head>
-    <title>Contact | JSCammie.com</title>
+    <title><%=profileProfile.username%> | JSCammie.com</title>
     <link rel='stylesheet' href='/style.css'/>
-
+    
     <%- include('../partials/_headerAll') %>
     
     <!-- Google tag (gtag.js) -->
@@ -13,9 +13,13 @@
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
 
+
     gtag('config', 'G-K3KJJKS1R4');
     </script>
 
+    <!-- load booruStyle.css -->
+    <link rel='stylesheet' href='/booruStyle.css'/>
+    
 </head>
 <body>
 
@@ -26,11 +30,129 @@
         <%- include('../partials/_bannerAdvert') %>
     </div>
 
-    <div class="round-frosted page-content mw50-dynamic" style="padding: 40px; justify-content: center;">
-        <h1>Profile for <%=userProfile.username%> (<%=userProfile.accountId%>)</h1>
+    <div class="round-frosted page-content mw75-content" style="padding: 40px; justify-content: center;">
+    
+    <script>
+        var masterBooruData = {}
 
+        var profileProfile = {
+            accountId: `<%= profileProfile.accountId %>`,
+            username: `<%= profileProfile.username %>`,
+            profileImg: `<%= profileProfile.profileImg || "http://www.jscammie.com/noimagefound.png" %>`,
+            userBio: `<%= profileProfile.userBio || "TEST BIO" %>`,
+            }
+
+        var userProfile = {
+            accountId: `<%= userProfile?.accountId %>`,
+            }
+
+        <% userBooru.forEach(image => { %>
+            masterBooruData[`<%=image.booru_id%>`] = {
+                booru_id: `<%=image.booru_id%>`,
+                account_id: `<%=image.account_id%>`,
+                image_id: `<%=image.image_id%>`,
+                prompt: `<%=image.prompt%>`,
+                negative_prompt: `<%=image.negative_prompt%>`,
+                model: `<%=image.model%>`,
+                aspect_ratio: `<%=image.aspect_ratio%>`,
+                loras: `<%=image.loras%>`,
+                lora_strengths: `<%=image.lora_strengths%>`,
+                steps: `<%=image.steps%>`,
+                cfg: `<%=image.cfg%>`,
+                seed: `<%=image.seed%>`,
+                content_url: `<%=image.content_url%>`,
+                thumbnailMade: Boolean(<%=image.thumbnailMade%>),
+                timestamp: `<%=image.timestamp%>`,
+                safety: `<%=image.safety%>`,
+                upvotes: [<%=image.upvotes%>],
+                downvotes: [<%=image.downvotes%>],
+            }
+        <% }) %>
+
+    </script>
+
+        <div id="profileProfileDiv"></div>
+        <div id="profileBooruDiv"></div>
 
     </div>
+
+    <style>
+        .profileProfileTop {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .profileProfileImage {
+            width: 200px;
+            height: 200px;
+            margin-right: 20px;
+        }
+
+        .profileProfileInfo {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+    </style>
+
+    <script>
+    
+        let profileProfileDiv = document.getElementById('profileProfileDiv')
+
+        let profileProfileHTML = `
+        <div class="profileProfileTop">
+            <div class="profileProfileImage">
+                <img src="${profileProfile.profileImg}" alt="Profile Image" style="width: 100%; border-radius: 50%;">
+            </div>
+            <div class="profileProfileInfo">
+                <h1>${profileProfile.username}</h1>
+                <p>${profileProfile.userBio}</p>
+            </div>
+        </div>
+        <div id="booruPosts" class="booruPostsGrid"></div>
+        `
+
+        // set the profileBooruDiv to be profileBooruDiv
+        profileProfileDiv.innerHTML = profileProfileHTML
+
+        let booruPostsDiv = document.getElementById('booruPosts')
+
+        booruPostsDivHTML = ""
+
+        for (const [key, value] of Object.entries(masterBooruData)) {
+            let newContentUrl = ""
+
+            if (value.thumbnailMade) {
+                newContentUrl = value.content_url.split(".png")[0] + "-thumb.png"
+            } else {
+                newContentUrl = value.content_url
+            }
+
+            let booruThumbnailHTML = `
+                <img src="${newContentUrl}" alt="Booru Image" style="max-width: 100%;" loading="lazy"/>
+            `
+
+            let postDiv = `
+                <a href="/booru/post/${value.booru_id}">
+                    <div class="booruPost">
+                        <h3>${profileProfile.username} | ${value.safety.toUpperCase()}</h3>
+                        ${booruThumbnailHTML}
+                    </div>
+                </a>
+            `
+            
+            booruPostsDivHTML += postDiv
+        }
+
+
+
+        booruPostsDiv.innerHTML = booruPostsDivHTML
+
+    
+    </script>
 
     <!-- get partials/_footer: -->
     <%- include('../partials/_footer') %>

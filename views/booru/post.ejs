@@ -1,0 +1,237 @@
+<!-- setup basic html template with metadata etc: -->
+<html>
+<head>
+    <!-- use metadata from booruImage to fill title and tags etc etc: -->
+    <title>AI Image | <%=booruImage.safety.toUpperCase()%> | <%= booruImage.prompt %> | JSCammie.com</title>
+    <meta name="description" content="<%= booruImage.prompt %>"/>
+    <meta name="keywords" content="<%= booruImage.prompt %>"/>
+    <meta name="author" content="JSCammie"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+    <!-- embed the image: -->
+    <!-- <meta content="Embed Title" property="og:title" />
+    <meta content="Site Description" property="og:description" />
+    <meta content="https://embed.com/this-is-the-site-url" property="og:url" />
+    <meta content="https://embed.com/embedimage.png" property="og:image" />
+    <meta content="#43B581" data-react-helmet="true" name="theme-color" /> -->
+
+    <meta property="og:title" content="AI Image | <%= booruImage.model %> | JSCammie.com" />
+    <meta property="og:description" content="<%= booruImage.prompt %>" />
+    <meta property="og:image" content="<%= booruImage.content_url %>" />
+    <meta property="og:url" content="https://jscammie.com/booru/post/<%= booruImage.booru_id %>" />
+    <meta content="#43B581" data-react-helmet="true" name="theme-color" />
+    <meta name="twitter:card" content="summary_large_image">
+
+
+
+    <link rel='stylesheet' href='/style.css'/>
+    
+    <%- include('../../partials/_headerAll') %>
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-K3KJJKS1R4"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-K3KJJKS1R4');
+    </script>
+
+    <!-- load booruStyle.css -->
+    <link rel='stylesheet' href='/booruStyle.css'/>
+    
+</head>
+<body>
+
+    <!-- get partials/_navigation: -->
+    <%- include('../../partials/_navigation') %>
+
+    <div class="center-fully-no-flex" style="margin-bottom: 1rem;">
+        <%- include('../../partials/_bannerAdvert') %>
+    </div>
+
+    <div class="round-frosted page-content" style="padding: 40px; justify-content: center;">
+
+        <script>
+
+            let booruImage = {}
+            booruImage.booru_id = `<%= booruImage.booru_id %>`
+            booruImage.account_id = `<%= booruImage.account_id %>`
+            booruImage.prompt = `<%= booruImage.prompt %>`
+            booruImage.negative_prompt = `<%= booruImage.negative_prompt %>`
+            booruImage.model = `<%= booruImage.model %>`
+            booruImage.aspect_ratio = `<%= booruImage.aspect_ratio %>`
+            booruImage.loras = `<%= booruImage.loras %>`
+            booruImage.lora_strengths = `<%= booruImage.lora_strengths %>`
+            booruImage.steps = `<%= booruImage.steps %>`
+            booruImage.cfg = `<%= booruImage.cfg %>`
+            booruImage.seed = `<%= booruImage.seed %>`
+            booruImage.content_url = `<%= booruImage.content_url %>`
+            booruImage.timestamp = `<%= booruImage.timestamp %>`
+            booruImage.safety = `<%= booruImage.safety %>`
+            booruImage.upvotes = [<%= booruImage.upvotes %>]
+            booruImage.downvotes = [<%= booruImage.downvotes %>]
+
+            function exportAIData() {
+
+                // get the imageData from the masterImageData object:
+                const imageData = booruImage
+
+                // Get the AI data from the form
+                let aiData = {
+                    prompt: imageData.prompt,
+                    negativeprompt: imageData.negative_prompt,
+                    aspectRatio: imageData.aspect_ratio,
+                    model: imageData.model,
+                    loras: imageData.loras,
+                    lora_strengths: imageData.lora_strengths,
+                    steps: imageData.steps,
+                    quantity: 2,
+                    cfg: imageData.cfg,
+                    seed: imageData.seed,
+                }
+
+                // save it to a file and download it without jsyaml:
+                let yamlString = `${aiData.prompt}<SPLIT>${aiData.negativeprompt}<SPLIT>${aiData.aspectRatio}<SPLIT>${aiData.model}<SPLIT>${aiData.loras}<SPLIT>${aiData.lora_strengths}<SPLIT>${aiData.steps}<SPLIT>${aiData.quantity}<SPLIT>${aiData.cfg}<SPLIT>${aiData.seed}`
+
+                let blob = new Blob([yamlString], {type: 'text/yaml'});
+                let url = URL.createObjectURL(blob);
+                let a = document.createElement('a');
+                a.href = url;
+                a.download = `${aiData.model}.aidata`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            }
+
+            var postProfile = {
+                accountId: `<%= postProfile.accountId %>`,
+                username: `<%= postProfile.username %>`,
+                profileImg: `<%= postProfile.profileImg || "http://www.jscammie.com/noimagefound.png" %>`,
+                userBio: `<%= postProfile.userBio || "TEST BIO" %>`,
+                ratings: `<%= postProfile.ratings %>`,
+            }
+                
+
+            var userProfile = {
+                accountId: '<%=userProfile?.accountId? userProfile.accountId : ''%>',
+                badges: {
+                    owner: <%=userProfile?.badges?.owner? userProfile.badges.owner : false%>,
+                    moderator: <%=userProfile?.badges?.moderator? userProfile.badges.moderator : false%>
+                }
+            }
+
+            function deletePost() {
+                if (confirm("Are you sure you want to delete this post?")) {
+                    window.location.href = `/booru/delete/${booruImage.booru_id}`
+                }
+            }
+
+            window.onload = () => {
+                postDiv = document.getElementById("postDiv")
+
+                postAccountIdButtons = ""
+                moderatorButtons=""
+
+                if (userProfile.accountId == booruImage.account_id) {
+                    // show delete button for post owner and moderators:
+                    postAccountIdButtons = `
+                        <button id="deletePost" onclick="deletePost()">Delete</button>
+                    `
+                } else if (userProfile.badges.moderator) {
+                    // show delete button for post owner and moderators:
+                    moderatorButtons = `
+                        <button id="deletePost" onclick="deletePost()">Delete</button>
+                    `
+                }
+
+                postDiv.innerHTML = `
+                    <a href="/profile/${booruImage.account_id}">
+                        <div id="postProfileDiv" class="postProfile">
+                            <img src="${postProfile.profileImg}" alt="Profile Image" class="postProfileImage"/>
+                            <h1>${postProfile.ratings} ${postProfile.username}'s Post</h1>
+                        </div>
+                    </a>
+                                     
+                    <img src="${booruImage.content_url}" alt="Booru Image" style="max-width: 100%;"/>
+                    <div class="postButtons" id="postButtons">
+                        <button id="upvoteButton${booruImage.booru_id}" onclick="votePost('upvote', '${booruImage.booru_id}')">${booruImage.upvotes.length} ⬆️</button>
+                        <button id="downvoteButton${booruImage.booru_id}" onclick="votePost('downvote', '${booruImage.booru_id}')">${booruImage.downvotes.length} ⬇️</button>
+                        ${moderatorButtons}
+                        ${postAccountIdButtons}
+                        <button onclick="exportAIData()">Export to .AIDATA</button>
+                    </div>
+                    
+                    <br>
+                        <h1>Post Details: </h1>
+                        <p>Prompt: ${booruImage.prompt}</p>
+                        <p>Negative Prompt: ${booruImage.negative_prompt}</p>
+                        <p>Model: ${booruImage.model}</p>
+                        <p>Aspect Ratio: ${booruImage.aspect_ratio}</p>
+                        <p>LoRAs: ${booruImage.loras}</p>
+                        <p>LoRA Strengths: ${booruImage.lora_strengths}</p>
+                        <p>Steps: ${booruImage.steps}</p>
+                        <p>CFG: ${booruImage.cfg}</p>
+                        <p>Seed: ${booruImage.seed}</p>
+                        <p>Timestamp: ${booruImage.timestamp}</p>
+                        <p>Safety: ${booruImage.safety}</p>
+                    <br>
+                `
+            }
+
+        </script>
+
+        <div class="searchDiv">
+            <div id="searchResultsDiv"></div>
+            <input id="searchInput" type="text" placeholder="Search..." style="width: 100%; padding: 10px; border-radius: 10px; margin-bottom: 20px;" />
+            <br>
+            <select id="searchSorting">
+                <option value="votes">Votes</option>
+                <option value="recent">Recent</option>
+            </select>
+            <br>
+            <div id="safetyCheckboxes">
+                <!-- the user may not have a profile to check against: -->
+                <% if (userProfile?.badges?.moderator) { %>
+                    <label for="naCheckbox">N/A</label>
+                    <input type="checkbox" id="naCheckbox" name="naCheckbox" value="na">
+                    <label for="sfwCheckbox">SFW</label>
+                    <input type="checkbox" id="sfwCheckbox" name="sfwCheckbox" value="sfw">
+                    <br>
+                    <label for="suggestiveCheckbox">Suggestive</label>
+                    <input type="checkbox" id="suggestiveCheckbox" name="suggestiveCheckbox" value="suggestive">
+                    <label for="nsfwCheckbox">NSFW</label>
+                    <input type="checkbox" id="nsfwCheckbox" name="nsfwCheckbox" value="nsfw">
+                <% } else { %>
+                    <!-- na hidden -->
+                    <input type="hidden" id="naCheckbox" name="naCheckbox" value="na">
+                    <label for="sfwCheckbox">SFW</label>
+                    <input type="checkbox" id="sfwCheckbox" name="sfwCheckbox" value="sfw">
+                    <br>
+                    <label for="suggestiveCheckbox">Suggestive</label>
+                    <input type="checkbox" id="suggestiveCheckbox" name="suggestiveCheckbox" value="suggestive">
+                    <label for="nsfwCheckbox">NSFW</label>
+                    <input type="checkbox" id="nsfwCheckbox" name="nsfwCheckbox" value="nsfw">
+                <% } %>
+            </div>
+
+            <button id="searchButton" style="padding: 10px; border-radius: 10px; margin-bottom: 20px;">Search</button>
+
+            <script>
+                <%- booruSearchScript %>
+
+                booruSearchInitialize()
+            </script>
+        </div>
+
+        <div id="postDiv"></div>
+
+    </div>
+
+    <!-- get partials/_footer: -->
+    <%- include('../../partials/_footer') %>
+    
+</body>
+</html>
