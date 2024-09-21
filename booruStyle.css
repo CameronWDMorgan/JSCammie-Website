@@ -1,0 +1,169 @@
+.autocompleteTags {
+	background-color: rgba(255, 255, 255, 0.1);
+	border: 1px solid rgba(0, 0, 0, 0.5);
+	border-radius: 5px;
+	padding: 5px;
+	font-size: 1rem;
+	font-weight: bold;
+	color: rgb(255, 255, 255);
+	cursor: pointer;
+	text-decoration: none !important;
+}
+
+.booruPostsGrid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+	grid-gap: 20px;
+	justify-content: center;
+}
+
+.booruThumbnail {
+	width: auto;
+	height: 300px;
+	object-fit: contain;
+	border-radius: 10px;
+	box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+	text-decoration: none !important;
+}
+
+.booruPost {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 0px;
+	border-radius: 10px;
+	background-color: rgba(0, 0, 0, 0.25);
+	box-shadow: 0px 0px 10px rgba(0, 0, 0, 1);
+	min-width: 300px;
+	min-height: 300px;
+}
+.votesDiv {
+	display: flex;
+	justify-content: space-between;
+	width: 50%;
+	border-radius: 10px;
+	padding: 5px;
+	text-decoration: none !important;
+}
+
+.votesDiv a {
+	text-decoration: none !important;
+}
+
+.votesDiv button {
+	background-color: rgba(255, 255, 255, 0.1);
+	border: 1px solid rgba(0, 0, 0, 0.5);
+	border-radius: 5px;
+	padding: 5px;
+	font-size: 1rem;
+	font-weight: bold;
+	color: rgb(255, 255, 255);
+	cursor: default;
+	text-decoration: none !important;
+}
+
+/* Position the postButtons container to the top right */
+.postButtons {
+	position: relative;
+}
+
+/* Initially hide the dropdown */
+.dropdown {
+	display: none;
+	position: absolute;
+	right: -175px;
+	top: 20px;
+	background-color: rgba(0, 0, 0, 0.8); /* Optional: background styling */
+	border-radius: 5px;
+	padding: 10px;
+	z-index: 10; /* Ensure the dropdown appears on top */
+}
+
+/* Make dropdown visible when the 'show' class is added */
+.dropdown.show {
+	display: block;
+}
+
+.dropdown a {
+	color: white;
+	padding: 5px;
+	display: block;
+	text-decoration: none;
+}
+
+.dropdown a:hover {
+	background-color: rgba(255, 255, 255, 0.1); /* Optional hover effect */
+}
+
+.dropdownButton {
+	/* have the button be in the top right of the post: */
+	position: absolute !important;
+	right: -175px;
+	top: -20;
+	background-color: rgba(0, 0, 0, 0.75);
+	color: white;
+	border: 2px solid white;
+
+}
+
+.pageButtons {
+	display: flex;
+	justify-content: center;	
+}
+
+.pageButtons button {
+	background-color: rgba(0, 0, 0, 0.1);
+	border: 1px solid rgba(0, 0, 0, 0.5);
+	border-radius: 15px;
+	/* have the padding be wider than taller: */
+	padding: 8px 15px;
+	font-size: 1rem;
+	font-weight: bold;
+	color: rgb(255, 255, 255);
+	cursor: pointer;
+	text-decoration: none !important;
+}
+
+.pageButtons button:hover {
+	border: 1px solid rgb(255, 255, 255);
+}
+
+.pageButtons .active {
+	background-color: rgb(0, 132, 255);
+	color: rgb(255, 255, 255);
+}
+
+
+
+.postButtons {
+	display: flex;
+	justify-content: center;
+	gap: 1rem;
+}
+
+.postButtons button {
+	background-color: rgba(0, 0, 0, 0.1);
+	border: 1px solid rgba(0, 0, 0, 0.5);
+	border-radius: 5px;
+	padding: 10px;
+	font-size: 1rem;
+	font-weight: bold;
+	color: rgb(255, 255, 255);
+	cursor: pointer;
+	text-decoration: none !important;
+	margin: 5px;
+}
+
+.postProfile {
+	display: flex;
+	justify-content: center;
+	gap: 1rem;
+}
+.postProfileImage {
+	width: 50px;
+	height: 50px;
+	border-radius: 50%;
+	/* center the size vertically, not horizontal: */
+	margin-top: 16px;
+}
