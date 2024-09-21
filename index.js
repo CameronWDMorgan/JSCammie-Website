@@ -84,6 +84,8 @@ const userProfileSchema = require('./schemas/userProfileSchema.js');
 const userSuggestionSchema = require('./schemas/userSuggestionSchema.js');
 const userHistorySchema = require('./schemas/userHistorySchema.js');
 
+const generationLoraSchema = require('./schemas/generationLoraSchema.js');
+
 const { type, networkInterfaces } = require('os');
 
 // setup views directory:
@@ -779,7 +781,32 @@ async function loraImagesCache() {
         // console.log the index:
         // console.log(`Cached YAML data updated with images for ${category}`)
     }
-    console.log('Cached YAML data updated with images')
+
+    // modify the cachedYAMLData, adding information from generationLoraSchema 'usesCount' and 'lastUsed', use the loraId as the key:
+    try {
+        let allLoras = await generationLoraSchema.find()
+
+        for (const lora of allLoras) {
+            // get the category and loraId:
+            let category = lora.loraId.split('-')[0]
+            let loraId = lora.loraId
+
+            // get the loraData from the cachedYAMLData:
+            let loraData = cachedYAMLData[category][loraId]
+
+            loraData.usesCount = lora.usesCount
+            loraData.lastUsed = lora.lastUsed
+
+            // add the loraData back to the cachedYAMLData:
+            cachedYAMLData[category][loraId] = loraData
+        }
+
+        console.log('Cached YAML data updated with images, usesCount, and lastUsed')
+    } catch (error) {
+        console.log(error)
+    }
+    
+
     modifiedCachedYAMLData = cachedYAMLData
     // console.log(cachedYAMLData)
 }
@@ -851,6 +878,12 @@ app.get('/userProfile', async (req, res) => {
 })
 
 app.post('/dailies', async (req, res) => {
+
+    if(!req.session.loggedIn){
+        res.redirect('/login')
+        return
+    }
+
     let userProfile = await userProfileSchema.findOne({ accountId: req.session.accountId });
 
     // check if the user exists, its a mongodb document that is returned:
@@ -1150,9 +1183,38 @@ app.get('/result/:request_id', async function(req, res){
 
         const json = await response.json();
 
+        let usedLoras = json.historyData.loras
+
+        console.log(typeof usedLoras)
+        console.log(usedLoras)
+
+        // convert the usedLoras "object" to an array, here is an example of the output `[ 'concept-sdxlantilongtorso', 'effect-sdxldetailifier' ]`:
+        usedLoras = usedLoras.flat()
+
+        console.log(typeof usedLoras)
+        console.log(usedLoras)
+
+        // for each lora in the usedLoras array, generationLoraSchema.findOneAndUpdate increase the usesCount by 1, update lastUsed to be the current timestamp, and upsert it if it doesnt exist:
+        // first check if usedLoras is not empty:
+        if (usedLoras.length > 0) {
+            // the usesCount and lastUsed are strings, so they need to be converted to number / BigInt before they can be incremented THEN converted back to string:
+            for (const lora of usedLoras) {
+                currentLora = await generationLoraSchema.findOne({loraId: lora})
+                if (currentLora == null) {
+                    await generationLoraSchema.create({loraId: lora, usesCount: "1", lastUsed: `${Date.now()}`})
+                } else {
+                    usesCount = BigInt(currentLora.usesCount) + BigInt(1)
+                    usesCount = usesCount.toString()
+                    await generationLoraSchema.findOneAndUpdate({ loraId: lora }, { usesCount: usesCount, lastUsed: `${Date.now()}` })
+                }
+            }
+        }
+
+
+
         if (json.historyData.account_id != "0") {
 
-            console.log(json.historyData)
+            // console.log(json.historyData)
 
             if (!fs.existsSync(imagesHistorySaveLocation)) {
                 fs.mkdirSync(imagesHistorySaveLocation, { recursive: true });
@@ -1424,6 +1486,568 @@ app.post('/ai-save-delete/', async function(req, res){
 app.get('/ai', async function(req, res){
     res.redirect('/')
 })
+
+
+const userBooruSchema = require('./schemas/userBooruSchema.js');
+const userBooruTagsSchema = require('./schemas/userBooruTagsSchema.js');
+
+let booruSearchScript = fs.readFileSync('./scripts/booru-search.js', 'utf8')
+
+setInterval(() => {
+    booruSearchScript = fs.readFileSync('./scripts/booru-search.js', 'utf8')
+}, 15000)
+
+
+
+let booruFolder = "E:/JSCammie/booruImages/"
+
+
+app.get('/booru/post/:booru_id', async function(req, res){
+    booru_id = req.param('booru_id')
+
+    let foundBooruImage = await userBooruSchema.findOne({booru_id: booru_id})
+
+    if (foundBooruImage == null) {
+        res.redirect('/booru/')
+        return
+    }
+
+    // find the user profile:
+    let userProfile = await userProfileSchema.findOne({accountId: req.session.accountId})
+
+    let postProfile = await userProfileSchema.findOne({accountId: foundBooruImage.account_id})
+
+    let foundBooruImages = await userBooruSchema.aggregate([
+        { $match: { account_id: foundBooruImage.account_id } },
+        {
+            $group: {
+                _id: "$safety",
+                count: { $sum: 1 }
+            }
+        }
+    ])
+    let ratings = {
+        sfw: false,
+        suggestive: false,
+        nsfw: false
+    }
+    foundBooruImages.forEach(image => {
+        if (image._id == "sfw") {
+            ratings.sfw = true
+        } else if (image._id == "suggestive") {
+            ratings.suggestive = true
+        } else if (image._id == "nsfw") {
+            ratings.nsfw = true
+        }
+    })
+    postProfile.ratings = Object.keys(ratings).filter(key => ratings[key]).join(',')
+    postProfile.ratings = postProfile.ratings.replace(/,/g, '/')
+    postProfile.ratings = `(${postProfile.ratings} Account)`
+
+    
+
+    res.render('booru/post', { session: req.session, booruImage: foundBooruImage, booruSearchScript, userProfile, postProfile })
+
+})
+
+function splitTags(tags) {
+    // make all the tags lowercase:
+    tags = tags.map(tag => tag.toLowerCase())
+    // replace every space with a dash:
+    tags = tags.map(tag => tag.replace(/ /g, '_'))
+    // remove any empty tags:
+    tags = tags.filter(tag => tag !== "")
+    return tags
+}
+
+app.get('/booru/', async function(req, res){
+    search = req.param('search') || ""
+    page = req.param('page') || 1
+    safety = req.param('safety') || ["sfw"]
+    sort = req.param('sort') || "recent"
+
+    totalPerPage = 24
+
+    // add the params to the url if they are not already there:
+    if (!req.url.includes('?')) {
+        res.redirect(`/booru/?search=${search}&page=${page}&safety=${safety}`)
+        return
+    }
+    
+    // if the rating is not an array, make it an array:
+    // example output of safety: na,sfw,suggestive,nsfw
+    if (!Array.isArray(safety)) {
+        safety = safety.split(',')
+    }
+
+    skip = (page - 1) * totalPerPage
+
+    let booruImages = []
+
+    if (search === "") {
+        // booruImages = await userBooruSchema.find().sort({timestamp: -1}).skip(skip).limit(30)
+        // filter by the safety:
+        if (sort == "recent") {
+            booruImages = await userBooruSchema.find({safety: { $in: safety }}).sort({timestamp: -1}).skip(skip).limit(totalPerPage)
+        } else if (sort == "votes") {
+            // there are 2 votes, upvotes and downvotes, get the difference of the array.length of upvotes and downvotes:
+            booruImages = await userBooruSchema.aggregate([
+                { $match: { safety: { $in: safety } } },
+                {
+                    $addFields: {
+                        votes: { $subtract: [ { $size: "$upvotes" }, { $size: "$downvotes" } ] }
+                    }
+                },
+                { $sort: { votes: -1 } },
+                { $skip: skip },
+                { $limit: totalPerPage }
+            ])
+        }
+        // get the total count of the pages:
+        totalImages = await userBooruSchema.find({safety: { $in: safety }}).countDocuments()
+    } else {
+
+        searchTags = search.split(' ')
+        searchTags = splitTags(searchTags)
+
+        console.log(`searchTags: ${searchTags}`)
+
+        const regex = searchTags.map(tag => tag.replace(/[()]/g, '')).map(tag => `(?=.*${tag})`).join('')
+
+        let allFoundBooruIds = [];
+
+        // set all tags to be lowercase:
+        searchTags = searchTags.map(tag => tag.toLowerCase())
+
+        const promises = searchTags.map(async (tag) => {
+            let foundTag = await userBooruTagsSchema.findOne({ tag: tag });
+            if (foundTag !== null) {
+                return foundTag.booru_ids; // return the booru_ids array
+            }
+            return [];
+        });
+
+        const allFoundBooruIdsArrays = await Promise.all(promises);
+
+        // Filter to get only booru_ids that appear in all arrays
+        let allBooruIds = allFoundBooruIdsArrays.reduce((acc, val) => acc.filter(x => val.includes(x)));
+
+        console.log(allBooruIds);
+
+        
+
+        // now get the booruImages that have the booru_ids in allBooruIds:
+        if (sort == "recent") {
+            booruImages = await userBooruSchema.find({booru_id: { $in: allBooruIds }, safety: { $in: safety }}).sort({timestamp: -1}).skip(skip).limit(totalPerPage)
+        } else if (sort == "votes") {
+            booruImages = await userBooruSchema.aggregate([
+                {
+                    $match: {
+                        booru_id: { $in: allBooruIds },
+                        safety: { $in: safety }
+                    }
+                },
+                {
+                    $addFields: {
+                        votes: { $subtract: [ { $size: "$upvotes" }, { $size: "$downvotes" } ] }
+                    }
+                },
+                { $sort: { votes: -1 } },
+                { $skip: skip },
+                { $limit: totalPerPage }
+            ])
+        }
+
+
+        // get the total count of the pages:
+        totalImages = await userBooruSchema.aggregate([
+            {
+                $match: {
+                    prompt: { $regex: regex, $options: 'i' },
+                    safety: { $in: safety }
+                }
+            },
+            { $count: 'count' }
+        ]);
+
+        if (totalImages.length == 0) {
+            totalImages = 0
+        } else {
+            totalImages = totalImages[0].count
+        }
+
+    }
+
+    // get the total count of the pages:
+    totalPages = Math.ceil(totalImages / totalPerPage)
+
+    console.log(`totalPages: ${totalPages}`)
+    
+    let userProfile = await userProfileSchema.findOne({accountId: req.session.accountId})
+
+    if (req.session.loggedIn) {
+        res.render('booru/home', { session: req.session, booruImages: booruImages, userProfile: userProfile, booruSearchScript: booruSearchScript, totalPages: totalPages });
+        return
+    } else {
+        res.render('booru/home', { session: req.session, booruImages: booruImages, userProfile: userProfile, booruSearchScript: booruSearchScript, totalPages: totalPages });
+    }
+
+})
+
+app.get('/mergetagstolowercase', async function(req, res){
+
+    let tags = await userBooruTagsSchema.find()
+
+    let uppercaseTags = tags.filter(tag => tag.tag !== tag.tag.toLowerCase())
+
+    for (const tag of uppercaseTags) {
+        // if there is a tag that is lowercase in the userBooruTagsSchema, then add the booru_ids to the lowercase tag, making sure to not have merges, then delete the uppercase tag:
+        let lowercaseTag = await userBooruTagsSchema.findOne({tag: tag.tag.toLowerCase()})
+
+        if (lowercaseTag == null) {
+            await userBooruTagsSchema.findOneAndUpdate({tag: tag.tag}, {tag: tag.tag.toLowerCase(), count: tag.count, booru_ids: tag.booru_ids})
+            await userBooruTagsSchema.findOneAndDelete({tag: tag.tag})
+        } else {
+            // merge the booru_ids to the lowercase tag:
+            differentBooruIds = tag.booru_ids.filter(booru_id => !lowercaseTag.booru_ids.includes(booru_id))
+            let newCount = lowercaseTag.booru_ids.length + differentBooruIds.length
+            newCount = newCount.toString()
+            await userBooruTagsSchema.findOneAndUpdate({tag: tag.tag.toLowerCase()}, {count: newCount, $push: {booru_ids: { $each: differentBooruIds } } })
+            await userBooruTagsSchema.findOneAndDelete({tag: tag.tag})
+        }
+
+    }
+
+    res.send({status: "success"})
+})
+
+app.post('/tags-autocomplete', async function(req, res){
+    try {
+
+        // let tags = await userBooruTagsSchema.find().sort({count: -1})
+        // count is a string so use aggregate to convert it to a number, then sort by count, also limit to 10:
+        let lastWord = req.body.lastWord
+
+        let tags = await userBooruTagsSchema.aggregate([
+            {
+                $match: {
+                    tag: { $regex: lastWord, $options: 'i' } // Filters tags that contain the lastWord (case insensitive)
+                }
+            },
+            {
+                $addFields: {
+                    count: { $toInt: "$count" }
+                }
+            },
+            { 
+                $sort: { count: -1 } 
+            },
+            { 
+                $limit: 10 
+            }
+        ]);
+
+
+        res.send({tags: tags})
+    } catch (error) {
+        console.log(error);
+        res.status(500).send('Error getting tags');
+    }
+})
+
+he = require('he')
+
+app.post('/create-booru-image', async function(req, res){
+    try {
+        data = req.body
+
+        // check if the user account exists:
+        let userProfile = await userProfileSchema.findOne({accountId: req.session.accountId})
+
+        if(userProfile == null) {
+            res.send({error: 'User profile not found'})
+            return
+        }
+
+        // check if the folder for the user exists:
+        if (!fs.existsSync(`${booruFolder}/${req.session.accountId}/`)) {
+            fs.mkdirSync(`${booruFolder}/${req.session.accountId}/`, { recursive: true });
+        }
+
+        let nextImageId = BigInt(Date.now());
+
+        let image_url = data.image_url // the filepath for the png image E:/JSCammie/imagesHistory/
+
+        // replace the http:\\www.jscammie.com\\ at the start:
+        image_url = image_url.replace("http://www.jscammie.com/", "")
+
+        // load the image from disk:
+        let image = fs.readFileSync(image_url)
+
+        let newImageUrlBase = `booruImages/${req.session.accountId}/${nextImageId}.png`
+
+        // save the image to the booru folder:
+        fs.writeFileSync(newImageUrlBase, image)
+
+        // split the prompt into an array of tags, first, split on commas removing any spaces:
+
+        tags = data.prompt
+
+        tags = tags.split(',').map(tag => tag.trim())
+
+        tags = splitTags(tags)
+
+        // make all the tags lowercase:
+        
+
+        for (const tag of tags) {
+            // check if the tag exists in the userBooruTagsSchema:
+            let foundTag = await userBooruTagsSchema.findOne({tag: tag})
+
+            if (foundTag == null) {
+                newCount = BigInt(1)
+                newCount = newCount.toString()
+            } else {
+                newCount = BigInt(foundTag.count) + BigInt(1)
+                newCount = newCount.toString()
+            }
+
+            await userBooruTagsSchema.findOneAndUpdate({tag: tag},
+                { // count is a string, make sure to convert it to a BigInt before incrementing, then back:
+                    tag: tag,
+                    count: newCount,
+                    $push: {booru_ids: `${req.session.accountId}-${nextImageId}`},
+                },
+                {upsert: true}
+            )
+        }
+
+        // convert any broken text, for example &#39; to ', etc:
+        data.prompt = he.decode(data.prompt)
+        data.negative_prompt = he.decode(data.negative_prompt)
+
+        // Prepare the new booru image document
+        let newBooruImage = {
+            booru_id: `${req.session.accountId}-${nextImageId}`,
+            account_id: req.session.accountId,
+            image_id: BigInt(nextImageId),
+            prompt: data.prompt,
+            negative_prompt: data.negative_prompt,
+            model: data.model,
+            aspect_ratio: data.aspect_ratio,
+            loras: data.loras,
+            lora_strengths: data.lora_strengths,
+            steps: data.steps,
+            cfg: data.cfg,
+            seed: data.seed,
+            content_url: `http://www.jscammie.com/${newImageUrlBase}`,
+            safety: "na",
+            timestamp: Date.now(),
+        };
+
+        // Insert the new booru image document into the database
+        await userBooruSchema.create(newBooruImage);
+
+        res.send({status: "success", message: "Booru image created", booru_id: `${req.session.accountId}-${nextImageId}`})
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).send('Error creating booru image');
+    }
+})
+
+// href="/booru/setRating/${value.booru_id}/nsfw"
+app.get('/booru/setRating/:booru_id/:rating', async function(req, res){
+    booru_id = req.param('booru_id')
+    rating = req.param('rating')
+
+    let foundBooruImage = await userBooruSchema.findOne({booru_id: booru_id})
+
+    if (foundBooruImage == null) {
+        res.send({status: "error", message: "Booru image not found"})
+        return
+    }
+
+    let userProfile = await userProfileSchema.findOne({accountId: req.session.accountId})
+
+    let creatorProfile = await userProfileSchema.findOne({accountId: foundBooruImage.account_id})
+
+    // if the user is not logged in, send them back to the previous page:
+    if (!req.session.loggedIn) {
+        res.redirect('back')
+        return
+    }
+
+    // check if the user has badges.moderator:
+    if (userProfile.badges?.moderator !== true) {
+        res.send({status: "error", message: "User does not have permission to set the rating"})
+        return
+    }
+    
+
+    // if foundBooruImage.safety is na, then give the creatorProfile 25 credits:
+    if (foundBooruImage.safety == "na") {
+        currentCredits = BigInt(creatorProfile.credits)
+        newCredits = currentCredits + BigInt(15)
+        newCredits = newCredits.toString()
+        await userProfileSchema.findOneAndUpdate({ accountId: foundBooruImage.account_id }, { credits: newCredits })
+    }
+
+    await userBooruSchema.findOneAndUpdate({ booru_id: booru_id }, { safety: rating })
+
+    // send them back to the previous page:
+    res.redirect('back')
+})
+
+// <a href="/booru/delete/${value.booru_id}">Delete</a>
+app.get('/booru/delete/:booru_id', async function(req, res){
+    booru_id = req.param('booru_id')
+
+    let foundBooruImage = await userBooruSchema.findOne({booru_id: booru_id})
+
+    let userProfile = await userProfileSchema.findOne({accountId: req.session.accountId})
+
+    if (foundBooruImage == null) {
+        res.send({status: "error", message: "Booru image not found"})
+        return
+    }
+
+    // check if the user either owns the image, or has badges.moderator:
+    if (foundBooruImage.account_id !== req.session.accountId && userProfile.badges?.moderator !== true) {
+        res.send({status: "error", message: "User does not own the image"})
+        return
+    }
+
+    
+
+    localImage = foundBooruImage.content_url.replace("http://www.jscammie.com/", "")
+
+    // delete the image from the booruImages folder:
+    // check if it exists first:
+    if (fs.existsSync(localImage)) {
+        fs.unlinkSync(localImage)
+    }
+
+    // local thumbnail:
+    localImage = localImage.replace(".png", "-thumb.png")
+
+    if (fs.existsSync(localImage)) {
+        fs.unlinkSync(localImage)
+    }
+
+    // delete the image from the userBooruSchema:
+    await userBooruSchema.findOneAndDelete({ booru_id: booru_id })
+
+    // delete the image from the userBooruTagsSchema:
+    // find every booruTagsSchema where the array booru_ids contains the booru_id:
+    let foundTags = await userBooruTagsSchema.find({booru_ids: booru_id})
+
+    for (const tag of foundTags) {
+        await userBooruTagsSchema.findOneAndUpdate({tag: tag.tag},
+            { $pull: {booru_ids: booru_id} }
+        )
+        // if the booru_ids array is empty, delete the tag:
+        if (tag.booru_ids.length == 0) {
+            await userBooruTagsSchema.findOneAndDelete({tag: tag.tag})
+        }
+    }
+
+    res.redirect('back')
+})
+
+// upvotes and downvotes logic:
+app.post('/booru/vote', async function(req, res){
+try {
+    let data = req.body
+    let vote = data.vote
+    let booru_id = data.booru_id
+    let account_id = req.session.accountId
+
+    let foundBooruImage = await userBooruSchema.findOne({booru_id: booru_id})
+
+    if (foundBooruImage == null) {
+        res.send({status: "error", message: "Booru image not found"})
+        return
+    }
+
+    let userProfile = await userProfileSchema.findOne({accountId: account_id})
+
+    if (userProfile == null) {
+        res.send({status: "error", message: "User not found"})
+        return
+    }
+
+    switch (vote) {
+        case 'upvote':
+            // check if the user has already upvoted:
+            if (foundBooruImage.upvotes.includes(account_id)) {
+                res.send({status: "error", message: "User has already upvoted"})
+                return
+            }
+            // check if the user has already downvoted:
+            if (foundBooruImage.downvotes.includes(account_id)) {
+                // remove the downvote:
+                await userBooruSchema.findOneAndUpdate({ booru_id: booru_id }, {
+                    $pull: { downvotes: account_id }
+                })                
+            }
+            // add the upvote:
+            await userBooruSchema.findOneAndUpdate({ booru_id: booru_id }, {
+                $push: { upvotes: account_id }
+            })
+            break
+        case 'downvote':
+            // check if the user has already downvoted:
+            if (foundBooruImage.downvotes.includes(account_id)) {
+                res.send({status: "error", message: "User has already downvoted"})
+                return
+            }
+            // check if the user has already upvoted:
+            if (foundBooruImage.upvotes.includes(account_id)) {
+                // remove the upvote:
+                await userBooruSchema.findOneAndUpdate({ booru_id: booru_id }, {
+                    $pull: { upvotes: account_id }
+                })                
+            }
+            // add the downvote:
+            await userBooruSchema.findOneAndUpdate({ booru_id: booru_id }, {
+                $push: { downvotes: account_id }
+            })
+            break
+        }
+
+        let newBooruImage = await userBooruSchema.findOne({booru_id: booru_id})
+
+        res.send({status: "success", message: "Vote added", upvotes: newBooruImage.upvotes.length, downvotes: newBooruImage.downvotes.length})
+
+} catch (error) {
+    console.log(error);
+    res.status(500).send('Error voting');
+}
+})
+
+app.get('/profile/:account_id', async function(req, res){
+    account_id = req.param('account_id')
+
+    console.log(account_id)
+
+    let profileProfile = await userProfileSchema.findOne({accountId: account_id})
+
+    if (profileProfile == null) {
+        res.send({status: "error", message: "User not found"})
+        return
+    }
+
+    let userProfile = await userProfileSchema.findOne({accountId: req.session.accountId })
+
+    let userBooru = await userBooruSchema.find({account_id: account_id})
+
+    res.render('profile', { session: req.session, profileProfile: profileProfile, userProfile: userProfile, userBooru: userBooru });
+})
+
+
+
+
 
 const http = require('http')
 const https = require('https');
