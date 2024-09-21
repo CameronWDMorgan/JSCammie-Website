@@ -262,7 +262,7 @@
                         ${userProfile.badges?.owner ? '<button id="addSuggestion">Add</button>' : ''}
                         ${userProfile.badges?.owner ? '<button id="rejectSuggestion">Reject</button>' : ''}
                         ${userProfile.accountId === suggestion.accountId || userProfile.badges?.owner ? '<button id="toggleSuggestionSafety">NSFW/SFW</button>' : ''}
-                        ${userProfile.accountId && suggestion.status.toLowerCase() === 'pending' && !suggestion.promoted ? '<button id="promoteSuggestion">Promote (750 Credits)</button>' : ''}
+                        ${userProfile.accountId && suggestion.status.toLowerCase() === 'pending' && !suggestion.promoted ? '<button id="promoteSuggestion">Promote (Costs 750 Credits)</button>' : ''}
                     </a>
                     <p id="${suggestion.suggestionId}-response"></p>
                 `;
