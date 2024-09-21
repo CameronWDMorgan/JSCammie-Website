@@ -1,14 +1,14 @@
 function getFastqueuePrice(loraCount, model) {
 
 	let dynamicCreditsPrice = 0
-	const baseCreditsPrice = 40
+	const baseCreditsPrice = 20
 
 	dynamicCreditsPrice = baseCreditsPrice
 
 	// is it a model with value starting sdxl?
 	if (model.startsWith('sdxl')) {
 		dynamicCreditsPrice = dynamicCreditsPrice * 1.5
-		loraModifier = 3
+		loraModifier = 2.5
 	} else if (model.startsWith('flux')) {
 		dynamicCreditsPrice = dynamicCreditsPrice * 2.5
 		loraModifier = 3
