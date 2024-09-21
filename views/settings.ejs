@@ -1,0 +1,53 @@
+<!-- setup basic html template with metadata etc: -->
+<html>
+<head>
+    <title>Template | JSCammie.com</title>
+    <link rel='stylesheet' href='/style.css'/>
+    
+    <%- include('../partials/_headerAll') %>
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-K3KJJKS1R4"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-K3KJJKS1R4');
+    </script>
+    
+</head>
+<body>
+
+    <!-- get partials/_navigation: -->
+    <%- include('../partials/_navigation') %>
+
+    <div class="center-fully-no-flex" style="margin-bottom: 1rem;">
+        <%- include('../partials/_bannerAdvert') %>
+    </div>
+
+    <script>
+        var settings = {}
+
+        <% settings.forEach(setting => { %>
+            settings[`<%=setting.name%>`] = `<%=setting.value%>`
+        <% }) %>
+
+        window.onLoad = function() {
+            console.log("Settings loaded.")
+            for (const [key, value] of Object.entries(settings)) {
+                console.log(`${key}: ${value}`);
+            }
+        }
+    </script>
+
+    <div class="round-frosted page-content mw75-dynamic" style="padding: 40px; justify-content: center;">
+        
+
+    </div>
+
+    <!-- get partials/_footer: -->
+    <%- include('../partials/_footer') %>
+    
+</body>
+</html>
