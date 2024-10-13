@@ -7,11 +7,11 @@ function getFastqueuePrice(loraCount, model) {
 
 	// is it a model with value starting sdxl?
 	if (model.startsWith('sdxl')) {
-		dynamicCreditsPrice = dynamicCreditsPrice * 1.5
-		loraModifier = 2.5
-	} else if (model.startsWith('flux')) {
 		dynamicCreditsPrice = dynamicCreditsPrice * 2.5
 		loraModifier = 3
+	} else if (model.startsWith('flux')) {
+		dynamicCreditsPrice = dynamicCreditsPrice * 4
+		loraModifier = 3.5
 	} else {
 		loraModifier = 1.25
 	}
@@ -28,7 +28,7 @@ function getFastqueuePrice(loraCount, model) {
 
 }
 
-function getExtrasPrice(extras) {
+function getExtrasPrice(extras, model='') {
 
 	let extrasPrice = {
 		removeWatermark: 0,
@@ -41,7 +41,13 @@ function getExtrasPrice(extras) {
 	}
 
 	if (extras.upscale) {
-		extrasPrice.upscale += 750
+		extrasPrice.upscale += 125
+		if (model.startsWith('sdxl')) {
+			extrasPrice.upscale += 75
+		}
+		if (model.startsWith('flux')) {
+			extrasPrice.upscale += 250
+		}
 	}
 
 	return extrasPrice
