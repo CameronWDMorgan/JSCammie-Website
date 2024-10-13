@@ -64,12 +64,62 @@
                 thumbnailMade: Boolean(<%=image.thumbnailMade%>),
                 timestamp: `<%=image.timestamp%>`,
                 safety: `<%=image.safety%>`,
-                upvotes: [<%=image.upvotes%>],
-                downvotes: [<%=image.downvotes%>],
+                upvotes: <%- JSON.stringify(image.upvotes) %>,
+                downvotes: <%- JSON.stringify(image.downvotes) %>,
             }
         <% }) %>
 
+        // reverse the order of the booru posts
+        masterBooruData = Object.fromEntries(Object.entries(masterBooruData).reverse())
+
     </script>
+
+        <div class="searchDiv">
+            <div id="searchResultsDiv"></div>
+            <input id="searchInput" type="text" placeholder="Search..." style="width: 100%; padding: 10px; border-radius: 10px; margin-bottom: 20px;" />
+            <br>
+            <select id="searchSorting">
+                <option value="votes">Votes</option>
+                <option value="recent">Recent</option>
+            </select>
+            <br>
+            <div id="safetyCheckboxes">
+                <!-- the user may not have a profile to check against: -->
+                <% if (userProfile?.badges?.moderator) { %>
+                    <label for="naCheckbox">N/A</label>
+                    <input type="checkbox" id="naCheckbox" name="naCheckbox" value="na">
+                    <label for="sfwCheckbox">SFW</label>
+                    <input type="checkbox" id="sfwCheckbox" name="sfwCheckbox" value="sfw">
+                    <br>
+                    <label for="suggestiveCheckbox">Suggestive</label>
+                    <input type="checkbox" id="suggestiveCheckbox" name="suggestiveCheckbox" value="suggestive">
+                    <label for="nsfwCheckbox">NSFW</label>
+                    <input type="checkbox" id="nsfwCheckbox" name="nsfwCheckbox" value="nsfw">
+                    <label for="extremeCheckbox">EXTREME</label>
+                    <input type="checkbox" id="extremeCheckbox" name="extremeCheckbox" value="extreme">
+                <% } else { %>
+                    <!-- na hidden -->
+                    <input type="hidden" id="naCheckbox" name="naCheckbox" value="na">
+                    <label for="sfwCheckbox">SFW</label>
+                    <input type="checkbox" id="sfwCheckbox" name="sfwCheckbox" value="sfw">
+                    <br>
+                    <label for="suggestiveCheckbox">Suggestive</label>
+                    <input type="checkbox" id="suggestiveCheckbox" name="suggestiveCheckbox" value="suggestive">
+                    <label for="nsfwCheckbox">NSFW</label>
+                    <input type="checkbox" id="nsfwCheckbox" name="nsfwCheckbox" value="nsfw">
+                    <label for="extremeCheckbox">EXTREME</label>
+                    <input type="checkbox" id="extremeCheckbox" name="extremeCheckbox" value="extreme">
+                <% } %>
+            </div>
+            <br>
+            <button id="searchButton" style="padding: 10px; border-radius: 10px; margin-bottom: 20px;">Search</button>
+        </div>
+
+        <script>
+            <%- booruSearchScript %>
+
+            booruSearchInitialize()
+        </script>
 
         <div id="profileProfileDiv"></div>
         <div id="profileBooruDiv"></div>
@@ -82,12 +132,6 @@
             justify-content: center;
             align-items: center;
             margin-bottom: 20px;
-        }
-
-        .profileProfileImage {
-            width: 200px;
-            height: 200px;
-            margin-right: 20px;
         }
 
         .profileProfileInfo {
@@ -104,8 +148,8 @@
 
         let profileProfileHTML = `
         <div class="profileProfileTop">
-            <div class="profileProfileImage">
-                <img src="${profileProfile.profileImg}" alt="Profile Image" style="width: 100%; border-radius: 50%;">
+            <div>
+                <img class="profileImage" src="${profileProfile.profileImg}" alt="Profile Image">
             </div>
             <div class="profileProfileInfo">
                 <h1>${profileProfile.username}</h1>
@@ -136,12 +180,16 @@
             `
 
             let postDiv = `
-                <a href="/booru/post/${value.booru_id}">
-                    <div class="booruPost">
-                        <h3>${profileProfile.username} | ${value.safety.toUpperCase()}</h3>
+                <div class="booruPost">
+                    <h3>${profileProfile.username} | ${value.safety.toUpperCase()}</h3>
+                    <a href="/booru/post/${value.booru_id}">
                         ${booruThumbnailHTML}
+                    </a>
+                    <div class="votesDiv">
+                        <button id="upvoteButton${value.booru_id}" onclick="votePost('upvote', '${value.booru_id}')">${value.upvotes.length} ⬆️</button>
+                        <button id="downvoteButton${value.booru_id}" onclick="votePost('downvote', '${value.booru_id}')">${value.downvotes.length} ⬇️</button>
                     </div>
-                </a>
+                </div>
             `
             
             booruPostsDivHTML += postDiv
