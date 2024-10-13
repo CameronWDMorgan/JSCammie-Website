@@ -14,6 +14,8 @@ const userHistorySchema = new Schema({
     cfg: { type: Number, default: 5 },
     seed: { type: Number, default: -1 },
     image_url: { type: String, default: "" },
+    thumbnailMade: { type: Boolean, default: false },
+    uploadedToBooru: { type: Boolean, default: false },
 })
 
 const name = 'userHistory'
