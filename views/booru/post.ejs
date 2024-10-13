@@ -70,8 +70,8 @@
             booruImage.content_url = `<%= booruImage.content_url %>`
             booruImage.timestamp = `<%= booruImage.timestamp %>`
             booruImage.safety = `<%= booruImage.safety %>`
-            booruImage.upvotes = [<%= booruImage.upvotes %>]
-            booruImage.downvotes = [<%= booruImage.downvotes %>]
+            booruImage.upvotes = <%- JSON.stringify(booruImage.upvotes) %>
+            booruImage.downvotes = <%- JSON.stringify(booruImage.downvotes) %>
 
             function exportAIData() {
 
@@ -204,6 +204,8 @@
                     <input type="checkbox" id="suggestiveCheckbox" name="suggestiveCheckbox" value="suggestive">
                     <label for="nsfwCheckbox">NSFW</label>
                     <input type="checkbox" id="nsfwCheckbox" name="nsfwCheckbox" value="nsfw">
+                    <label for="extremeCheckbox">EXTREME</label>
+                    <input type="checkbox" id="extremeCheckbox" name="extremeCheckbox" value="extreme">
                 <% } else { %>
                     <!-- na hidden -->
                     <input type="hidden" id="naCheckbox" name="naCheckbox" value="na">
@@ -214,6 +216,8 @@
                     <input type="checkbox" id="suggestiveCheckbox" name="suggestiveCheckbox" value="suggestive">
                     <label for="nsfwCheckbox">NSFW</label>
                     <input type="checkbox" id="nsfwCheckbox" name="nsfwCheckbox" value="nsfw">
+                    <label for="extremeCheckbox">EXTREME</label>
+                    <input type="checkbox" id="extremeCheckbox" name="extremeCheckbox" value="extreme">
                 <% } %>
             </div>
 
