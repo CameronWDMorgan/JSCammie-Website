@@ -1,240 +1,134 @@
-$(document).ready(function() {
+function getPhraseAtCursor(textarea) {
+    let text = textarea.value;
+    let cursorPos = textarea.selectionStart;
 
-    var autocompleteEnabled = true; // Initially, autocomplete is enabled.
+    // Get the last part of the text before the cursor
+    let leftText = text.slice(0, cursorPos);
 
+    // Split by commas, trim, and get the last part
+    let phrases = leftText.split(',').map(phrase => phrase.trim());
+    let currentPhrase = phrases[phrases.length - 1];
 
-    // Right after setting the checkbox state
-    document.getElementById('autocompleteCheckbox').addEventListener('change', function() {
-        autocompleteEnabled = !this.checked;
-        // Potentially reset or refresh autocomplete here if needed
+    // Return both the phrase and its position for replacement purposes
+    let startPos = leftText.lastIndexOf(currentPhrase);
+    let endPos = startPos + currentPhrase.length;
+
+    return {
+        phrase: currentPhrase,
+        start: startPos,
+        end: endPos
+    };
+}
+
+function escapeBrackets(tag) {
+    // Escape brackets for correct insertion into the textarea
+    return tag.replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+}
+
+function fetchTagsDataForPrompt(term) {
+    // Replace spaces with underscores to match the format
+    // term = term.replace(/ /g, '_');
+    // console.log(`fetchTagsData: "${term}"`);
+    if (!term) {
+        return;
+    }
+    if (term.length < 2) {
+        return;
+    }
+    return $.ajax({
+        url: '/autocomplete',
+        method: 'POST',
+        data: JSON.stringify({ query: term }),
+        contentType: 'application/json',
+        dataType: 'json'
     });
+}
 
-    // autocompleteCheckbox trigger change event to set the initial state
-    document.getElementById('autocompleteCheckbox').dispatchEvent(new Event('change'));
+function initializePromptAutocomplete() {
+    let promptTextarea = document.getElementById("prompt");
+    let negativePromptTextarea = document.getElementById("negativeprompt");
 
+    [promptTextarea, negativePromptTextarea].forEach(textarea => {
+        textarea.addEventListener("input", function () {
+            let { phrase: phraseAtCursor, start, end } = getPhraseAtCursor(textarea);
 
-    function checkAutocompleteEnabled() {
-        document.getElementById('autocompleteCheckbox').dispatchEvent(new Event('change'));
-        if (!autocompleteEnabled) {
-            // document.getElementById('autocomplete-div').style.display = 'none';
-            document.getElementById('autocomplete-div').style.marginBottom = '0px';
-            return false;
-        }
-    }
+            if (!phraseAtCursor || phraseAtCursor.trim() === "") {
+                return;
+            }
 
+            console.log("Phrase at cursor:", phraseAtCursor);
 
+            index = 0
 
-    function getVerticalDistance(element1, element2) {
-        var rect1 = element1.getBoundingClientRect();
-        var rect2 = element2.getBoundingClientRect();
+            // Perform a search for the full phrase at the cursor
+            fetchTagsDataForPrompt(phraseAtCursor)
+                .then(data => {
+                    let searchResultsDiv = document.getElementById("autocomplete-div");
+                    searchResultsDiv.innerHTML = ""; // Clear previous results
 
-        // Calculate the vertical distance from the bottom of element1 to the top of element2
-        return rect2.top - rect1.bottom;
-    }
+                    let searchTags = [];
 
-    function fetchTagsData(term) {
-        console.log('fetchTagsData', term);
-        if(!term) {
-            return
-        }
-        return $.ajax({
-            url: '/autocomplete',
-            method: 'POST',
-            data: JSON.stringify({ query: term }),
-            contentType: 'application/json',
-            dataType: 'json'
-        });
-    }
+                    data.forEach(tag => {
+                        // Only add tags that match the phrase and don't already exist in the results
+                        if (!searchTags.includes(tag) && tag.tag.toLowerCase().includes(phraseAtCursor.toLowerCase())) {
+                            searchTags.push(tag);
+                        }
+                    });
 
-    function split(val) {
-        return val.split(/,\s*/);
-    }
-    function extractLast(term) {
-        return split(term).pop();
-    }
+                    // remove any empty tags:
+                    searchTags = searchTags.filter(tag => tag.tag !== "");
 
-    function setupAutocomplete(selector, tagsData) {
-        $(selector)
-            .on("keydown", function(event) {
-                if (checkAutocompleteEnabled() == false) {
-                    return;
-                }
+                    // Display the tag along with its score, but only paste the tag
+                    searchTags.forEach(result => {
+                        index = index + 1
+                        let resultDiv = document.createElement('button');
 
-                if (event.ctrlKey && (event.keyCode === 38 || event.keyCode === 40)) {
-                    autocompleteEnabled = false; // Disable autocomplete when adjusting AI strength
-                }
-                if (event.keyCode === $.ui.keyCode.TAB && $(this).autocomplete("instance").menu.active) {
-                    event.preventDefault();
-                }
-            })
-            .on("keyup", function(event) {
-                if (checkAutocompleteEnabled() == false) {
-                    return;
-                }
-                if (event.keyCode === 17) { // CTRL key
-                    autocompleteEnabled = true; // Re-enable autocomplete after CTRL key is released
-                }
-            }).autocomplete({
-                source: function(request, response) {
-                    if (checkAutocompleteEnabled() == false) {
-                        response([]);
-                        return;
-                    }
+                        // set the autocomplete-item class to be autocomplete-item-1 for the 1st item, autocomplete-item-5 for the top 5 items, etc.
+                        resultDiv.classList.add("autocomplete-item")
+                        if (index == 1) {
+                            resultDiv.classList.add("autocomplete-item-1")
+                        } else if (index <= 5) {
+                            resultDiv.classList.add("autocomplete-item-5")
+                        } else if (index <= 10) {
+                            resultDiv.classList.add("autocomplete-item-10")
+                        }
 
-                    var textarea = $(selector);
-                    var cursorPos = textarea.get(0).selectionStart;
-                    var text = textarea.val();
-                    var leftText = text.substring(0, cursorPos);
-                    var rightText = text.substring(cursorPos);
+                        // Extract tag and score, replace underscores with spaces for display
+                        let cleanedTag = result.tag.replace(/\(\d+\)\s*/, '').toLowerCase();
+                        cleanedTag = cleanedTag.replace(/_/g, ' '); // Unescaped for display
+                        let tagWithScore = `(${result.score}) ${cleanedTag}`; // Show score in the button
 
-                    var leftWordMatch = leftText.match(/[\w]+$/);
-                    var rightWordMatch = rightText.match(/^[\w]*/);
+                        // Display the tag with score
+                        resultDiv.innerText = tagWithScore;
 
-                    var searchTerm = (leftWordMatch ? leftWordMatch[0] : '') + (rightWordMatch ? rightWordMatch[0] : '');
-                    searchTerm = searchTerm.toLowerCase();
+                        resultDiv.addEventListener('click', function (e) {
+                            e.preventDefault();
 
-                    if (searchTerm.length < 2 || searchTerm === undefined) {
-                        response([]);
-                        return;
-                    } else {
-                        fetchTagsData(searchTerm).done(function(tagsData) {
-                            let suggestions = [];
-    
-                            tagsData.forEach(tagData => {
-                                const tag = tagData.tag.replace(/\\/g, '\\\\').replace(/_/g, ' ');
-                                const score = tagData.score;
-                                suggestions.push(`${tag} (${score})`);
-                            });
-    
-                            response(suggestions);
+                            let searchValue = textarea.value;
+
+                            // Escape brackets in the tag for insertion, keep spaces as is
+                            let escapedTag = escapeBrackets(cleanedTag);
+
+                            // Replace the exact phrase at the cursor with the cleaned & escaped tag, keeping text before and after the cursor intact
+                            textarea.value = searchValue.slice(0, start) + `${escapedTag}, ` + searchValue.slice(end);
+
+                            let inputEvent = new Event('input');
+                            textarea.dispatchEvent(inputEvent);
                         });
-                    }
-                },
 
-                select: function(event, ui) {
-                    if (checkAutocompleteEnabled() == false) {
-                        return;
-                    }
+                        searchResultsDiv.appendChild(resultDiv);
+                    });
 
-                    var textarea = $(selector);
-                    var cursorPos = textarea.get(0).selectionStart;
-                    var text = textarea.val();
-                    var leftText = text.substring(0, cursorPos);
-                    var rightText = text.substring(cursorPos);
-                
-                    var leftWordMatch = leftText.match(/[\w]+$/);
-                    var rightWordMatch = rightText.match(/^[\w]*/);
-                
-                    var replaceLength = (leftWordMatch ? leftWordMatch[0].length : 0) + (rightWordMatch ? rightWordMatch[0].length : 0);
-                    // example tags are "1girl_(63474386)" and "Amy_Rose_(sonic)_(3753564)" needs to become "1girl", "Amy Rose \(sonic\)":
-                    var actualTag = ui.item.value
-                        .replace(/ \(\d+\)/g, '')  // Remove numeric IDs
-                        .replace(/_/g, ' ')        // Replace underscores with spaces
-                        .replace(/\\/g, '\\\\')    // Escape backslashes
-                        .replace(/\(/g, '\\(')     // Escape open parenthesis
-                        .replace(/\)/g, '\\)');    // Escape close parenthesis
-                
-                    // Determine the appropriate text to append
-                    var appendText = "";
-                    if (rightText.startsWith(" ")) {
-                        appendText = ","; // Add just a comma if rightText starts with a space
-                    } else {
-                        appendText = ", "; // Add comma and space otherwise
+                    if (searchTags.length === 0) {
+                        searchResultsDiv.innerHTML = `<div>No results found for "${phraseAtCursor}"</div>`;
                     }
-                
-                    var newText = leftText.substring(0, leftText.length - (leftWordMatch ? leftWordMatch[0].length : 0)) + actualTag + appendText + rightText.substring(rightWordMatch ? rightWordMatch[0].length : 0);
-                    textarea.val(newText);
-                
-                    // Update the cursor position to be after the inserted tag and appendText
-                    var newCursorPos = cursorPos - replaceLength + actualTag.length + appendText.length;
-                    textarea.get(0).selectionStart = textarea.get(0).selectionEnd = newCursorPos;
-
-                    return false;
-                },
-
-                open: function() {
-                    if (checkAutocompleteEnabled() == false) {
-                        return;
-                    }
-                    var menu = $(this).data('ui-autocomplete').menu.element;
-                    var autocompleteDiv = $('#autocomplete-div');
-        
-                    // Delay the execution to ensure the menu is fully rendered
-                    setTimeout(function() {
-                        // Position the menu at the top-left corner of the autocomplete-div
-                        menu.offset({
-                            top: autocompleteDiv.offset().top,
-                            left: autocompleteDiv.offset().left
-                        });
-                    }, 0);
-                },
-                response: function(event, ui) {
-                    if (checkAutocompleteEnabled() == false) {
-                        return;
-                    }
-                    var menu = $(this).data('ui-autocomplete').menu.element;
-                    var autocompleteDiv = $('#autocomplete-div');
-                    var autocompleteDivDocument = document.getElementById('autocomplete-div');
-        
-                    // Delay the execution to ensure the menu's height is updated
-                    setTimeout(function() {
-                        autocompleteDivDocument.style.marginBottom = (menu.height() + 20) + 'px';
-                    }, 0);
-                },
-                close: function( event, ui ) {
-                    // reset the height of the autocomplete-div to 0:
-                    document.getElementById('autocomplete-div').style.marginBottom = '0px';
-                },
-                search: function() {
-
-                    if (checkAutocompleteEnabled() == false) {
-                        return;
-                    }
-
-                    var term = extractLast(this.value);
-                    if (term.length < 2) {
-                        return false;
-                    }
-                },
-                focus: function (event, ui) {
-                    event.preventDefault();
-
-                    if (checkAutocompleteEnabled() == false) {
-                        return;
-                    }
-                    
-                    var menu = $(this).data('ui-autocomplete').menu.element;
-                    menu.find('li').removeClass('custom-highlight');
-                    
-                    var index = ui.item ? menu.find('li:contains("' + ui.item.value + '")').index() : -1;
-                    if(index !== -1){
-                        menu.find('li').eq(index).addClass('custom-highlight');
-                    }
-                },
-            }).data('ui-autocomplete')._renderItem = function (ul, item) {
-            
-                var term = extractLast(this.term);
-                var re = new RegExp("(" + $.ui.autocomplete.escapeRegex(term) + ")", "gi");
-                var highlightedValue = item.label.replace(re, "<strong>$1</strong>");
-                return $("<li>")
-                    .addClass('ui-menu-item')
-                    .append("<div class='ui-menu-item-wrapper'>" + highlightedValue + "</div>")
-                    .appendTo(ul);
-
-            };
-
-        $(selector).on('autocompleteclose', function () {
-            document.getElementById('autocomplete-div').style.marginBottom = '0px';
-            $(this).data('ui-autocomplete').menu.element.find('li').css({
-                'background-color': '',
-                'color': '',
-                'font-weight': ''
-            });
+                })
+                .catch(error => console.error('Error fetching tags:', error)); // Handle fetch error
         });
-    }
+    });
+}
 
-    // Setup autocomplete without fetching tags data
-    setupAutocomplete('#prompt', []);
-    setupAutocomplete('#negativeprompt', []);
-
+// Initialize the autocomplete feature
+$(document).ready(function() {
+    initializePromptAutocomplete();
 });
