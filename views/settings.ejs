@@ -1,7 +1,7 @@
 <!-- setup basic html template with metadata etc: -->
 <html>
 <head>
-    <title>Template | JSCammie.com</title>
+    <title>Settings | JSCammie.com</title>
     <link rel='stylesheet' href='/style.css'/>
     
     <%- include('../partials/_headerAll') %>
@@ -26,25 +26,98 @@
         <%- include('../partials/_bannerAdvert') %>
     </div>
 
-    <script>
-        var settings = {}
-
-        <% settings.forEach(setting => { %>
-            settings[`<%=setting.name%>`] = `<%=setting.value%>`
-        <% }) %>
-
-        window.onLoad = function() {
-            console.log("Settings loaded.")
-            for (const [key, value] of Object.entries(settings)) {
-                console.log(`${key}: ${value}`);
-            }
+    <style>
+        button {
+            background: #4caf50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
         }
-    </script>
+        button:hover {
+            background: #45a049;
+        }
+        details {
+            margin-top: 20px;
+        }
+        summary {
+            cursor: pointer;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 5px;
+        }
+        summary:hover {
+            background: rgba(139, 255, 133, 0.279);
+        }
+        p {
+            margin-top: 10px;
+        }
+    </style>
 
     <div class="round-frosted page-content mw75-dynamic" style="padding: 40px; justify-content: center;">
-        
-
+        <h1>Settings</h1>
+        <p>Change your settings here.</p>
+        <div>
+            <details>
+                <summary>Change Avatar</summary>
+                <h2>Change Avatar</h2>
+                <input type="file" id="avatar" name="avatar" accept="image/*" required>
+                <button id="avatarUploadButton">Upload</button>
+                <div id="avatarProgressContainer" style="width: 100%; background: #f3f3f3; border-radius: 5px; overflow: hidden; margin-top: 10px;">
+                    <div id="avatarProgressBar" style="width: 0%; height: 20px; background: #4caf50;"></div>
+                </div>
+                <p id="avatarStatusMessage"></p>
+            </details>
+        </div>
     </div>
+
+    <script>
+        document.getElementById('avatarUploadButton').addEventListener('click', function () {
+        const fileInput = document.getElementById('avatar');
+        const file = fileInput.files[0];
+
+        if (!file) {
+            document.getElementById('avatarStatusMessage').textContent = 'Please select a file to upload.';
+            return;
+        }
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/settings/avatar', true);
+        xhr.setRequestHeader('Content-Type', file.type);
+
+        // Update progress bar
+        xhr.upload.addEventListener('progress', function (e) {
+            if (e.lengthComputable) {
+                const percentComplete = (e.loaded / e.total) * 100;
+                document.getElementById('avatarProgressBar').style.width = percentComplete + '%';
+            }
+        });
+
+        // Handle the response
+        xhr.onload = function () {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                const response = JSON.parse(xhr.responseText);
+                document.getElementById('avatarStatusMessage').textContent = 'Avatar uploaded successfully!';
+                // Optionally, update the user's avatar on the page
+                // document.getElementById('userAvatar').src = response.avatarUrl;
+            } else {
+                document.getElementById('avatarStatusMessage').textContent = 'Error uploading avatar: ' + xhr.responseText;
+            }
+            // Reset the progress bar
+            document.getElementById('avatarProgressBar').style.width = '0%';
+            fileInput.value = ''; // Clear the file input
+        };
+
+        xhr.onerror = function () {
+            document.getElementById('avatarStatusMessage').textContent = 'Error uploading avatar.';
+        };
+
+        xhr.send(file);
+    });
+    </script>
+
+
 
     <!-- get partials/_footer: -->
     <%- include('../partials/_footer') %>
