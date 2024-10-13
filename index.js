@@ -10,10 +10,13 @@ const path = require('path');
 const fs = require('fs')
 const bodyParser = require('body-parser')
 
+const mongolib = require('./mongolib.js')
+
+// connect to the database:
+mongolib.connectToDatabase()
+
 const cors = require('cors');
 app.use(cors());
-
-let cookieSession = require('cookie-session')
 
 app.set('view engine', 'ejs');
 
@@ -24,38 +27,34 @@ const customFunctions = require('./scripts/ai-calculateCreditsPrice.js')
 const getFastqueuePrice = customFunctions.getFastqueuePrice
 const getExtrasPrice = customFunctions.getExtrasPrice
 
-// dotenv for environment variables:
-require('dotenv').config();
-
-// connect to mongodb:
-//connects to the mongodb database
-mongoose.connect(process.env.MONGODB_URI)
-mongoose.set('strictQuery', false)
-
-app.use(bodyParser.urlencoded({limit: '50mb', extended: false}));
-app.use(bodyParser.json({limit: '50mb'}));
-app.use(express.json({ limit: '50mb' })); // Increase limit if needed
+// Middleware to parse incoming form data
+app.use(express.urlencoded({ extended: true }));
+// set limit:
+app.use(express.json({ limit: '50mb' }));
 
 
+const cookieSession = require('cookie-session');
+
+// Session middleware
 app.use(cookieSession({
     name: 'session',
     keys: [process.env.COOKIE_KEY1, process.env.COOKIE_KEY2],
-    secure: true, // Ensure this is true if your site is served over HTTPS
+    secure: true, // Ensures the browser only sends the cookie over HTTPS
     httpOnly: true, // Helps prevent attacks such as cross-site scripting
-    maxAge: (24 * 60 * 60 * 1000) * 30 // 24 hours - 30 days
-}))
+    maxAge: (24 * 60 * 60 * 1000) * 30 // 30 days
+}));
 
-app.use( async (req, res, next) => {
+// Middleware to refresh session expiration
+app.use(async (req, res, next) => {
     if (req.session) {
-        // Update some session property to ensure the session is considered modified.
+        // Update a session property to ensure modification
         req.session.nowInMinutes = Math.floor(Date.now() / 60e3);
 
-        // Optionally, explicitly refresh maxAge if needed (this step might be redundant).
-        req.sessionOptions.maxAge = (24 * 60 * 60 * 1000) * 30; // Resets the expiration to 30 days from now
+        // Explicitly refresh session expiration by resetting the session
+        req.sessionOptions.maxAge = (24 * 60 * 60 * 1000) * 30; // 30 days from now
     }
     next();
 });
-
 app.use(express.static(__dirname));
 
 // fixed the www redirect to work:
@@ -154,53 +153,57 @@ app.get('/profile', async (req, res) => {
         return
     }
 
-    let userProfile = await userProfileSchema.findOne({accountId: req.session.accountId})
+    let userProfile = await mongolib.getSchemaDocumentOnce("userProfile", {accountId: req.session.accountId})
 
     res.render('profile', { userProfile: userProfile, session: req.session })
 
 })
 
+// OAuth route to handle Discord token and login
 app.post('/receive-token', async (req, res) => {
     const accessToken = req.body.accessToken;
 
-    let discordUser
+    try {
+        const discordResponse = await fetch('https://discord.com/api/users/@me', {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+        const discordUser = await discordResponse.json();
 
-    fetch('https://discord.com/api/users/@me', {
-        headers: {
-            'Authorization': `Bearer ${accessToken}`
+        if (!discordUser.id) {
+            return res.status(400).send({ status: 'error', message: 'Account not found' });
         }
-    })
-    .then(res => res.json())
-    .then(async json => {
-        discordUser = json
 
-        newProfile = {
+        const newProfile = {
             accountId: discordUser.id,
             username: discordUser.username,
             timestamp: Date.now(),
-        }
-    
-        await userProfileSchema.findOneAndUpdate({accountId: discordUser.id}, newProfile, {upsert: true})
-    
-        req.session.accountId = discordUser.id
-        req.session.loggedIn = true
+        };
 
-        // make them join the discord server:
-        const addUserResponse = await fetch(`https://discord.com/api/guilds/${process.env.GUILD_ID}/members/${discordUser.id}`, {
+        // Update or create user profile in database
+        await userProfileSchema.findOneAndUpdate({ accountId: discordUser.id }, newProfile, { upsert: true });
+
+        // Store user session information
+        req.session.accountId = discordUser.id;
+        req.session.loggedIn = true;
+
+        // Add user to the Discord server
+        await fetch(`https://discord.com/api/guilds/${process.env.GUILD_ID}/members/${discordUser.id}`, {
             method: 'PUT',
             headers: {
                 'Authorization': `Bot ${process.env.BOT_TOKEN}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                access_token: accessToken
-            })
+            body: JSON.stringify({ access_token: accessToken })
         });
-        
-        res.sendStatus(200)
-    })
 
-})
+        res.sendStatus(200);
+    } catch (error) {
+        console.error('Error during OAuth process:', error);
+        res.status(500).send({ status: 'error', message: 'Server error' });
+    }
+});
 
 app.get('/suggestions', async (req, res) => {
     let suggestions = await userSuggestionSchema.find()
@@ -236,7 +239,6 @@ app.post('/promote-suggestion', async (req, res) => {
     let suggestionId = req.body.suggestionId
     let accountId = req.session.accountId
 
-    let currentUser = await userProfileSchema.findOne({accountId: accountId})
     let suggestion = await userSuggestionSchema.findOne({suggestionId: suggestionId})
 
     if(suggestion === null) {
@@ -250,18 +252,18 @@ app.post('/promote-suggestion', async (req, res) => {
         return
     }
 
-    creditsRequired = BigInt(750)
-
     // check if the user has more than 300 credits:
-    if(BigInt(currentUser.credits) < creditsRequired) {
-        res.send({status: 'error', message: `You do not have enough credits to promote this suggestion (${creditsRequired} credits)`})
+    let result = await mongolib.modifyUserCredits(accountId, 1000, '-', `Promoted Suggestion Titled: "${suggestion.title}"`, true)
+
+    if(result.status === 'error') {
+        res.send({status: result.status, message: result.message})
         return
     }
 
     // promote the suggestion:
     await userSuggestionSchema.findOneAndUpdate({suggestionId: suggestionId}, {promoted: true})
-    let newCredits = BigInt(currentUser.credits) - creditsRequired
-    await userProfileSchema.findOneAndUpdate({accountId: accountId}, {credits: newCredits})
+    
+    await mongolib.modifyUserCredits(accountId, 1000, '-', `Promoted Suggestion Titled: "${suggestion.title}"`)
 
     res.send({status: 'success', message: 'Suggestion promoted (refresh to see changes)'})
 })
@@ -404,21 +406,22 @@ app.post('/vote-suggestion', async (req, res) => {
 
     // if the user has already upvoted and have chosen to downvote, remove the upvote:
     if(upvoted && req.body.vote === 'downvote') {
-        await userSuggestionSchema.findOneAndUpdate({suggestionId: suggestionId}, { $pull: { upvotes: accountId } })
+        // await userSuggestionSchema.findOneAndUpdate({suggestionId: suggestionId}, { $pull: { upvotes: accountId } })
+        await mongolib.updateSchemaDocumentOnce("userSuggestion", {suggestionId: suggestionId}, { $pull: { upvotes: accountId } })
     }
 
     // if the user has already downvoted and have chosen to upvote, remove the downvote:
     if(downvoted && req.body.vote === 'upvote') {
-        await userSuggestionSchema.findOneAndUpdate({suggestionId: suggestionId}, { $pull: { downvotes: accountId } })
+        await mongolib.updateSchemaDocumentOnce("userSuggestion", {suggestionId: suggestionId}, { $pull: { downvotes: accountId } })
     }
 
     if (req.body.vote === 'upvote') {
-        await userSuggestionSchema.findOneAndUpdate({suggestionId: suggestionId}, { $push: { upvotes: accountId } })
+        await mongolib.updateSchemaDocumentOnce("userSuggestion", {suggestionId: suggestionId}, { $push: { upvotes: accountId } })
     } else if (req.body.vote === 'downvote') {
-        await userSuggestionSchema.findOneAndUpdate({suggestionId: suggestionId}, { $push: { downvotes: accountId } })
+        await mongolib.updateSchemaDocumentOnce("userSuggestion", {suggestionId: suggestionId}, { $push: { downvotes: accountId } })
     }
 
-    suggestion = await userSuggestionSchema.findOne({suggestionId: suggestionId})
+    suggestion = await mongolib.getSchemaDocumentOnce("userSuggestion", {suggestionId: suggestionId})
 
     // if suggestion doesnt exist, send error:
     if(suggestion === null) {
@@ -440,8 +443,8 @@ app.post('/remove-suggestion', async (req, res) => {
     let suggestionId = req.body.suggestionId
     let accountId = req.session.accountId
 
-    let currentUser = await userProfileSchema.findOne({accountId: accountId})
-    let suggestion = await userSuggestionSchema.findOne({suggestionId: suggestionId})
+    let currentUser = await mongolib.getSchemaDocumentOnce("userProfile", {accountId: accountId})
+    let suggestion = await mongolib.getSchemaDocumentOnce("userSuggestion", {suggestionId: suggestionId})
 
     if(suggestion === null) {
         res.send({status: 'error', message: 'Suggestion not found'})
@@ -513,9 +516,22 @@ app.get('/image-history', async (req, res) => {
         return
     }
 
+    // count how many images are in the userHistory to find who has the most images:
+    // let allUserHistory = await userHistorySchema.aggregate([
+    //     {
+    //         $group: {
+    //             _id: "$account_id",
+    //             count: { $sum: 1 }
+    //         }
+    //     }
+    // ]).sort({count: -1})
+
+    // console.log(allUserHistory)
+
     if(req.session.accountId == "1039574722163249233") {
         // make sure its sorted by _id getTimestamp:
-        userHistory = await userHistorySchema.find({account_id: req.session.accountId}).sort({ _id: -1 })
+        userHistory = await userHistorySchema.find({account_id: "1039574722163249233"}).sort({ _id: -1 })
+        // userHistory = await userHistorySchema.find().sort({ _id: -1 }).limit(100)
     } else {
         userHistory = await userHistorySchema.find({account_id: req.session.accountId}).sort({ _id: -1 })
     }
@@ -611,7 +627,8 @@ async function loadTags() {
     let allTags = []
 
     records.forEach(record => {
-        const tag = record.name;
+        let tag = record.name;
+        tag = tag.replace(/_/g, ' '); // Replace underscores with spaces
         const score = parseInt(record.post_count); // Get the usage count and parse it as an integer.
         allTags.push({ tag: tag, score: score });
     });
@@ -634,31 +651,31 @@ app.post('/autocomplete', async (req, res) => {
     }
 
     const { query } = req.body;
-    const tagsThatMatch = [];
+    let tagsThatMatch = [];
 
     // Check if query is defined and not an empty string
     if (query && typeof query === 'string') {
         const lowercaseQuery = query.toLowerCase();
 
-        for (const tagObj of allTags) {
-            if (tagObj && tagObj.tag && tagObj.tag.toLowerCase().includes(lowercaseQuery)) {
-                tagsThatMatch.push(tagObj);
-            }
-        }
+        // console.log(`Query: "${lowercaseQuery}"`);
 
-        // sort the tags by score:
+        // Filter the tags based on both versions
+        tagsThatMatch = allTags.filter(tag => tag.tag.toLowerCase().includes(lowercaseQuery));
+
+        // Sort the tags by score:
         tagsThatMatch.sort((a, b) => b.score - a.score);
 
-        // get the top 10 tags:
-        const topx = tagsThatMatch.slice(0, 5);
+        // Get the top 10 tags:
+        const topx = tagsThatMatch.slice(0, 20);
 
-        // console.log(topx);
         res.json(topx);
     } else {
         // Handle the case when query is undefined or not a string
         res.status(400).json({ error: 'Invalid query parameter' });
     }
 });
+
+
 
 // ? test the autocomplete function:
 try {
@@ -784,7 +801,7 @@ async function loraImagesCache() {
 
     // modify the cachedYAMLData, adding information from generationLoraSchema 'usesCount' and 'lastUsed', use the loraId as the key:
     try {
-        let allLoras = await generationLoraSchema.find()
+        let allLoras = await mongolib.getSchemaDocuments("generationLora", {})
 
         for (const lora of allLoras) {
             // get the category and loraId:
@@ -793,6 +810,10 @@ async function loraImagesCache() {
 
             // get the loraData from the cachedYAMLData:
             let loraData = cachedYAMLData[category][loraId]
+
+            if (loraData === undefined) {
+                continue
+            }
 
             loraData.usesCount = lora.usesCount
             loraData.lastUsed = lora.lastUsed
@@ -940,18 +961,18 @@ app.post('/dailies', async (req, res) => {
         return
     }
 
-    newCredits = BigInt(userProfile.credits) + BigInt(creditsEarned)
-    newCredits = newCredits.toString()
-
-    if (dailyType == '3hr') {        
-        await userProfileSchema.findOneAndUpdate({ accountId: req.session.accountId }, { 'dailies.timestamp3hr': currentTimestamp, credits: newCredits })
-    } else if (dailyType == '12hr') {
-        await userProfileSchema.findOneAndUpdate({ accountId: req.session.accountId }, { 'dailies.timestamp12hr': currentTimestamp, credits: newCredits })
-    } else if (dailyType == '24hr') {
-        await userProfileSchema.findOneAndUpdate({ accountId: req.session.accountId }, { 'dailies.timestamp24hr': currentTimestamp, credits: newCredits })
-    } else if (dailyType == '168hr') {
-        await userProfileSchema.findOneAndUpdate({ accountId: req.session.accountId }, { 'dailies.timestamp168hr': currentTimestamp, credits: newCredits })
+    result = await mongolib.modifyUserCredits(req.session.accountId, creditsEarned, '+', `Dailies claimed: ${dailyType}`)
+    if(result.status == 'error') {
+        res.send({ status: result.status, message: result.message })
+        return
     }
+
+    result = await mongolib.updateSchemaDocumentOnce("userProfile", { accountId: req.session.accountId }, { [`dailies.timestamp${dailyType}`]: currentTimestamp })
+    if (result.status == 'error') {
+        res.send({ status: result.status, message: result.message })
+        return
+    }
+
     res.send({ status: 'success', message: 'Dailies claimed' })
 })
 
@@ -989,8 +1010,23 @@ app.get('/', async function(req, res){
 
         scripts = aiScripts
 
+        let imageHistoryCountRaw = await userHistorySchema.aggregate([
+            {
+                $match: { account_id: req.session.accountId }
+            },
+            {
+                $group: {
+                    _id: "$account_id",
+                    count: { $sum: 1 }
+                }
+            }
+        ])
+
+        imageHistoryCount = imageHistoryCountRaw[0]?.count ?? 0
+
         res.render('ai', { 
             userProfile,
+            imageHistoryCount,
             session: req.session,
             scripts: scripts,
             lora_data: modifiedCachedYAMLData,
@@ -1059,8 +1095,6 @@ app.post('/generate', async function(req, res){
             loras: request.lora,
             aspectRatio: request.aspect_ratio,
             favoriteLoras: request.favoriteLoras,
-            strengthenabled: request.strengthenabled,
-            autocompleteenabled: request.autocompleteenabled,
             steps: request.steps,
             quantity: request.quantity,
             cfguidance: request.guidance,
@@ -1091,7 +1125,7 @@ app.post('/generate', async function(req, res){
 
             // if any value in the extras object is true, then proceed with the if statement:
             if (Object.values(request.extras).includes(true)) {
-                extrasCreditsRequired = getExtrasPrice(request.extras)
+                extrasCreditsRequired = getExtrasPrice(request.extras, request.model)
                 
                 // add all the values in the extrasCreditsRequired object to the request.creditsRequired:
                 for (const [key, value] of Object.entries(extrasCreditsRequired)) {
@@ -1164,6 +1198,13 @@ app.get('/queue_position/:request_id', async function(req, res){
 
         const json = await response.json();
 
+        // remove any number in brackets from queue_length:
+        if (json.queue_length != null){
+            if (json.queue_length.includes("(")) {
+                json.queue_length = json.queue_length.replace(/\s*\(.*?\)\s*/g, '')
+            }
+        }
+
         res.send(json);
     } catch (error) {
         console.error(error);
@@ -1185,14 +1226,8 @@ app.get('/result/:request_id', async function(req, res){
 
         let usedLoras = json.historyData.loras
 
-        console.log(typeof usedLoras)
-        console.log(usedLoras)
-
         // convert the usedLoras "object" to an array, here is an example of the output `[ 'concept-sdxlantilongtorso', 'effect-sdxldetailifier' ]`:
         usedLoras = usedLoras.flat()
-
-        console.log(typeof usedLoras)
-        console.log(usedLoras)
 
         // for each lora in the usedLoras array, generationLoraSchema.findOneAndUpdate increase the usesCount by 1, update lastUsed to be the current timestamp, and upsert it if it doesnt exist:
         // first check if usedLoras is not empty:
@@ -1210,11 +1245,9 @@ app.get('/result/:request_id', async function(req, res){
             }
         }
 
-
+        let allImageHistory = []
 
         if (json.historyData.account_id != "0") {
-
-            // console.log(json.historyData)
 
             if (!fs.existsSync(imagesHistorySaveLocation)) {
                 fs.mkdirSync(imagesHistorySaveLocation, { recursive: true });
@@ -1224,6 +1257,8 @@ app.get('/result/:request_id', async function(req, res){
             }
         
             let nextImageId = BigInt(Date.now());
+
+            
                 
             for (const image of json.images) {
                 try {
@@ -1252,6 +1287,11 @@ app.get('/result/:request_id', async function(req, res){
             
                         // Insert the new image history document into the database
                         await userHistorySchema.create(newImageHistory);
+
+                        // change the newImageHistory image_id to a string:
+                        newImageHistory.image_id = newImageHistory.image_id.toString()
+
+                        allImageHistory.push(newImageHistory);
             
                         // Increment the image ID for the next iteration
                         nextImageId = BigInt(nextImageId) + BigInt(1);
@@ -1262,11 +1302,19 @@ app.get('/result/:request_id', async function(req, res){
             }
             
         }
-        
 
-        if (json.historyData.account_id !== "0" && json.fastqueue === true && json.status !== "error") {
+        // make it so allImageHistory is added to the json object:
+        json.allImageHistory = allImageHistory
+
+        if (json.creditsRequired > 0) {
             // get the user profile:
-            let userProfile = await userProfileSchema.findOne({accountId: req.session.accountId})
+
+            let userProfile = await mongolib.getSchemaDocumentOnce("userProfile", { accountId: req.session.accountId })
+
+            if(userProfile.status == 'error') {
+                res.send({status: 'error', message: 'User not found'})
+                return
+            }
 
             creditsRequired = json.creditsRequired
 
@@ -1277,42 +1325,13 @@ app.get('/result/:request_id', async function(req, res){
                 creditsCurrent = userProfile.credits
             }
 
+            creditsMessage = `Generated images, Using: ${json.historyData.model}`
+
             // creditsFinal = creditsCurrent - creditsRequired
-            creditsFinal = BigInt(creditsCurrent) - BigInt(creditsRequired)
-            creditsFinal = creditsFinal.toString()
+            result = await mongolib.modifyUserCredits(req.session.accountId, creditsRequired, '-', creditsMessage)
 
-            await userProfileSchema.findOneAndUpdate({ accountId: req.session.accountId }, { credits: creditsFinal })
-
-            // console.log(`${userProfile.username} credits decremented by ${creditsRequired}`)
-            json.credits = userProfile.credits - creditsRequired
+            json.credits = result.newCredits
         }
-
-        if (json.historyData.account_id !== "0" && req.session.loggedIn && json.status !== "error") {
-            let userProfile = await userProfileSchema.findOne({accountId: req.session.accountId})
-            if (userProfile.credits == null || userProfile.credits == undefined) {
-                creditsCurrent = 500
-            } else {
-                creditsCurrent = userProfile.credits
-            }
-
-            // have a random change to get a credit, 1 in 2 chance:
-            randomChance = Math.round(Math.floor(Math.random() * 2))
-            randomCredits = 1
-            randomChance2 = Math.round(Math.floor(Math.random() * 1000))
-
-            if (randomChance2 == 1) {
-                randomCredits += 25
-            }
-
-            // if the random number is 1, add the credits to the user:
-            if (randomChance == 1) {
-                creditsCurrent = BigInt(creditsCurrent) + BigInt(randomCredits)
-            }
-            creditsCurrent = creditsCurrent.toString()
-            // console.log(`${userProfile.username} credits incremented by ${randomCredits}`)
-            await userProfileSchema.findOneAndUpdate({ accountId: req.session.accountId }, { credits: creditsCurrent })
-            json.credits = creditsCurrent
-        }        
 
         historyData = json.historyData
 
@@ -1553,8 +1572,17 @@ app.get('/booru/post/:booru_id', async function(req, res){
 function splitTags(tags) {
     // make all the tags lowercase:
     tags = tags.map(tag => tag.toLowerCase())
-    // replace every space with a dash:
+
+    tags = tags.map(tag => tag.replace(/<.*?>/g, ''))
+    tags = tags.map(tag => tag.replace(/[()]/g, ''))
+
+    // trim the front and back of the tags:
+    tags = tags.map(tag => tag.trim())
+
     tags = tags.map(tag => tag.replace(/ /g, '_'))
+    // remove any back slashes:
+    tags = tags.map(tag => tag.replace(/\\/g, ''))
+    
     // remove any empty tags:
     tags = tags.filter(tag => tag !== "")
     return tags
@@ -1584,7 +1612,9 @@ app.get('/booru/', async function(req, res){
 
     let booruImages = []
 
-    if (search === "") {
+    console.log(`search: "${search}", safety: "${safety}", sort: "${sort}"`)
+
+    if (search == "") {
         // booruImages = await userBooruSchema.find().sort({timestamp: -1}).skip(skip).limit(30)
         // filter by the safety:
         if (sort == "recent") {
@@ -1598,7 +1628,7 @@ app.get('/booru/', async function(req, res){
                         votes: { $subtract: [ { $size: "$upvotes" }, { $size: "$downvotes" } ] }
                     }
                 },
-                { $sort: { votes: -1 } },
+                { $sort: { votes: -1, _id: 1 } },
                 { $skip: skip },
                 { $limit: totalPerPage }
             ])
@@ -1610,14 +1640,13 @@ app.get('/booru/', async function(req, res){
         searchTags = search.split(' ')
         searchTags = splitTags(searchTags)
 
-        console.log(`searchTags: ${searchTags}`)
+        let regex = searchTags.map(tag => `(?=.*${tag})`).join('')
+        // remove any back slashes:
+        regex = regex.replace(/\\/g, '')
 
-        const regex = searchTags.map(tag => tag.replace(/[()]/g, '')).map(tag => `(?=.*${tag})`).join('')
+        // console.log(`searchTags: ${searchTags}, regex: ${regex}`)
 
         let allFoundBooruIds = [];
-
-        // set all tags to be lowercase:
-        searchTags = searchTags.map(tag => tag.toLowerCase())
 
         const promises = searchTags.map(async (tag) => {
             let foundTag = await userBooruTagsSchema.findOne({ tag: tag });
@@ -1630,11 +1659,7 @@ app.get('/booru/', async function(req, res){
         const allFoundBooruIdsArrays = await Promise.all(promises);
 
         // Filter to get only booru_ids that appear in all arrays
-        let allBooruIds = allFoundBooruIdsArrays.reduce((acc, val) => acc.filter(x => val.includes(x)));
-
-        console.log(allBooruIds);
-
-        
+        let allBooruIds = allFoundBooruIdsArrays.reduce((acc, val) => acc.filter(x => val.includes(x)), allFoundBooruIdsArrays[0] || []);
 
         // now get the booruImages that have the booru_ids in allBooruIds:
         if (sort == "recent") {
@@ -1652,7 +1677,7 @@ app.get('/booru/', async function(req, res){
                         votes: { $subtract: [ { $size: "$upvotes" }, { $size: "$downvotes" } ] }
                     }
                 },
-                { $sort: { votes: -1 } },
+                { $sort: { votes: -1, _id: 1 } },
                 { $skip: skip },
                 { $limit: totalPerPage }
             ])
@@ -1680,8 +1705,6 @@ app.get('/booru/', async function(req, res){
 
     // get the total count of the pages:
     totalPages = Math.ceil(totalImages / totalPerPage)
-
-    console.log(`totalPages: ${totalPages}`)
     
     let userProfile = await userProfileSchema.findOne({accountId: req.session.accountId})
 
@@ -1694,28 +1717,104 @@ app.get('/booru/', async function(req, res){
 
 })
 
-app.get('/mergetagstolowercase', async function(req, res){
+// app.get('/mergetagstolowercase', async function(req, res){
+
+//     let tags = await userBooruTagsSchema.find()
+
+//     let uppercaseTags = tags.filter(tag => tag.tag !== tag.tag.toLowerCase())
+
+//     for (const tag of uppercaseTags) {
+//         // if there is a tag that is lowercase in the userBooruTagsSchema, then add the booru_ids to the lowercase tag, making sure to not have merges, then delete the uppercase tag:
+//         let lowercaseTag = await userBooruTagsSchema.findOne({tag: tag.tag.toLowerCase()})
+
+//         if (lowercaseTag == null) {
+//             await userBooruTagsSchema.findOneAndUpdate({tag: tag.tag}, {tag: tag.tag.toLowerCase(), count: tag.count, booru_ids: tag.booru_ids})
+//             await userBooruTagsSchema.findOneAndDelete({tag: tag.tag})
+//         } else {
+//             // merge the booru_ids to the lowercase tag:
+//             differentBooruIds = tag.booru_ids.filter(booru_id => !lowercaseTag.booru_ids.includes(booru_id))
+//             let newCount = lowercaseTag.booru_ids.length + differentBooruIds.length
+//             newCount = newCount.toString()
+//             await userBooruTagsSchema.findOneAndUpdate({tag: tag.tag.toLowerCase()}, {count: newCount, $push: {booru_ids: { $each: differentBooruIds } } })
+//             await userBooruTagsSchema.findOneAndDelete({tag: tag.tag})
+//         }
+
+//     }
+
+//     res.send({status: "success"})
+// })
+
+// // similar page to the one above, remove all brackets from the tags and merge them to the tag without brackets IF it exists:
+// app.get('/mergetagsremovebrackets', async function(req, res){
+
+//     let tags = await userBooruTagsSchema.find()
+
+//     let tagsWithBrackets = tags.filter(tag => tag.tag.includes('(') || tag.tag.includes(')'))
+
+//     for (const tag of tagsWithBrackets) {
+//         // if there is a tag that is lowercase in the userBooruTagsSchema, then add the booru_ids to the lowercase tag, making sure to not have merges, then delete the uppercase tag:
+//         let tagWithoutBrackets = tag.tag.replace(/[()]/g, '')
+
+//         let tagWithoutBracketsDocument = await userBooruTagsSchema.findOne({tag: tagWithoutBrackets})
+
+//         if (tagWithoutBracketsDocument == null) {
+//             await userBooruTagsSchema.findOneAndUpdate({tag: tag.tag}, {tag: tagWithoutBrackets, count: tag.count, booru_ids: tag.booru_ids})
+//             await userBooruTagsSchema.findOneAndDelete({tag: tag.tag})
+//             console.log(`No tag found for ${tagWithoutBrackets}, creating new tag`)
+//         } else {
+//             // merge the booru_ids to the lowercase tag:
+//             differentBooruIds = tag.booru_ids.filter(booru_id => !tagWithoutBracketsDocument.booru_ids.includes(booru_id))
+//             let newCount = tagWithoutBracketsDocument.booru_ids.length + differentBooruIds.length
+//             newCount = newCount.toString()
+//             await userBooruTagsSchema.findOneAndUpdate({tag: tagWithoutBrackets}, {count: newCount, $push: {booru_ids: { $each: differentBooruIds } } })
+//             await userBooruTagsSchema.findOneAndDelete({tag: tag.tag})
+//             console.log(`Merged ${tag.tag} to ${tagWithoutBrackets}, ${newCount} new booru_ids`)
+//         }
+
+//     }
+//     res.send({status: "success"})
+// })
+
+// // do the same as above but for removing anything after any : or ; in the tags:
+// app.get('/mergetagsremoveaftercolon', async function(req, res){
+
+//     let tags = await userBooruTagsSchema.find()
+
+//     let tagsWithColon = tags.filter(tag => tag.tag.includes(':') || tag.tag.includes(';'))
+
+//     for (const tag of tagsWithColon) {
+
+//         let tagWithoutColon = tag.tag.split(/:|;/)[0]
+
+//         let tagWithoutColonDocument = await userBooruTagsSchema.findOne({tag: tagWithoutColon})
+
+//         if (tagWithoutColonDocument == null) {
+//             await userBooruTagsSchema.findOneAndUpdate({tag: tag.tag}, {tag: tagWithoutColon, count: tag.count, booru_ids: tag.booru_ids})
+//             await userBooruTagsSchema.findOneAndDelete({tag: tag.tag})
+//             console.log(`No tag found for ${tagWithoutColon}, creating new tag`)
+//         } else {
+//             // merge the booru_ids to the lowercase tag:
+//             differentBooruIds = tag.booru_ids.filter(booru_id => !tagWithoutColonDocument.booru_ids.includes(booru_id))
+//             let newCount = tagWithoutColonDocument.booru_ids.length + differentBooruIds.length
+//             newCount = newCount.toString()
+//             await userBooruTagsSchema.findOneAndUpdate({tag: tagWithoutColon}, {count: newCount, $push: {booru_ids: { $each: differentBooruIds } } })
+//             await userBooruTagsSchema.findOneAndDelete({tag: tag.tag})
+//             console.log(`Merged ${tag.tag} to ${tagWithoutColon}, ${newCount} new booru_ids`)
+//         }
+
+//     }
+//     res.send({status: "success"})
+// })
+
+app.get('/recounttags', async function(req, res){
 
     let tags = await userBooruTagsSchema.find()
 
-    let uppercaseTags = tags.filter(tag => tag.tag !== tag.tag.toLowerCase())
+    for (const tag of tags) {
+        let newCount = tag.booru_ids.length
+        newCount = newCount.toString()
 
-    for (const tag of uppercaseTags) {
-        // if there is a tag that is lowercase in the userBooruTagsSchema, then add the booru_ids to the lowercase tag, making sure to not have merges, then delete the uppercase tag:
-        let lowercaseTag = await userBooruTagsSchema.findOne({tag: tag.tag.toLowerCase()})
-
-        if (lowercaseTag == null) {
-            await userBooruTagsSchema.findOneAndUpdate({tag: tag.tag}, {tag: tag.tag.toLowerCase(), count: tag.count, booru_ids: tag.booru_ids})
-            await userBooruTagsSchema.findOneAndDelete({tag: tag.tag})
-        } else {
-            // merge the booru_ids to the lowercase tag:
-            differentBooruIds = tag.booru_ids.filter(booru_id => !lowercaseTag.booru_ids.includes(booru_id))
-            let newCount = lowercaseTag.booru_ids.length + differentBooruIds.length
-            newCount = newCount.toString()
-            await userBooruTagsSchema.findOneAndUpdate({tag: tag.tag.toLowerCase()}, {count: newCount, $push: {booru_ids: { $each: differentBooruIds } } })
-            await userBooruTagsSchema.findOneAndDelete({tag: tag.tag})
-        }
-
+        await userBooruTagsSchema.findOneAndUpdate({tag: tag.tag}, {count: newCount})
     }
 
     res.send({status: "success"})
@@ -1797,9 +1896,6 @@ app.post('/create-booru-image', async function(req, res){
 
         tags = splitTags(tags)
 
-        // make all the tags lowercase:
-        
-
         for (const tag of tags) {
             // check if the tag exists in the userBooruTagsSchema:
             let foundTag = await userBooruTagsSchema.findOne({tag: tag})
@@ -1845,8 +1941,13 @@ app.post('/create-booru-image', async function(req, res){
             timestamp: Date.now(),
         };
 
+        
+
         // Insert the new booru image document into the database
         await userBooruSchema.create(newBooruImage);
+
+        // set the userHistorySchema to have uploadedToBooru as true, use image_url without the .png as the image_id and the account_id:
+        await userHistorySchema.findOneAndUpdate({ image_url: data.image_url }, { uploadedToBooru: true })
 
         res.send({status: "success", message: "Booru image created", booru_id: `${req.session.accountId}-${nextImageId}`})
 
@@ -1884,13 +1985,8 @@ app.get('/booru/setRating/:booru_id/:rating', async function(req, res){
         return
     }
     
-
-    // if foundBooruImage.safety is na, then give the creatorProfile 25 credits:
     if (foundBooruImage.safety == "na") {
-        currentCredits = BigInt(creatorProfile.credits)
-        newCredits = currentCredits + BigInt(15)
-        newCredits = newCredits.toString()
-        await userProfileSchema.findOneAndUpdate({ accountId: foundBooruImage.account_id }, { credits: newCredits })
+        await mongolib.modifyUserCredits(creatorProfile.accountId, 50, '+', `Your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a> was rated ${rating.toUpperCase()}`)
     }
 
     await userBooruSchema.findOneAndUpdate({ booru_id: booru_id }, { safety: rating })
@@ -1947,7 +2043,7 @@ app.get('/booru/delete/:booru_id', async function(req, res){
             { $pull: {booru_ids: booru_id} }
         )
         // if the booru_ids array is empty, delete the tag:
-        if (tag.booru_ids.length == 0) {
+        if (tag.booru_ids.length - 1 == 0) {
             await userBooruTagsSchema.findOneAndDelete({tag: tag.tag})
         }
     }
@@ -1955,7 +2051,6 @@ app.get('/booru/delete/:booru_id', async function(req, res){
     res.redirect('back')
 })
 
-// upvotes and downvotes logic:
 app.post('/booru/vote', async function(req, res){
 try {
     let data = req.body
@@ -1963,60 +2058,76 @@ try {
     let booru_id = data.booru_id
     let account_id = req.session.accountId
 
-    let foundBooruImage = await userBooruSchema.findOne({booru_id: booru_id})
+    let foundBooruImage = await mongolib.getSchemaDocumentOnce("userBooru", { booru_id: booru_id })
 
     if (foundBooruImage == null) {
         res.send({status: "error", message: "Booru image not found"})
         return
     }
 
-    let userProfile = await userProfileSchema.findOne({accountId: account_id})
-
-    if (userProfile == null) {
+    let userProfile = await mongolib.getSchemaDocumentOnce("userProfile", { accountId: req.session.accountId })
+    if (userProfile.status == 'error') {
         res.send({status: "error", message: "User not found"})
         return
     }
 
+    let creatorProfile = await mongolib.getSchemaDocumentOnce("userProfile", { accountId: foundBooruImage.account_id })
+    if (creatorProfile.status == 'error') {
+        res.send({status: "error", message: "Creator not found"})
+        return
+    }
+
+    // if the voter is the same as the creator, then return an error:
+    if (account_id == foundBooruImage.account_id) {
+        res.send({status: "error", message: "User cannot vote on their own post"})
+        return
+    }
+
+    // votes are stored as an array of objects, each object has a accountId and a timestamp:
+    // check if the user has already voted on the post:
+
+
     switch (vote) {
         case 'upvote':
             // check if the user has already upvoted:
-            if (foundBooruImage.upvotes.includes(account_id)) {
+            // votes are stored as an array of objects, each object has a accountId and a timestamp:
+            if (foundBooruImage.upvotes.some(vote => vote.accountId == account_id)) {
                 res.send({status: "error", message: "User has already upvoted"})
                 return
             }
             // check if the user has already downvoted:
-            if (foundBooruImage.downvotes.includes(account_id)) {
+            if (foundBooruImage.downvotes.some(vote => vote.accountId == account_id)) {
                 // remove the downvote:
-                await userBooruSchema.findOneAndUpdate({ booru_id: booru_id }, {
-                    $pull: { downvotes: account_id }
-                })                
+                await mongolib.updateSchemaDocumentOnce("userBooru", { booru_id: booru_id }, { $pull: { downvotes: { accountId: account_id } } })
+
+            } else {
+
+                await mongolib.modifyUserCredits(account_id, 1, '+', `You Upvoted a <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a>`)
+                if (creatorProfile != null) {
+                    await mongolib.modifyUserCredits(creatorProfile.accountId, 1, '+', `${userProfile.username} upvoted your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a>`)
+                }
+
             }
             // add the upvote:
-            await userBooruSchema.findOneAndUpdate({ booru_id: booru_id }, {
-                $push: { upvotes: account_id }
-            })
+            await mongolib.updateSchemaDocumentOnce("userBooru", { booru_id: booru_id }, { $push: { upvotes: { accountId: account_id, timestamp: Date.now() } } })
             break
         case 'downvote':
             // check if the user has already downvoted:
-            if (foundBooruImage.downvotes.includes(account_id)) {
+            if (foundBooruImage.downvotes.some(vote => vote.accountId == account_id)) {
                 res.send({status: "error", message: "User has already downvoted"})
                 return
             }
             // check if the user has already upvoted:
-            if (foundBooruImage.upvotes.includes(account_id)) {
+            if (foundBooruImage.upvotes.some(vote => vote.accountId == account_id)) {
                 // remove the upvote:
-                await userBooruSchema.findOneAndUpdate({ booru_id: booru_id }, {
-                    $pull: { upvotes: account_id }
-                })                
+                await mongolib.updateSchemaDocumentOnce("userBooru", { booru_id: booru_id }, { $pull: { upvotes: { accountId: account_id } } })   
             }
             // add the downvote:
-            await userBooruSchema.findOneAndUpdate({ booru_id: booru_id }, {
-                $push: { downvotes: account_id }
-            })
+            await mongolib.updateSchemaDocumentOnce("userBooru", { booru_id: booru_id }, { $push: { downvotes: { accountId: account_id, timestamp: Date.now() } } })
             break
         }
 
-        let newBooruImage = await userBooruSchema.findOne({booru_id: booru_id})
+        let newBooruImage = await mongolib.getSchemaDocumentOnce("userBooru", { booru_id: booru_id })
 
         res.send({status: "success", message: "Vote added", upvotes: newBooruImage.upvotes.length, downvotes: newBooruImage.downvotes.length})
 
@@ -2029,22 +2140,151 @@ try {
 app.get('/profile/:account_id', async function(req, res){
     account_id = req.param('account_id')
 
-    console.log(account_id)
-
-    let profileProfile = await userProfileSchema.findOne({accountId: account_id})
+    let profileProfile = await mongolib.getSchemaDocumentOnce("userProfile", {accountId: account_id})
 
     if (profileProfile == null) {
         res.send({status: "error", message: "User not found"})
         return
     }
 
-    let userProfile = await userProfileSchema.findOne({accountId: req.session.accountId })
+    let userProfile = await mongolib.getSchemaDocumentOnce("userProfile", { accountId: req.session.accountId })
 
     let userBooru = await userBooruSchema.find({account_id: account_id})
 
-    res.render('profile', { session: req.session, profileProfile: profileProfile, userProfile: userProfile, userBooru: userBooru });
+    res.render('profile', { session: req.session, profileProfile: profileProfile, userProfile: userProfile, userBooru: userBooru, booruSearchScript: booruSearchScript });
 })
 
+app.get('/game', async function(req, res){
+    res.render('game', { session: req.session });
+})
+
+app.get('/credits-history', async function(req, res){
+    let userProfile = await mongolib.getSchemaDocumentOnce("userProfile", { accountId: req.session.accountId })
+
+    console.log(userProfile)
+
+    if(userProfile.status == 'error') {
+        res.send({status: 'error', message: 'User not found'})
+        return
+    }
+
+    let creditsHistory = await mongolib.getSchemaDocuments("userCreditsHistory", { accountId: req.session.accountId })
+
+    if(creditsHistory.status == 'error') {
+        res.send({status: 'error', message: 'User credits history not found'})
+        return
+    }
+
+    res.render('creditshistory', { session: req.session, userProfile: userProfile, creditsHistory: creditsHistory });
+})
+
+app.get('/settings', async function(req, res){
+    let userProfile = await mongolib.getSchemaDocumentOnce("userProfile", { accountId: req.session.accountId })
+
+    if(userProfile.status == 'error') {
+        res.send({status: 'error', message: 'User not found'})
+        return
+    }
+
+    res.render('settings', { session: req.session, userProfile: userProfile });
+})
+
+app.post('/settings/avatar', async (req, res) => {
+    try {
+        // Check if user profile exists
+        let userProfile = await mongolib.getSchemaDocumentOnce("userProfile", { accountId: req.session.accountId });
+
+        if (userProfile.status === 'error') {
+            return res.status(404).json({ status: 'error', message: 'User not found' });
+        }
+
+        // Create the directory if it does not exist
+        const avatarDir = path.join(__dirname, 'userAvatars');
+        if (!fs.existsSync(avatarDir)) {
+            fs.mkdirSync(avatarDir, { recursive: true });
+        }
+
+        // Buffer to store the first few bytes of the file
+        let fileHeaderBuffer = Buffer.alloc(8);
+        let headerBytesRead = 0;
+        let fileSize = 0;
+        const maxSize = 5 * 1024 * 1024; // 5MB
+
+        // Generate a temporary filename
+        const tempFilename = `temp-${Date.now()}-${Math.floor(Math.random() * 10)}-${req.session.accountId}.tmp`;
+        const tempFilePath = path.join(avatarDir, tempFilename);
+
+        const writeStream = fs.createWriteStream(tempFilePath);
+
+        req.on('data', (chunk) => {
+            fileSize += chunk.length;
+            if (fileSize > maxSize) {
+                writeStream.end();
+                fs.unlink(tempFilePath, () => {});
+                res.status(413).json({ status: 'error', message: 'File too large' });
+                return;
+            }
+
+            // Only read the first 8 bytes if we haven't already
+            if (headerBytesRead < 8) {
+                const bytesToRead = Math.min(8 - headerBytesRead, chunk.length);
+                chunk.copy(fileHeaderBuffer, headerBytesRead, 0, bytesToRead);
+                headerBytesRead += bytesToRead;
+            }
+
+            writeStream.write(chunk);
+        });
+
+        req.on('end', async () => {
+            writeStream.end();
+
+            if (fileSize === 0) {
+                fs.unlink(tempFilePath, () => {});
+                return res.status(400).json({ status: 'error', message: 'No file uploaded' });
+            }
+
+            // Determine file type based on file signature
+            let fileExtension;
+            if (fileHeaderBuffer.toString('hex', 0, 8) === '89504e470d0a1a0a') {
+                fileExtension = '.png';
+            } else if (fileHeaderBuffer.toString('hex', 0, 2) === 'ffd8') {
+                fileExtension = '.jpg';
+            } else if (fileHeaderBuffer.toString('hex', 0, 3) === '474946') {
+                fileExtension = '.gif';
+            } else {
+                fs.unlink(tempFilePath, () => {});
+                return res.status(400).json({ status: 'error', message: 'Invalid file type', fileHeader: fileHeaderBuffer.toString('hex') });
+            }
+
+            // Generate the final filename
+            const finalFilename = `${req.session.accountId}${fileExtension}`;
+            const finalFilePath = path.join(avatarDir, finalFilename);
+
+            // Rename the temp file to the final filename
+            fs.rename(tempFilePath, finalFilePath, async (err) => {
+                if (err) {
+                    console.error("Error renaming file:", err);
+                    return res.status(500).json({ status: 'error', message: 'Error saving avatar' });
+                }
+
+                // Update the user's profile image URL in the database
+                const avatarUrl = `https://www.jscammie.com/userAvatars/${finalFilename}`;
+                await mongolib.updateSchemaDocumentOnce("userProfile", { accountId: req.session.accountId }, { profileImg: avatarUrl });
+
+                res.json({ status: 'success', message: 'Avatar uploaded successfully', avatarUrl });
+            });
+        });
+
+        writeStream.on('error', (err) => {
+            console.error("Error writing file:", err);
+            res.status(500).json({ status: 'error', message: 'Error saving avatar' });
+        });
+
+    } catch (error) {
+        console.error("Unexpected error:", error);
+        res.status(500).json({ status: 'error', message: 'Unexpected error' });
+    }
+});
 
 
 
