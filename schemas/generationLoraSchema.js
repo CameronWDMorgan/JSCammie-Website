@@ -3,7 +3,7 @@ const { Schema } = mongoose
 
 
 const generationLoraSchema = new Schema({
-    loraId: { type: String, required: true, unique: true },
+    loraId: { type: String, required: true },
     usesCount: { type: String, default: "0" },
     lastUsed: { type: String, default: "0" },
 })
