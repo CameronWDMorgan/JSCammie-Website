@@ -4,7 +4,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Free Stable Diffusion AI Image Generator FLUX/PDXL/SD1.5 | JSCammie.com</title>
     <meta name="description" content="Free FLUX, PDXL and SD 1.5 Stable Diffusion Generator | Generate free images SFW & NSFW with multiple models, loras & more!">
-    <meta name="keywords" content="flux ai, flux dev, flux schnell, flux loras, flux free, flux ai free, nsfw, uncensored, free, online, inpainting, img2img, txt2img, stable diffusion, ai image generator, sdxl ai image generator, ai free online, sfw, nsfw, sdxl, sd1.5, loras, lora, embeddings, pdxl, pony diffusion">
+    <meta name="keywords" content="no sign up, no restrictions, flux ai, flux dev, flux schnell, flux loras, flux free, flux ai free, nsfw, uncensored, free, online, inpainting, img2img, txt2img, stable diffusion, ai image generator, sdxl ai image generator, ai free online, sfw, nsfw, sdxl, sd1.5, loras, lora, embeddings, pdxl, pony diffusion">
     <meta name="author" content="JSCammie">
 
     <%- include('../partials/_headerAll') %>
@@ -1200,8 +1200,8 @@
                 }
             </style>
             <div style="flex: auto;">
-                <button class="button exportaidatabutton" type="button" onclick="exportAIData()">Export AI Data</button>
-                <label for="importAiData" class="button importaidatalabel">Import AI Data:</label>
+                <button class="button exportaidatabutton" type="button" onclick="exportAIData()">Export .AIDATA</button>
+                <label for="importAiData" class="button importaidatalabel">Import .AIDATA</label>
                 <input id="importAiData" class="importaidatainput" type="file">
             </div>
             
@@ -1236,23 +1236,7 @@
                 <details open>
                     
                     <summary>Prompt & Negative Prompt</summary>
-
-                        <!-- have a autocompleteCheckbox and a strengthArrowkeysCheckbox in a flex box side by side: -->
-
-                        <div class="form-control settings-container">
-                            <div class="setting" hidden style="display: none;">
-                                <label for="strengthArrowkeysCheckbox">Disable Strength Arrowkeys:</label>
-                                <input type="checkbox" id="strengthArrowkeysCheckbox">
-                            </div>
-                            <div class="setting">
-                                <label for="autocompleteCheckbox">Disable Autocomplete:</label>
-                                <input type="checkbox" id="autocompleteCheckbox">
-                                <span class="tooltip" onclick="showTooltip(this)">❓</span>
-                                <div class="tooltiptext">If you find the random scrolling etc annoying, this disables the autocomplete feature for the prompt and negative prompt fields which should help with that.</div>
-                            </div>
-                        </div>
                         
-
                         <style>
                             .wordCountGreen {
                                 color: green;
@@ -1265,7 +1249,43 @@
                             }
                         </style>
 
-                        <div style="position: relative;" id="autocomplete-div"></div>
+                        <style>
+                            #autocomplete-div {
+                                display: block;
+                                z-index: 1000;
+                                background-color: rgba(0, 0, 0, 0.2);
+                                border: 1px solid black;
+                                width: 100%;
+                                max-height: 100px; /* Limit height */
+                                height: 100px;
+                                overflow-y: auto; /* Add vertical scroll if items exceed height */
+                            }
+
+                            .autocomplete-item {
+                                padding: 4px;
+                                background-color: rgba(103, 131, 255, 0.3);
+                                border: 1px solid black;
+                                width: fit-content;
+                                cursor: pointer;
+                                position: relative;
+                                font-size: 20px
+                            }
+
+                            .autocomplete-item-1 {
+                                background-color: rgba(255, 0, 0, 0.3) !important;
+                            }
+
+                            .autocomplete-item-5 {
+                                background-color: rgba(238, 255, 0, 0.3) !important;
+                            }
+
+                            .autocomplete-item-10 {
+                                background-color: rgba(0, 255, 0, 0.3) !important;
+                            }
+
+                        </style>
+
+                        <div class="frosted" style="position: relative;" id="autocomplete-div"></div>
 
                         <div class="form-control">
                             <label for="prompt">
@@ -1873,13 +1893,6 @@
                                 document.getElementById('model').dispatchEvent(new Event('change'));
                                 document.getElementById('aspectRatio').dispatchEvent(new Event('change'));
 
-                                let autocompleteenabled = lastRequestSD.autocompleteenabled || false;
-                                if (autocompleteenabled === true) {
-                                    document.getElementById('autocompleteCheckbox').checked = true;
-                                } else {
-                                    document.getElementById('autocompleteCheckbox').checked = false;
-                                }
-
                                 // set the loras as selected inside of the masterLoraData object:
                                 if (!lastRequestSD.loras) {
                                     lastRequestSD.loras = [];
@@ -2023,6 +2036,13 @@
 
                                     value.words.split(';').map((word, index) => {
                                         noWhitespaceWord = word.trim()
+                                        // remove any start or end commas:
+                                        if (noWhitespaceWord.startsWith(',')) {
+                                            noWhitespaceWord = noWhitespaceWord.slice(1)
+                                        }
+                                        if (noWhitespaceWord.endsWith(',')) {
+                                            noWhitespaceWord = noWhitespaceWord.slice(0, -1)
+                                        }
                                         wordsFormatted += `<a class="lora-words">
                                             Words ${index + 1}: ${noWhitespaceWord}<br>
                                             <button class="lora-words-copy-button" onclick="copyXWordsToClipboard(\`${noWhitespaceWord}\`)">Copy Words</button>
@@ -2035,6 +2055,14 @@
                                         value.lastUsed = new Date(parseFloat(value.lastUsed)).toLocaleString()
                                     }
 
+                                    let loraIdFormatted = ""
+
+                                    allowedUsers = ['1039574722163249233', '550239177837379594']
+
+                                    if (allowedUsers.includes(document.getElementById('user-session').value)) {
+                                        loraIdFormatted = `<a class="lora-id"><strong>ID:</strong> ${key}<br><button class="lora-words-copy-button" onclick="copyXWordsToClipboard(\`${key}\`)">Copy ID</button></a>`
+                                    }
+
                                     loraSummary.innerHTML = `
                                         <div class="lora-toggle">
                                             <input id="enable-${key}" type="checkbox" value="${key}" checked onchange="masterLoraData['${key}'].selected = this.checked; loadLoras(); updateLoraSelectionsSummary();">
@@ -2043,7 +2071,7 @@
                                             </label>
                                         </div>
                                         <div class="lora-info">
-                                            <a class="lora-id"><strong>ID:</strong> ${key}<br><button class="lora-words-copy-button" onclick="copyXWordsToClipboard(\`${key}\`)">Copy ID</button></a>
+                                            ${loraIdFormatted}
                                             <p class="lora-description"><strong>Description:</strong> ${value.description || 'Null'}</p>
                                             <p class="lora-strength"><strong>Default Strength:</strong> ${value.strength || 'Null'}</p>
                                             ${wordsFormatted}
@@ -2133,7 +2161,7 @@
                     <br>
                 </div>
 
-                <input name="user-session" id="user-session" value="<%-session.accountId%>" hidden>
+                <input name="user-session" id="user-session" value="<%=session.accountId%>" hidden>
 
 
                 
@@ -2593,6 +2621,14 @@
                     </label>
                     <input type="checkbox" id="upscaleCheckbox" name="upscaleCheckbox">
 
+                    <!-- <label>
+                        15% Larger Image: <span><a id="largerImageCreditsPrice">25</a> Credits
+                        <span class="tooltip" onclick="showTooltip(this)">❓</span>
+                            <div class="tooltiptext">
+                                Use this checkbox to generate a larger image<br>
+                                The image will be generated at a 25% larger size, useful for images to be zoomed out further
+                    </label> -->
+
                     <% if (session.loggedIn) { %>
                     <label>
                         Fast Queue: <span><a id="fastqueueCreditsPrice">25</a> Credits
@@ -2712,6 +2748,17 @@
                     <br>
                 </div>
 
+                <div id="imageHistoryCount"></div>
+
+                <script>
+                    let imageHistoryCount = '<%=imageHistoryCount%>';
+                    
+                    window.onload = function() {
+                        // document.getElementById('imageHistoryCount').innerText = `You have generated ${imageHistoryCount}/15000 images!`;
+                    }
+                    
+                </script>
+
                 <div id="additionalInfo"></div><br>
                 <div id="response"></div>
                 <div id="queuePosition" style="display: none;">
@@ -2719,7 +2766,6 @@
                     <span class="tooltip" onclick="showTooltip(this)">❓</span>
                         <div class="tooltiptext">
                             This is your position in the queue, you will be notified by a sound when your image is ready<br>
-                            The number in brackets () is the total queue length, as the queue is split into 2 parts
                         </div>
                 </div>
 
@@ -2840,7 +2886,7 @@
                         runningCost += fastqueueCost
                     }
 
-                    extrasCosts = getExtrasPrice(extras)
+                    extrasCosts = getExtrasPrice(extras, model)
 
                     if (document.getElementById('removeWatermarkCheckbox').checked) {
                         runningCost += extrasCosts.removeWatermark
@@ -3354,6 +3400,9 @@
     
     <script> <%- scripts.aiForm %> </script>
     <script src="https://www.jscammie.com/scripts/ai-autocomplete.js?v19"></script>
+
+    <div class="overlay" id="overlayBooru"></div>
+    <div class="booruPopupContent" id="booruPopupContent"></div>
 
 </body>
 </html>
