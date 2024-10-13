@@ -1,0 +1,236 @@
+<!-- setup basic html template with metadata etc: -->
+<html>
+<head>
+    <title>Credits History | JSCammie.com</title>
+    <link rel='stylesheet' href='/style.css'/>
+    
+    <%- include('../partials/_headerAll') %>
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-K3KJJKS1R4"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-K3KJJKS1R4');
+    </script>
+    
+</head>
+<body>
+
+    <!-- get partials/_navigation: -->
+    <%- include('../partials/_navigation') %>
+
+    <div class="center-fully-no-flex" style="margin-bottom: 1rem;">
+        <%- include('../partials/_bannerAdvert') %>
+    </div>
+
+    <div class="round-frosted page-content" style="padding: 40px; justify-content: center;">
+        
+        <h1>Credits History</h1>
+
+        <div class="credits-history-container" id="credits-history"></div>
+
+    </div>
+
+    <style>
+        /* Container Styling */
+        .credits-history-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            max-width: 100%;
+        }
+
+        /* Card Styling */
+        .card-minus {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            padding: 1.5rem;
+            border-radius: 12px;
+            background-color: rgba(255, 100, 100, 0.35); /* Red color for negative values */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); /* More noticeable shadow */
+            max-width: 800px;
+            width: 100%;
+        }
+
+        .card-plus {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            padding: 1.5rem;
+            border-radius: 12px;
+            background-color: rgba(100, 255, 100, 0.35); /* Green color for positive values */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); /* More noticeable shadow */
+            max-width: 800px;
+            width: 100%;
+        }
+
+        /* Adjusting Card Spacing */
+        .card-left {
+            display: flex;
+            align-items: center;
+        }
+
+        .card-right {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-end;
+            text-align: right;
+        }
+
+        /* Text Styling */
+        .messageText {
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+            color: white; /* Ensures text is white */
+        }
+        
+        .timestampText {
+            margin-bottom: 0;
+            color: #b0b0b0; /* Light grey for contrast */
+            font-size: 0.9rem;
+        }
+
+        /* Color Classes */
+        .minus-class p {
+            color: #ff6b6b; /* Red color for negative values */
+            font-weight: bold;
+        }
+
+        .plus-class p {
+            color: #2ecc71; /* Green color for positive values */
+            font-weight: bold;
+        }
+
+        /* Container Background */
+        .credits-history-container {
+            padding: 4rem;
+            border: 1px solid rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+        }
+    </style>
+
+
+    <script>
+        // const creditsHistorySchema = new Schema({
+        //     accountId: { type: String, required: true },
+        //     previousCredits: { type: String, required: true },
+        //     newCredits: { type: String, required: true },
+        //     timestamp: { type: Number, required: true },
+        //     message: { type: String, default: "" }
+        // });
+
+        let creditsHistory = []
+
+        <% for (let i = 0; i < creditsHistory.length; i++) { %>
+            creditsHistory.push({
+                accountId: "<%= creditsHistory[i].accountId %>",
+                previousCredits: "<%= creditsHistory[i].previousCredits %>",
+                newCredits: "<%= creditsHistory[i].newCredits %>",
+                timestamp: "<%= creditsHistory[i].timestamp %>",
+                message: "<%= creditsHistory[i].message %>",
+                operation: "<%= creditsHistory[i].newCredits < creditsHistory[i].previousCredits ? 'minus' : 'plus' %>",
+                difference: ""
+            })
+        <% } %>
+
+        // set the difference for each operation:
+        for (let i = 0; i < creditsHistory.length; i++) {
+            currentHistory = creditsHistory[i]
+
+            if (currentHistory.operation === "minus") {
+                currentHistory.difference = currentHistory.previousCredits - currentHistory.newCredits
+            } else {
+                currentHistory.difference = currentHistory.newCredits - currentHistory.previousCredits
+            }
+        }
+
+        // reverse the array so the most recent transactions are at the top:
+        creditsHistory.reverse()
+
+        let creditsHistoryHtml = "";
+
+        // Create the cards and inject them into the DOM
+        const creditsHistoryContainer = document.getElementById('credits-history');
+
+        creditsHistory.forEach((currentHistory, index) => {
+            // Create elements without embedding the message HTML directly in the template literal
+            const cardDiv = document.createElement('div');
+            cardDiv.className = `card-${currentHistory.operation}`;
+
+            const leftDiv = document.createElement('div');
+            leftDiv.className = 'card-left';
+            leftDiv.innerHTML = `
+                <div class="${currentHistory.operation === 'minus' ? 'minus-class' : 'plus-class'}">
+                    <p>
+                        ${currentHistory.operation === 'minus' ? '-' : '+'}${currentHistory.difference} Credits
+                    </p>
+                    <p>
+                        Running Total: ${currentHistory.newCredits} Credits
+                    </p>
+                    
+            `;
+
+            const rightDiv = document.createElement('div');
+            rightDiv.className = 'card-right';
+
+            // Create a separate p tag for message and set innerHTML separately
+            const messageP = document.createElement('p');
+            messageP.className = 'messageText';
+            messageP.innerHTML = `Message: ${currentHistory.message}`;
+
+            const timestampP = document.createElement('p');
+            timestampP.className = 'timestampText';
+            timestampP.textContent = `Timestamp: ${currentHistory.timestamp}`;
+
+            // Append everything into the structure
+            rightDiv.appendChild(messageP);
+            rightDiv.appendChild(timestampP);
+            cardDiv.appendChild(leftDiv);
+            cardDiv.appendChild(rightDiv);
+            creditsHistoryContainer.appendChild(cardDiv);
+        });
+
+        // Function to reconstruct href and multi-word anchor text in the message
+        const reconstructLinksInMessages = () => {
+            const messageTexts = document.querySelectorAll('.messageText');
+
+            messageTexts.forEach(messageText => {
+                // Capture the raw text content
+                let messageTextContent = messageText.textContent;
+
+                // Regex to find patterns like: href='url'>anchor text</a>
+                const linkRegex = /href=['"]([^'"]+)['"]>([^<]+)<\/a>/g;
+
+                // Replace the raw text with the actual HTML link
+                const reconstructedMessage = messageTextContent.replace(linkRegex, function(match, href, anchorText) {
+                    // Create the proper <a href="">...</a> structure
+                    return `<a href="${href}" target="_blank">${anchorText}</a>`;
+                });
+
+                // Inject the reconstructed message back as HTML
+                messageText.innerHTML = reconstructedMessage;
+            });
+        };
+
+        // Call the function to reconstruct all links in messages
+        reconstructLinksInMessages();
+
+
+    </script>
+
+
+    </script>
+
+    <!-- get partials/_footer: -->
+    <%- include('../partials/_footer') %>
+    
+</body>
+</html>
