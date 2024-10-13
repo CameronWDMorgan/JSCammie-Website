@@ -1,0 +1,364 @@
+<!-- setup basic html template with metadata etc: -->
+<html>
+<head>
+    <title>Template | JSCammie.com</title>
+    <link rel='stylesheet' href='/style.css'/>
+    
+    <%- include('../partials/_headerAll') %>
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-K3KJJKS1R4"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-K3KJJKS1R4');
+    </script>
+    
+</head>
+<body>
+
+    <!-- get partials/_navigation: -->
+    <%- include('../partials/_navigation') %>
+
+    <div class="center-fully-no-flex" style="margin-bottom: 1rem;">
+        <%- include('../partials/_bannerAdvert') %>
+    </div>
+
+    <div class="round-frosted page-content" style="padding: 40px; justify-content: center;">
+        
+        <canvas id="gameCanvas">
+            <p>Your browser does not support the canvas element.</p>
+        </canvas>
+
+        <script>
+
+            // get the canvas element:
+            var canvas = document.getElementById("gameCanvas");
+            var ctx = canvas.getContext("2d");
+            // set width and height of canvas:
+            canvas.width = 720;
+            canvas.height = 720
+
+            var gravity = 0.5;
+
+            function drawRotateObject(object, angle) {
+                ctx.save();
+                ctx.translate(object.x + object.width / 2, object.y + object.height / 2);
+                ctx.rotate(angle);
+                ctx.fillRect(-object.width / 2, -object.height / 2, object.width, object.height);
+                // have the top edge be a different color to show rotation:
+                ctx.fillStyle = 'blue';
+                ctx.fillRect(-object.width / 2, -object.height / 2, object.width, 2);
+                ctx.restore();
+            }
+
+            class Object {
+                constructor(objectId, x, y, rotation) {
+                    this.objectId = objectId;
+                    this.x = x;
+                    this.y = y;
+                    this.rotation = rotation;
+                }
+            }
+
+            // create an object to store the keys:
+            var keys = {};
+
+            // add an event listener to the window to listen for keydown events:
+            window.addEventListener('keydown', function(e) {
+                keys[e.key] = true;
+            });
+
+            // add an event listener to the window to listen for keyup events:
+            window.addEventListener('keyup', function(e) {
+                keys[e.key] = false;
+            });
+
+            class Player extends Object {
+                constructor(objectId, x, y, rotation, width, height, color, xVelocity, yVelocity) {
+                    super(objectId, x, y, rotation);
+                    this.width = width;
+                    this.height = height;
+                    this.color = color;
+                    this.xVelocity = xVelocity;
+                    this.yVelocity = yVelocity;
+                    this.calcXVelocity = 0;
+                    this.calcYVelocity = 0;
+                }
+
+                draw() {
+                    ctx.fillStyle = this.color;
+                    // rotate the player around their center before drawing:
+                    // ctx.fillRect(this.x, this.y, this.width, this.height);
+                    drawRotateObject(this, this.rotation);
+                }
+
+                update() {
+                    this.draw();
+                    playerLogic(this);
+                }
+            }
+
+
+            class rectangle extends Object {
+                constructor(objectId, x, y, rotation, width, height, color, hasCollision) {
+                    super(objectId, x, y, rotation);
+                    this.hasCollision = hasCollision;
+                    this.width = width;
+                    this.height = height;
+                    this.color = color;
+                }
+                draw() {
+                    ctx.fillStyle = this.color;
+                    drawRotateObject(this, this.rotation);
+                }
+                update() {
+                    this.draw();
+                }
+            }
+
+            class MultilineTextElement extends Object {
+                constructor(objectId, x, y, rotation, width, height, color, text) {
+                    super(objectId, x, y, rotation);
+                    this.width = width;
+                    this.height = height;
+                    this.color = color;
+                    this.text = text;
+                }
+                draw() {
+                    ctx.fillStyle = this.color;
+                    ctx.font = "20px Arial";
+                    // console.log(this.text);
+                    // loop through the text object and draw each line:
+                    var i = 0;
+                    for (var key in this.text) {
+                        ctx.fillText(key + ': ' + this.text[key], this.x, this.y + (i * 20));
+                        i++;
+                    }
+                    // rotate the text only:
+                    ctx.rotate(this.rotation);
+                }
+                update() {
+                    this.draw();
+                }
+            }
+
+            var objects = [];
+
+            var player = new Player('player', 150, 150, 0, 50, 50, 'red', 0, 0);
+            objects.push(player);
+
+            var floor = new rectangle('floor', -200, 500, 0, 1000, 400, 'green', true);
+            objects.push(floor);
+
+            
+            // add fps logic:
+            var lastCalledTime;
+            var fps;
+            let fpsLast10s = [];
+            var avgFps = 0;
+            var delta
+            function updateDebugInfo() {
+                if (!lastCalledTime) {
+                    lastCalledTime = Date.now();
+                    fps = 0;
+                    return;
+                }
+                fpsdelta = (Date.now() - lastCalledTime) / 1000;
+                lastCalledTime = Date.now();
+                fps = 1 / fpsdelta;
+                fpsLast10s.push(fps);
+                if (fpsLast10s.length > 100) {
+                    fpsLast10s.shift();
+                }
+                let sum = 0;
+                for (var i = 0; i < fpsLast10s.length; i++) {
+                    sum += fpsLast10s[i];
+                }
+                avgFps = sum / fpsLast10s.length;
+
+                // update the debugInfo object:
+                for (var i = 0; i < objects.length; i++) {
+                    if (objects[i].objectId === 'debugInfo') {
+                        objects[i].text = {
+                            'fps': avgFps,
+                            'player.x': player.x,
+                            'player.y': player.y,
+                            'player.xVelocity': player.xVelocity,
+                            'player.yVelocity': player.yVelocity,
+                            'player.rotation': player.rotation,
+                            'delta': delta,
+                            'calcXVelocity': player.calcXVelocity,
+                            'calcYVelocity': player.calcYVelocity,
+                        }
+                    }
+                }
+
+            }
+
+            var debugInfo = new MultilineTextElement('debugInfo', 10, 20, 0, 200, 200, 'black', {
+                'fps': avgFps,
+                'player.x': player.x,
+                'player.y': player.y,
+                'player.xVelocity': player.xVelocity,
+                'player.yVelocity': player.yVelocity,
+                'player.rotation': player.rotation,
+                'delta': delta,
+                'calcXVelocity': player.calcXVelocity,
+                'calcYVelocity': player.calcYVelocity,
+            });
+            objects.push(debugInfo);
+
+            let targetFps = 60;
+            let physicsFps = 60;
+
+            function gameLoop() {
+                setTimeout(function() {
+
+                    delta = 1 / (avgFps / physicsFps);
+
+                    if (delta > 2) {
+                        delta = 2;
+                    } else if (delta < 0.5) {
+                        delta = 0.1;
+                    }
+
+                    // make the borders of the screen loop the player:
+                    if (player.x > canvas.width) {
+                        player.x = 0;
+                    }
+                    if (player.x < 0) {
+                        player.x = canvas.width;
+                    }
+                    if (player.y > canvas.height) {
+                        player.y = 0;
+                    }
+                    if (player.y < 0) {
+                        player.y = canvas.height;
+                    }
+
+                    requestAnimationFrame(gameLoop);
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    // check if objects have update function, for all possible objects:
+                    updateDebugInfo();
+
+                    // framerate independent value, targetFps ISNT the actual framerate:
+                    
+
+                    for (var i = 0; i < objects.length; i++) {
+                        if (objects[i].update) {
+                            objects[i].update();
+                        }
+                    }
+                }, 1000 / targetFps);
+            }
+
+            gameLoop();
+
+            function playerLogic(player) {
+                let playerInput = false;
+                for (var key in keys) {
+                    if (keys[key]) {
+                        playerInput = true;
+                    }
+                }
+
+                Accel = 5
+                enhancedAccel = 50
+                drag = 2
+
+                speedCap = 20
+
+                // cap player.yVelocity and player.xVelocity to the speedCap:
+                if (player.yVelocity > speedCap) {
+                    player.yVelocity = speedCap - 1;
+                }
+                if (player.yVelocity < -speedCap) {
+                    player.yVelocity = -speedCap + 1;
+                }
+                if (player.xVelocity > speedCap) {
+                    player.xVelocity = speedCap - 1;
+                }
+                if (player.xVelocity < -speedCap) {
+                    player.xVelocity = -speedCap + 1;
+                }
+
+                // apply drag to the player if they are not pressing any keys, making sure to corrent it to 0 if it goes past 0:
+                if (keys.a == false && player.xVelocity < 0) {
+                    player.xVelocity += drag;
+                    if (player.xVelocity > 0) {
+                        player.xVelocity = 0;
+                    }
+                    // console.log('A drag applied');
+                }
+                if (keys.d == false && player.xVelocity > 0) {
+                    player.xVelocity -= drag;
+                    if (player.xVelocity < 0) {
+                        player.xVelocity = 0;
+                    }
+                    // console.log('D drag applied');
+                }
+                
+                player.calcYVelocity = player.yVelocity * delta
+                player.calcXVelocity = player.xVelocity * delta
+
+                // potential next position:
+                potentialY = player.y + player.calcYVelocity
+                potentialX = player.x + player.calcXVelocity
+
+                // check for collision with any object that is in the next position:
+                for (var i = 0; i < objects.length; i++) {
+                    if (player.objectId !== objects[i].objectId) {
+                        if (objects[i].hasCollision) {
+                            // check if the edges of the player are within the edges of the object, make sure to double the width and height of the player to account for the center point:
+                            if (potentialY + player.height / 2 > objects[i].y - objects[i].height / 2 && potentialY - player.height / 2 < objects[i].y + objects[i].height / 2 && potentialX + player.width / 2 > objects[i].x - objects[i].width / 2 && potentialX - player.width / 2 < objects[i].x + objects[i].width / 2) {
+                                // collision detected:
+                                // make it so the player can't move into the object:
+                                player.calcYVelocity = 0
+                                player.calcXVelocity = 0
+                            }
+                        }
+                    }
+                }
+
+                player.y -= player.calcYVelocity
+                player.x += player.calcXVelocity
+
+                if (playerInput) {
+                    // check for the arrow keys:
+                    // console.log("x: " + player.x + " y: " + player.y);
+
+                    // console.log(keys)
+
+                    // check wasd
+                    if (keys.s == true) {
+                        // console.log('s is true');
+                        player.yVelocity -= Accel;
+                    }
+                    if (keys.w == true) {
+                        // console.log('w is true');
+                        player.yVelocity += Accel;
+                    }
+                    if (keys.a == true) {
+                        // console.log('a is true');
+                        player.xVelocity -= Accel;
+                    }
+                    if (keys.d == true) {
+                        // console.log('d is true');
+                        player.xVelocity += Accel;
+                    }
+                }
+            }
+
+
+        </script>
+
+    </div>
+
+    <!-- get partials/_footer: -->
+    <%- include('../partials/_footer') %>
+    
+</body>
+</html>
