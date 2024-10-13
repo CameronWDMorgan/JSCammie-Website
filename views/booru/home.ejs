@@ -59,6 +59,8 @@
                     <input type="checkbox" id="suggestiveCheckbox" name="suggestiveCheckbox" value="suggestive">
                     <label for="nsfwCheckbox">NSFW</label>
                     <input type="checkbox" id="nsfwCheckbox" name="nsfwCheckbox" value="nsfw">
+                    <label for="extremeCheckbox">EXTREME</label>
+                    <input type="checkbox" id="extremeCheckbox" name="extremeCheckbox" value="extreme">
                 <% } else { %>
                     <!-- na hidden -->
                     <input type="hidden" id="naCheckbox" name="naCheckbox" value="na">
@@ -69,19 +71,73 @@
                     <input type="checkbox" id="suggestiveCheckbox" name="suggestiveCheckbox" value="suggestive">
                     <label for="nsfwCheckbox">NSFW</label>
                     <input type="checkbox" id="nsfwCheckbox" name="nsfwCheckbox" value="nsfw">
+                    <label for="extremeCheckbox">EXTREME</label>
+                    <input type="checkbox" id="extremeCheckbox" name="extremeCheckbox" value="extreme">
                 <% } %>
             </div>
-
+            <br>
             <button id="searchButton" style="padding: 10px; border-radius: 10px; margin-bottom: 20px;">Search</button>
-
-            <script>
-                <%- booruSearchScript %>
-
-                booruSearchInitialize()
-            </script>
         </div>
+
+        <script>
+            <%- booruSearchScript %>
+
+            booruSearchInitialize()
+        </script>
+
+        <style>
+            
+            /* styling to make the moreInfoDropdown more visually appealing and to give the user(s) feedback */
+            .moreInfoDropdown {
+                padding: 10px;
+                border-radius: 10px;
+                margin-bottom: 20px;
+                border: 1px solid rgba(100, 100, 255, 0.3);
+            }
+
+            .moreInfoDropdown summary {
+                cursor: pointer;
+                background-color: rgba(100, 100, 255, 0.3);
+                border-radius: 10px;
+                padding: 4px
+            }
+
+            .moreInfoDropdown p {
+                margin-top: 10px;
+            }
+
+            .moreInfoDropdown:hover {
+                background-color: rgba(100, 100, 255, 0.3);
+            }
+            
+
+        </style>
         
-        <p>(To submit images you will need to have been logged-in when you generated an image, go to <a href="/image-history">Image History</a>, select an image, and press "Upload to Booru")</p>
+        <h2>User Booru!</h2>
+        <details class="moreInfoDropdown">
+            <summary>What is this?</summary>
+            <p>
+                <!-- <p>Here you can view all the images that have been uploaded to the booru!</p>
+        <p>Images are sorted by votes by default, but you can change the sorting method using the dropdown above!</p>
+        <p>You can upload generated images once you are <a href="/login" target="_blank">logged in</a> either on the <a href="/" target="_blank">Generator itself</a>, or in the <a href="/image-history">Image History</a> page!</p>
+        <p>Click on an image to view it in full size!</p> -->
+                Here you can view all the images that have been uploaded to the booru!
+                <br>
+                Images are sorted and filtered by the options above!
+                <br>
+                Click on an image to view it in full size!
+                <br>
+                You can upload generated images once you are logged in either on the <a href="/" target="_blank">AI Generator itself</a>, or in the <a href="/image-history">Image History</a> page!
+                <% if (userProfile?.accountId) { %>
+                    <br>
+                    Click the ⬆️ and ⬇️ buttons to upvote and downvote images!
+                    <br>
+                    Click <a href="/profile/<%=userProfile.accountId%>">here</a> to view your profile!
+                <% } %>
+            </p>
+        </details>
+        <br>
+        
         <div id="booruPosts" class="booruPostsGrid"></div>
         <div id="pageControls" class="pageControls"></div>
 
@@ -106,13 +162,14 @@
                     thumbnailMade: Boolean(<%=image.thumbnailMade%>),
                     timestamp: `<%=image.timestamp%>`,
                     safety: `<%=image.safety%>`,
-                    upvotes: [<%=image.upvotes%>],
-                    downvotes: [<%=image.downvotes%>],
+                    upvotes: <%- JSON.stringify(image.upvotes) %>,
+                    downvotes: <%- JSON.stringify(image.downvotes) %>,
                 }
             <% }) %>
 
+
             var userProfile = {
-                accountId: '<%=userProfile?.accountId? userProfile.accountId : ''%>',
+                accountId: "<%=userProfile?.accountId? userProfile.accountId : ''%>",
                 badges: {
                     owner: <%=userProfile?.badges?.owner? userProfile.badges.owner : false%>,
                     moderator: <%=userProfile?.badges?.moderator? userProfile.badges.moderator : false%>
@@ -141,8 +198,10 @@
 
                     if (userProfile.badges.moderator) {
                         dropdownHTML = `
+                            <button class="dropdownButton" onclick="document.getElementById('dropdown${value.booru_id}')?.classList.toggle('show')">⋮</button>
                             <div class="dropdown" id="dropdown${value.booru_id}">
                                 <a href="/booru/delete/${value.booru_id}">Delete</a>
+                                <a href="/booru/setRating/${value.booru_id}/extreme">Set EXTREME</a>
                                 <a href="/booru/setRating/${value.booru_id}/nsfw">Set NSFW</a>
                                 <a href="/booru/setRating/${value.booru_id}/suggestive">Set Suggestive</a>
                                 <a href="/booru/setRating/${value.booru_id}/sfw">Set SFW</a>
@@ -172,7 +231,6 @@
                         <div class="booruPost">
                             <p>${value.safety.toUpperCase()}</p>
                             <div class="postButtons">
-                                <button class="dropdownButton" onclick="document.getElementById('dropdown${value.booru_id}')?.classList.toggle('show')">⋮</button>
                                 ${dropdownHTML}
                             </div>
                             <a href="/booru/post/${value.booru_id}" target="_blank">
