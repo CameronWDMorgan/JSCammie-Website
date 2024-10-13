@@ -3,11 +3,11 @@
 <script id="aclib" type="text/javascript" src="//acscdn.com/script/aclib.js"></script>
 
 <style>
-
 /* Navigation Bar */
 .topNavBar {
     color: #fff;
     padding: 10px 20px;
+    background-color: rgba(0, 0, 0, 0.2);
 }
 
 .navContainer {
@@ -80,47 +80,141 @@
     transition: transform 0.3s;
 }
 
-/* Optional: Add responsive design for mobile view */
-@media (max-width: 768px) {
-    .navLinksWrapper {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    
-    .navLink {
-        padding: 8px 10px;
-        margin: 5px 0;
-    }
-    
-    #creditsNav {
-        margin: 10px 0;
-    }
+/* Dropdown Menu for Mobile */
+.mobileMenu {
+    display: none;
+    flex-direction: column;
+    background-color: rgba(0, 0, 0, 0.7) !important;
+    border: 2px solid #fff;
+    border-radius: 5px;
+    padding: 10px;
+    position: absolute;
+    top: 60px; /* Adjust according to your header height */
+    left: 20px;
+    border-radius: 5px;
+    z-index: 1000;
 }
 
+.mobileMenu a {
+    padding: 10px;
+    margin: 5px 0;
+    color: #fff;
+    text-decoration: none;
+    text-align: left;
+    display: block;
+}
+
+.mobileMenu a:hover {
+    background-color: var(--highlight-colour);
+}
+
+/* Mobile Menu Button */
+#mobileMenuButton {
+    display: none;
+    font-size: 1.5em;
+    background: none;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+    .navLinksWrapper {
+        display: none;
+    }
+
+    #mobileMenuButton {
+        display: block;
+    }
+
+    .mobileMenu {
+        display: flex;
+        display: none;
+    }
+}
 </style>
 
-
-
 <nav class="topNavBar">
-    <div class="navContainer" id="navContainer">
+    <div class="navContainer">
+        <!-- Desktop Navigation Links -->
         <div class="navLinksWrapper">
-            <a href="/home" class="navLink">🏠 Home</a>
-            <a href="/" class="navLink">🖥️ AI Generator</a>
-            <a href="/booru" class="navLink">🖼️ Booru</a>
-            <a href="https://ko-fi.com/jscammie" class="navLink">🥺 Donate</a>
+            <a class="navlink" href="/home">🏠 Home</a>
+            <a class="navlink" href="/">🖥️ AI Generator</a>
+            <a class="navlink" href="/booru">🖼️ Booru</a>
+            <a class="navlink" href="https://ko-fi.com/jscammie">🥺 Donate</a>
             <% if (session.loggedIn) { %>
-                <a href="/logout" class="navLink">Logout</a>
+                <a class="navlink" href="/logout">❌Logout</a>
+                <a class="navlink" href="/profile/<%=session.accountId%>">⭐ My Profile</a>
             <% } else { %>
-                <a href="/login" class="navLink">Login</a>
+                <a class="navlink" href="/login">Login</a>
             <% } %>
-            <a href="https://discord.gg/AvbQuRmh7t" class="navLink">💬 Discord</a>
-            <button id="creditsNav" class="navLink">Credits: <a id="creditsDisplay" style="transition: all 0.3s;">0</a></button>
+            <a class="navlink" href="https://discord.gg/AvbQuRmh7t">💬 Discord</a>
+            
         </div>
+
+        <!-- Mobile Menu Button -->
+        <button id="mobileMenuButton">☰</button>
+
+        <!-- Mobile Dropdown Menu -->
+        <div class="mobileMenu frosted" id="mobileMenu">
+            <a href="/home">🏠 Home</a>
+            <a href="/">🖥️ AI Generator</a>
+            <a href="/booru">🖼️ Booru</a>
+            <a href="https://ko-fi.com/jscammie">🥺 Donate</a>
+            <% if (session.loggedIn) { %>
+                <a href="/logout">❌Logout</a>
+                <a href="/profile/<%=session.accountId%>">⭐ My Profile</a>
+            <% } else { %>
+                <a href="/login">Login</a>
+            <% } %>
+            <a href="https://discord.gg/AvbQuRmh7t">💬 Discord</a>
+        </div>
+
+        <button id="creditsNav">Credits: <span id="creditsDisplay">0</span></button>
+
+        <!-- Dark Mode Button -->
         <button id="darkModeButton">
             <span id="darkModeIcon">🌙</span>
         </button>
     </div>
 </nav>
+
+<style>
+    #topSiteText {
+        background-color: rgba(0, 0, 0, 0.5);
+        color: white;
+        padding: 10px;
+        text-align: center;
+        font-size: 1em;
+        font-weight: bold;
+    }
+</style>
+
+<div id="topSiteText"></div>
+
+<script>
+    let topSiteTextArray = [
+        "Consider answering the Survey by clicking/tapping <a href='https://forms.gle/dbRsyWEA5RSZL3qb6'>'Here'</a> to help make the site better!",
+        "Consider donating by clicking/tapping <a href='https://ko-fi.com/jscammie'>'Here'</a> to help keep the site running! 🥺",
+        "Check out the <a href='https://www.jscammie.com/booru'>'Booru'</a> for some cool user-created images!",
+    ]
+
+    let topSiteText = document.getElementById('topSiteText');
+
+    // set the topSiteText to a random element from the array:
+    topSiteText.innerHTML = topSiteTextArray[Math.floor(Math.random() * topSiteTextArray.length)];
+
+</script>
+
+<script>
+    // Mobile Menu Toggle
+    document.getElementById('mobileMenuButton').addEventListener('click', function () {
+        const mobileMenu = document.getElementById('mobileMenu');
+        mobileMenu.style.display = mobileMenu.style.display === 'none' || mobileMenu.style.display === '' ? 'block' : 'none';
+    });
+</script>
+
 
 
 <div id="creditsDailyPopup" style="display: none;">
@@ -140,6 +234,12 @@
         <p class="topTextCreditsButton">7 Days Rewards (500 Credits)</p>
         <button id="168hrCreditsButton" class="creditsButton"><span id="168hrCreditsButtonTimeLeft"></span> / 7 Days</button>
     </div>
+
+    <div class="dailiesDivSideBySide">
+        <p class="topTextCreditsButton">Credits History</p>
+        <a href="/credits-history" target="_blank" class="creditsButton">View</a>
+    </div>
+
 </div>
 
 <style>
@@ -420,17 +520,13 @@
 <!-- create a shadow only going down: -->
 
 <style>
-    .dividingLine {
-        width: 100%;
-        height: 4px;
-        background-color: rgba(0, 0, 0, 0.5);
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 1);
-    }
 
-    .dividingLine.dark {
-        background-color: rgba(255, 255, 255, 0.5);
+    .dividingLine {
+        background-color: rgb(255, 255, 255);
         box-shadow: 0 4px 15px rgba(255, 255, 255, 1);
+        height: 2px;
     }
+    
 </style>
 
 <div class="dividingLine"></div>
@@ -447,12 +543,10 @@
         if (darkmodeStatus == "false") {
             document.body.classList.remove('dark');
             document.getElementsByClassName('topNavBar')[0].classList.remove('dark');
-            document.getElementsByClassName('dividingLine')[0].classList.remove('dark');
             darkModeIcon.textContent = '☀️';
         } if (darkmodeStatus == "true") {
             document.body.classList.add('dark');
             document.getElementsByClassName('topNavBar')[0].classList.add('dark');
-            document.getElementsByClassName('dividingLine')[0].classList.add('dark');
             darkModeIcon.textContent = '🌙';
         }
     }
