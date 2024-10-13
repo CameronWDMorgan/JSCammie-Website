@@ -1,7 +1,6 @@
 const mongoose = require ("mongoose");
 const { Schema } = mongoose
 
-
 const userBooruSchema = new Schema({
     booru_id: { type: String, required: true, unique: true },
     account_id: { type: String, required: true },
