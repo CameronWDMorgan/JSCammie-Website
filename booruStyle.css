@@ -110,6 +110,10 @@
 .pageButtons {
 	display: flex;
 	justify-content: center;	
+	/* make sure they wrap if they go off the screen: */
+	flex-wrap: wrap;
+	gap: 0.2rem;
+	margin: 2px
 }
 
 .pageButtons button {
@@ -160,6 +164,7 @@
 	justify-content: center;
 	gap: 1rem;
 }
+
 .postProfileImage {
 	width: 50px;
 	height: 50px;
