@@ -54,18 +54,6 @@
             position: relative;
         }
     
-        /* Overlay to dim the background */
-        .overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 999;
-            display: none; /* Hidden by default */
-        }
-    
         /* Popup styling */
         .generationPopupContent {
             position: fixed;
@@ -82,40 +70,6 @@
             max-height: 90%;
             overflow-y: auto;
             display: none; /* Hidden by default */
-        }
-
-        .booruPopupContent {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: rgb(0, 0, 0);
-            background-image: linear-gradient(315deg, #2f6094 0%, #862e7f 74%);
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
-            z-index: 2100;
-            width: 90%;
-            max-width: 90%;
-            max-height: 90%;
-            overflow-y: auto;
-            display: none; /* Hidden by default */
-        }
-    
-        /* Close button styling */
-        .closeButton {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: red;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            cursor: pointer;
-            font-size: 16px;
-            text-align: center;
         }
 
         .generatedImage {
@@ -245,6 +199,16 @@
                 overlay.onclick = function() {
                     closeGenerationPopup();
                 }
+
+                uploadToBooruButtonHTML = ``;
+
+                // <button id="uploadToBooruButton" onclick="showBooruPopup('${image_id}')">Upload to Booru</button>
+                //     <br>
+
+                // add the above only if the image has not been uploaded to the booru yet:
+                if (imageData.uploadedToBooru == false) {
+                    uploadToBooruButtonHTML = `<button id="uploadToBooruButton" onclick="showBooruPopup('${image_id}')">Upload to Booru</button><br><br>`;
+                }
     
                 generationPopupContent.innerHTML = `
                     <button class="closeButton" onclick="closeGenerationPopup()">×</button>
@@ -255,8 +219,7 @@
                     <button id="exportAIDataButton" onclick="exportAIData('${image_id}')">Export AI Data</button>
                     <br>
                     <br>
-                    <button id="uploadToBooruButton" onclick="showBooruPopup('${image_id}')">Upload to Booru</button>
-                    <br>
+                    ${uploadToBooruButtonHTML}
 
                     <a>Prompt: </a>
                     <a id="prompt">${imageData.prompt}</a><br>
@@ -382,7 +345,10 @@
                     steps: "<%=imageData.steps%>",
                     cfg: "<%=imageData.cfg%>",
                     seed: "<%=imageData.seed%>",
-                    image_url: "<%=imageData.image_url%>"
+                    image_url: "<%=imageData.image_url%>",
+                    image_id: "<%=imageData.image_id%>",
+                    uploadedToBooru: <%=imageData.uploadedToBooru%>,
+                    thumbnailMade: <%=imageData.thumbnailMade%>,
                 };
             <% }); %>
         </script>
@@ -409,6 +375,14 @@
             <br>
             <!-- on enter key input search -->
             <input type="text" id="searchInputLora" placeholder="Search for LORAs.." onkeydown="if (event.keyCode == 13) {search()}"></input>
+            <br>
+            <br>
+            <select id="imagesPerPage" name="imagesPerPage">
+                <option value="10">10 Images Per Page</option>
+                <option value="25">25 Images Per Page</option>
+                <option value="50">50 Images Per Page</option>
+                <option value="100">100 Images Per Page</option>
+            </select>
             <!-- search button: -->
             <button onclick="search()">Search</button>
         </details>
@@ -504,7 +478,11 @@
     <div class="generationsGrid">
         <% userHistory.forEach((imageData, index) => { %>
             <div id="<%=imageData.image_id%><%=imageData.account_id%>" class="generationDiv">
-                <% thumbImage = imageData.image_url.replace('.png', '-thumb.png') %>
+                <% if (imageData.thumbnailMade == true) { %>
+                    <% thumbImage = imageData.image_url.replace('.png', '-thumb.png') %>
+                <% } else { %>
+                    <% thumbImage = imageData.image_url %>
+                <% } %>
                 <img class="generatedImage" loading="lazy" src="<%= thumbImage %>" onclick="showGenerationPopup('<%=imageData.image_id%><%=imageData.account_id%>')"/>
                 <!-- delete button -->
                 <button class="deleteButton" onclick="deleteImage('<%=imageData.image_id%>-<%=imageData.account_id%>')">Delete</button>
@@ -519,6 +497,82 @@
     </div>
 
     <div class="generationsControls" id="generationsControls"></div>
+
+    <script>
+        async function deletePage() {
+            
+            // get the current page number:
+            let currentPageButton = document.querySelector('.pageButton.active');
+
+            if (!currentPageButton) {
+                alert("No images to delete on this page!");
+                return;
+            }
+
+            let currentPage = parseInt(currentPageButton.innerHTML);
+
+            if (!confirm("Are you sure you want to delete all images on page " + currentPage + "?")) {
+                return;
+            }
+
+            // get the images div ids on the current page:
+            let imagesOnPage = document.querySelectorAll(`.page${currentPage}.generationDiv`);
+
+            // loop through masterImageData, getting the image_id from it by using the ID of the div:
+            for (let i = 0; i < imagesOnPage.length; i++) {
+                let imageDiv = imagesOnPage[i];
+                image = masterImageData[imageDiv.id];
+
+                // send a request to the server to delete the image from the database:
+                fetch('/image-history/delete-image', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        image_id: image.image_id,
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data);
+                    // animate the image div disappearing:
+                    imageDiv.style.transition = 'opacity 1s';
+                    imageDiv.style.opacity = 0;
+                    setTimeout(() => {
+                        imageDiv.style.display = 'none';
+                    }, 1000);
+                })
+                .catch((error) => {
+                    console.error('Error:', error);
+                });
+            }
+
+            // remove all the deleted images from the masterImageData object:
+            for (let i = 0; i < imagesOnPage.length; i++) {
+                let imageDiv = imagesOnPage[i];
+                delete masterImageData[imageDiv.id];
+            }
+
+            // re-paginate the images:
+            search();
+            
+            // wait 0.5s then select the page before the current page, if there is one:
+            setTimeout(() => {
+                let previousPageButton = document.querySelector(`.page${currentPage - 1}.pageButton`);
+                if (previousPageButton) {
+                    previousPageButton.click();
+                } else {
+                    // if there is no previous page, click the first page:
+                    let firstPageButton = document.querySelector('.page1.pageButton');
+                    firstPageButton.click();
+                }
+            }, 500);
+            
+        }
+    </script>
+
+    <button id="deletePage" onclick="deletePage()">Delete Current Page</button>
 
     <style>
         .pageButton {
@@ -551,6 +605,8 @@
 
     <script>
 
+        let imagesPerPageToggle = false
+
         function paginateImages() {
 
             let allImages = document.querySelectorAll('.generationDiv');
@@ -559,7 +615,23 @@
             // get the number of visible images by checking if they have the class "visible":
             let visibleImages = document.querySelectorAll('.visible');
 
-            let imagesPerPage = 24;
+            // set imagesPerPage select to the 25 images per page option:
+            // if its first load:
+
+
+            if (!imagesPerPageToggle) {
+                document.getElementById('imagesPerPage').value = 25;
+                imagesPerPageToggle = true;
+            }
+
+
+
+            let imagesPerPage = parseInt(document.getElementById('imagesPerPage').value);
+
+            // add an event listener to the imagesPerPage select to re-paginate the images:
+            document.getElementById('imagesPerPage').onchange = function() {
+                paginateImages();
+            }
 
             // calculate the number of pages:
             let numberOfPagesAll = Math.ceil(allImages.length / imagesPerPage);
@@ -619,25 +691,8 @@
                     // add the active class to the button:
                     pageButton.classList.add('active');
 
-                    // scroll the user to the top of the page gradually over time:
-                    // const duration = 500;
-
-                    // const start = window.scrollY;
-                    // const startTime = performance.now();
-
-                    // function scrollStep(currentTime) {
-                    //     const timeElapsed = currentTime - startTime;
-                    //     const progress = Math.min(timeElapsed / duration, 1);
-                    //     window.scrollTo(0, start * (1 - progress));
-
-                    //     if (progress < 1) {
-                    //     requestAnimationFrame(scrollStep);
-                    //     }
-                    // }
-                    // requestAnimationFrame(scrollStep);
-
                     // add lerping to the scroll:
-                    const duration = 1400;
+                    const duration = 500;
                     const start = window.scrollY;
                     const end = 220; // End position you want to scroll to
                     let start_time = null;
