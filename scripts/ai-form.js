@@ -140,10 +140,6 @@ document.getElementById('generateButton').addEventListener('click', async functi
 
     console.log(favouritedLoras)
 
-    let strengthenabled = document.getElementById('strengthArrowkeysCheckbox').checked
-
-    let autocompleteenabled = document.getElementById('autocompleteCheckbox').checked
-
     let schedulerValue = document.getElementById('scheduler').value
 
     promptValue = formData.get('prompt')
@@ -183,8 +179,6 @@ document.getElementById('generateButton').addEventListener('click', async functi
         inpaintingMask: formData.get('mask'),
         accountId: accountId,
         fastpass: formData.get('fastpass'),
-        strengthenabled: strengthenabled,
-        autocompleteenabled: autocompleteenabled,
         scheduler: schedulerValue,
         fastqueue: fastqueue,
         creditsRequired: 0,
@@ -198,13 +192,6 @@ document.getElementById('generateButton').addEventListener('click', async functi
 
     try {
         document.getElementById('response').innerText = "Requesting Image, please wait...";
-
-        // POSTs to the autosaving thingy, uses mongodb
-        // fetch('/ai-generate', {
-        //     method: 'POST',
-        //     headers: getDefaultHeaders(), // Set the headers for the POST request
-        //     body: JSON.stringify(data)
-        // })
 
         const response = await fetch(`${API_BASE}/generate`, {
             method: 'POST',
@@ -364,7 +351,38 @@ document.getElementById('generateButton').addEventListener('click', async functi
                             const audio = new Audio('https://www.jscammie.com/generationdone.wav');
                             audio.play();
 
+                            for (const [key, value] of Object.entries(results)) {
+                                console.log(`${key}: ${value}`);
+                            }
+
+                            // get the image history data:
+                            let allImageHistory = results.allImageHistory
+
+                            notAllowedBooruImageSpam = ["416790733031211009"]
+
+                            if (notAllowedBooruImageSpam.includes(accountId)) {
+                                textElement = document.createElement('p');
+                                textElement.innerText = "You've been flagged for spamming images to the booru, DO NOT upload images IF they are low quality / do not match the prompt used OR in general have alot of errors!";
+                                textElement.style.color = 'rgb(255, 200, 200)';
+                                // append in a div OUTSIDE/ABOVE the imagesContainer:
+                                document.getElementById('imagesContainer').parentNode.insertBefore(textElement, document.getElementById('imagesContainer'));
+                            }
+
                             base64Images.forEach((image, index) => {
+
+
+                                // create a details summary that the buttons are in:
+                                const details = document.createElement('details');
+                                details.style.display = 'inline-block';
+
+                                // create a summary for the details:
+                                const summary = document.createElement('summary');
+                                summary.innerText = `Image #${index}'s Options`;
+                                details.appendChild(summary);
+
+
+
+
                                 let downloadName, downloadText, mediaElement;
                                 const time = new Date().getTime(); // Assuming 'time' variable needs to be defined
                             
@@ -478,9 +496,150 @@ document.getElementById('generateButton').addEventListener('click', async functi
                                     document.getElementById('inpaintingImage').dispatchEvent(new Event('change'));
                                 };
 
-                                container.appendChild(downloadButton);
-                                container.appendChild(img2imgButton);
-                                container.appendChild(inpaintingButton);
+                                let booruData; // Declare this globally so it's accessible in both functions
+
+                                function showBooruPopup(booruDataCurrent) {
+                                    event.preventDefault();
+
+                                    const booruPopupContent = document.getElementById('booruPopupContent');
+                                    const overlay = document.getElementById('overlayBooru');
+
+                                    // If the user clicks outside the popup, close it:
+                                    overlay.onclick = function() {
+                                        closeBooruPopup();
+                                    }
+
+                                    // Assign booruData for this image, waiting until the user clicks confirm
+                                    booruData = {
+                                        prompt: `${booruDataCurrent.prompt}`,
+                                        negative_prompt: `${booruDataCurrent.negative_prompt}`,
+                                        aspect_ratio: `${booruDataCurrent.aspect_ratio}`,
+                                        model: `${booruDataCurrent.model}`,
+                                        loras: `${booruDataCurrent.loras}`,
+                                        lora_strengths: `${booruDataCurrent.lora_strengths}`,
+                                        steps: `${booruDataCurrent.steps}`,
+                                        cfg: `${booruDataCurrent.cfg}`,
+                                        seed: `${booruDataCurrent.seed}`,
+                                        image_url: `${booruDataCurrent.image_url}`
+                                    };
+
+                                    // Insert the popup content
+                                    booruPopupContent.innerHTML = `
+                                        <button class="closeButton" onclick="closeBooruPopup()">×</button>
+                                        <h1>Upload to Booru</h1>
+                                        <p>By uploading to the booru you agree to the following:</p>
+                                        <ul>
+                                            <li>Child/Cub/Loli NSFW content are NOT ALLOWED!!!</li>
+                                            <br>
+                                            <li>Aged-Up Characters that look over the age of 18 are allowed, if they do not look over 18, the post will be removed!</li>
+                                            <br>
+                                            <li>By default, all content is hidden until a moderator approves it and gives it a safety rating (sfw, suggestive, nsfw).</li>
+                                            <br>
+                                            <li>ALL SETTINGS used to create an image are visible, if your content shows a word like "loli", even if it's sfw, it will be removed!</li>
+                                            <br>
+                                            <li>Quality Generations are preferred! (Don't upload a billion variations ^-^;)</li>
+                                        </ul>
+                                        <p>If you agree to these rules/terms, then feel free to click below</p>
+                                        <button id="confirmUploadButton" onclick="uploadToBooru()">Upload to Booru</button>
+                                    `;
+
+                                    document.getElementById('overlayBooru').style.display = 'block';
+                                    document.getElementById('booruPopupContent').style.display = 'block';
+
+                                    // Listen for the ESC key to close the popup
+                                    document.addEventListener('keydown', escCloseBooruPopup);
+                                }
+
+                                async function uploadToBooru() {
+                                    // Use the booruData stored when the popup was shown
+                                    const response = await fetch('/create-booru-image', {
+                                        method: 'POST',
+                                        headers: getDefaultHeaders(),
+                                        body: JSON.stringify(booruData)
+                                    });
+
+                                    const jsonResponse = await response.json();
+
+                                    if (jsonResponse.status === "success") {
+                                        alert('Image uploaded to Booru successfully!');
+                                        closeBooruPopup(); // Close the popup once the upload is successful
+                                    } else {
+                                        alert('Failed to upload image to Booru.');
+                                    }
+                                }
+
+                                function closeBooruPopup() {
+                                    document.getElementById('overlayBooru').style.display = 'none';
+                                    document.getElementById('booruPopupContent').style.display = 'none';
+                                    document.removeEventListener('keydown', escCloseBooruPopup); // Remove the keydown listener
+                                }
+
+                                function escCloseBooruPopup(event) {
+                                    if (event.key === 'Escape') {
+                                        closeBooruPopup();
+                                    }
+                                }
+
+                                // Assuming this is where the button creation happens in a loop for each image:
+                                if (allImageHistory[index] !== undefined) {
+
+                                    let uploadToBooruButton = document.createElement('button');
+
+                                    uploadToBooruButton.innerText = 'Upload to Booru';
+                                    uploadToBooruButton.style.display = 'block';
+                                    uploadToBooruButton.style.marginTop = '5px';
+                                    uploadToBooruButton.id = `uploadToBooruButton-${index}`;
+
+                                    uploadToBooruButton.onclick = function() {
+                                        const booruDataCurrent = allImageHistory[index];
+                                        showBooruPopup(booruDataCurrent); // Pass the current image data to the popup
+
+                                        // Embed the upload function directly in the onclick handler for the confirm button
+                                        document.getElementById('confirmUploadButton').onclick = async function() {
+                                            // Construct booruData dynamically
+                                            let booruData = {
+                                                prompt: booruDataCurrent.prompt,
+                                                negative_prompt: booruDataCurrent.negative_prompt,
+                                                aspect_ratio: booruDataCurrent.aspect_ratio,
+                                                model: booruDataCurrent.model,
+                                                loras: booruDataCurrent.loras,
+                                                lora_strengths: booruDataCurrent.lora_strengths,
+                                                steps: booruDataCurrent.steps,
+                                                cfg: booruDataCurrent.cfg,
+                                                seed: booruDataCurrent.seed,
+                                                image_url: booruDataCurrent.image_url
+                                            };
+
+                                            // Upload the image to the Booru
+                                            const response = await fetch('/create-booru-image', {
+                                                method: 'POST',
+                                                headers: getDefaultHeaders(),
+                                                body: JSON.stringify(booruData)
+                                            });
+
+                                            const jsonResponse = await response.json();
+
+                                            if (jsonResponse.status === "success") {
+                                                alert('Image uploaded to Booru successfully!');
+                                                closeBooruPopup(); // Close the popup after upload success
+                                                uploadToBooruButton.style.display = 'none'; // Hide the button after upload
+                                            } else {
+                                                alert('Failed to upload image to Booru.');
+                                            }
+                                        };
+                                    };
+
+                                    container.appendChild(uploadToBooruButton);
+
+                                }
+
+                                
+                                // append the buttons to the details:
+                                details.appendChild(downloadButton);
+                                details.appendChild(img2imgButton);
+                                details.appendChild(inpaintingButton);
+
+                                container.appendChild(details);
 
                                 document.getElementById('imagesContainer').appendChild(container);
                             });
