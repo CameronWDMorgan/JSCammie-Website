@@ -169,6 +169,8 @@
             <input type="text" id="suggestionsSearch" placeholder="Search for a suggestion...">
         </div>
 
+        <p id="suggestionCount"></p>
+
         <div id="suggestionsContainer">
         </div>
     </div>
@@ -232,6 +234,10 @@
                 }
             });
 
+            document.getElementById('suggestionCount').innerText = `Showing ${suggestions.length} suggestions`;
+
+
+
             // console.log(suggestions); // Check the filtered and sorted suggestions
             // console.log(userProfile); // Check the userProfile object
             // console.log(masterSuggestionData)
@@ -262,7 +268,7 @@
                         ${userProfile.badges?.owner ? '<button id="addSuggestion">Add</button>' : ''}
                         ${userProfile.badges?.owner ? '<button id="rejectSuggestion">Reject</button>' : ''}
                         ${userProfile.accountId === suggestion.accountId || userProfile.badges?.owner ? '<button id="toggleSuggestionSafety">NSFW/SFW</button>' : ''}
-                        ${userProfile.accountId && suggestion.status.toLowerCase() === 'pending' && !suggestion.promoted ? '<button id="promoteSuggestion">Promote (Costs 750 Credits)</button>' : ''}
+                        ${userProfile.accountId && suggestion.status.toLowerCase() === 'pending' && !suggestion.promoted ? '<button id="promoteSuggestion">Promote (Costs 1000 Credits)</button>' : ''}
                     </a>
                     <p id="${suggestion.suggestionId}-response"></p>
                 `;
