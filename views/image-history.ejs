@@ -139,8 +139,16 @@
                 .then(data => {
                     console.log(data);
                     alert(data.message);
-                    // open the booru/post/booru_id page in a new tab:
-                    window.open(`/booru/post/${data.booru_id}`, '_blank');
+                    if (data.status == 'success') {
+                        // close the image and booru popup:
+                        closeGenerationPopup();
+                        closeBooruPopup();
+                    } else {
+                        // close the popup:
+                        closeGenerationPopup();
+                        closeBooruPopup();
+                    }
+                    
                 })
 
             }

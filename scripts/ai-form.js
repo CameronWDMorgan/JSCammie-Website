@@ -37,10 +37,6 @@ document.getElementById('generateButton').addEventListener('click', async functi
 
     let targetQuantity = 4
 
-    if (targetModel.startsWith('flux')) {
-        targetQuantity = 2
-    }
-
     targetSteps = Number(targetSteps)
 
     // get the loras from the masterLoraData object, filter by .selected:
@@ -155,8 +151,24 @@ document.getElementById('generateButton').addEventListener('click', async functi
 
     extras = {
         removeWatermark: document.getElementById('removeWatermarkCheckbox').checked ?? false,
-        upscale: document.getElementById('upscaleCheckbox').checked ?? false
+        upscale: document.getElementById('upscaleCheckbox').checked ?? false,
+        doubleImages: document.getElementById('doubleImagesCheckbox').checked ?? false
     }
+
+    if (document.getElementById('regionalPromptCheckbox').checked) {
+        regionalPromptSettings = {
+            status: "true",
+            regionalPromptSplitPosition: formData.get('regionalPromptSplitPosition'),
+            regionalPromptAStrength: formData.get('regionalPromptAStrength'),
+            regionalPromptBStrength: formData.get('regionalPromptBStrength')
+        }
+    } else {
+        regionalPromptSettings = {status: "false"}
+    }
+            
+
+
+
 
     let data = {
         prompt: promptValue,
@@ -182,7 +194,8 @@ document.getElementById('generateButton').addEventListener('click', async functi
         scheduler: schedulerValue,
         fastqueue: fastqueue,
         creditsRequired: 0,
-        extras: extras
+        extras: extras,
+        regionalPromptSettings: regionalPromptSettings
     };
 
     console.log(data)
@@ -358,7 +371,7 @@ document.getElementById('generateButton').addEventListener('click', async functi
                             // get the image history data:
                             let allImageHistory = results.allImageHistory
 
-                            notAllowedBooruImageSpam = ["416790733031211009"]
+                            notAllowedBooruImageSpam = ["416790733031211009", "774138250179772437"]
 
                             if (notAllowedBooruImageSpam.includes(accountId)) {
                                 textElement = document.createElement('p');
@@ -537,7 +550,7 @@ document.getElementById('generateButton').addEventListener('click', async functi
                                             <br>
                                             <li>ALL SETTINGS used to create an image are visible, if your content shows a word like "loli", even if it's sfw, it will be removed!</li>
                                             <br>
-                                            <li>Quality Generations are preferred! (Don't upload a billion variations ^-^;)</li>
+                                            <li>DO NOT SPAM THE BOORU WITH 1240987 IMAGES OF THE SAME OC IN SAME POSE / LOCATION</li>
                                         </ul>
                                         <p>If you agree to these rules/terms, then feel free to click below</p>
                                         <button id="confirmUploadButton" onclick="uploadToBooru()">Upload to Booru</button>

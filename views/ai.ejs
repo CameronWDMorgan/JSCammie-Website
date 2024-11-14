@@ -2,9 +2,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Free Stable Diffusion AI Image Generator FLUX/PDXL/SD1.5 | JSCammie.com</title>
+    <title>FREE Stable Diffusion AI Generator FLUX/PDXL/SD1.5 | JSCammie.com</title>
     <meta name="description" content="Free FLUX, PDXL and SD 1.5 Stable Diffusion Generator | Generate free images SFW & NSFW with multiple models, loras & more!">
-    <meta name="keywords" content="no sign up, no restrictions, flux ai, flux dev, flux schnell, flux loras, flux free, flux ai free, nsfw, uncensored, free, online, inpainting, img2img, txt2img, stable diffusion, ai image generator, sdxl ai image generator, ai free online, sfw, nsfw, sdxl, sd1.5, loras, lora, embeddings, pdxl, pony diffusion">
+    <meta name="keywords" content="no sign up, no restrictions, regional prompt, regional prompter, regional prompting, comfyui, flux ai, flux dev, flux schnell, flux loras, flux free, flux ai free, nsfw, uncensored, free, online, inpainting, img2img, txt2img, stable diffusion, ai image generator, sdxl ai image generator, ai free online, sfw, nsfw, sdxl, sd1.5, loras, lora, embeddings, pdxl, pony diffusion">
     <meta name="author" content="JSCammie">
 
     <%- include('../partials/_headerAll') %>
@@ -85,6 +85,8 @@
         }
         .form-control textarea{
             font-size: 20;
+            overflow: hidden;
+            height: 500px
         }
         .form-control span {
             margin-top: 0.5rem;
@@ -343,17 +345,17 @@
 
         .loraCardGrid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
             grid-template-rows: auto;
             grid-column-gap: 5px;
             grid-row-gap: 5px;
             /* round the corners: */
-
+            overflow: hidden;
         }
 
-        .loraContainer {
-            /* remove scrollbar: */
-            scrollbar-width: none;
+        .lorabox {
+            border-radius: 20px;
+            border: none;
         }
 
         /* .form-control { */
@@ -446,7 +448,7 @@
     </div>
 
     <!-- popup that displays how long it took to load, for example: 3.65s -->
-    <div style="position: fixed; top: 0; right: 0; padding: 10px; background-color: #00000015; border-radius: 0 0 0 10px; z-index: 1000;">
+    <div id="loadTimeDiv" style="position: fixed; top: 0; right: 0; padding: 10px; background-color: #00000015; border-radius: 0 0 0 10px; z-index: 1000;">
         <p id="loadTime">Loading...</p>
     </div>
 
@@ -474,6 +476,7 @@
 
                 setTimeout(() => {
                     loadTime.remove();
+                    document.getElementById('loadTimeDiv').remove();
                 }, 500);
             }, 500);
         });
@@ -486,6 +489,9 @@
             }
             if (document.readyState == "complete") {
                 loadingBar.style.width = '100%';
+                // fire events for the steps and cfguidance sliders to update the labels:
+                document.getElementById('steps').dispatchEvent(new Event('input'));
+                document.getElementById('cfguidance').dispatchEvent(new Event('input'));
             }
         }
 
@@ -604,11 +610,13 @@
 
             </style>
 
+            
+
             <details>
                 <% if (aiSaveSlots) { %>
-                <summary>Save Slots (<%=aiSaveSlots.length%>)</summary>
+                <summary>Save Slots (<%=aiSaveSlots.length%>) Click to View!</summary>
                 <% } else { %>
-                <summary>Save Slots (0)</summary>
+                <summary>Save Slots (0) Click to View!</summary>
                 <% } %>
                 <div class="form-control">
                     <!-- Display Existing Save Slots -->
@@ -1157,6 +1165,11 @@
                     
                 </div>
             </details>
+
+            <a class="tooltip" onclick="showTooltip(this)">❓</a>
+            <div class="tooltiptext">
+                Save-Slots are a way of saving and loading the current settings, very good for saving templates to generate the best images for later use, this requires you to be logged in to use.<br><br>If you'd like to save your settings without logging in then you can use the "Export/Import .AIDATA" buttons beneath this text to save your settings to a file on your computer/phone!
+            </div>
             
 
             <style>
@@ -1203,6 +1216,12 @@
                 <button class="button exportaidatabutton" type="button" onclick="exportAIData()">Export .AIDATA</button>
                 <label for="importAiData" class="button importaidatalabel">Import .AIDATA</label>
                 <input id="importAiData" class="importaidatainput" type="file">
+                <span class="tooltip" onclick="showTooltip(this)">❓</span>
+                <div class="tooltiptext">Import .AIDATA:<br>
+                Allows the user to import a .AIDATA file to load the settings into the AI Image Generator, this can be used to load settings like the loras used, the prompt, model, etc etc; to copy settings from booru posts and to use settings from other users.<br>
+                <br>Export .AIDATA:<br>
+                Allows the user to export the current settings to a .AIDATA file, this can be used to save settings for later use and share settings with other users.
+                </div>
             </div>
             
             <script>
@@ -1227,9 +1246,7 @@
             <form id="generatorForm">
 
                 <style>
-                    textarea {
-                        overflow: hidden;
-                    }
+                    
 
                 </style>
 
@@ -1283,24 +1300,65 @@
                                 background-color: rgba(0, 255, 0, 0.3) !important;
                             }
 
+                            .regionalPromptDisplayText {
+                                display: block;
+                                background-color: rgba(0, 0, 0, 0.2);
+                                border: 2px solid rgb(255, 255, 255);
+                                padding: 4px;
+                                border-radius: 5px;
+                                font-size: 20px;
+                                font-weight: bold;
+                            }
+
                         </style>
+
+                        
 
                         <div class="frosted" style="position: relative;" id="autocomplete-div"></div>
 
-                        <div class="form-control">
+                        <div class="form-control" id="prompt-div">
                             <label for="prompt">
                                 Prompt: <span id="promptWordCount">(70)</span>
                                 <span class="tooltip" onclick="showTooltip(this)">❓</span>
-                                <div class="tooltiptext">Use this field to describe what you want to see in the image.</div>
+                                <div class="tooltiptext">Type here what you want in the image.
+                                You can use "," to separate different things you want in the image.
+                                For example: "A cute cat, with a hat, in a forest"<br><br>
+                                To adjust how much focus or Strength specific word(s) have you can use the following syntax:<br>
+                                (word), ((word)), ((word1, word2))<br>(word:1.25), ((word:1.25)), ((word1, word2:1.25))<br>
+                                (word:0.75), ((word:0.75)), ((word1, word2:0.75))<br><br>
+                                These are just examples of setting the strength(s) of the word(s) in the prompt, you can use any number between 0.1 and 3.0 to adjust the strength of the word(s) in the prompt.
+                                </div>
                             </label>
                             <textarea id="prompt" name="prompt" rows="2" required></textarea>
                         </div>
+                        <span id="regionalPromptDisplayText" class="regionalPromptDisplayText"></span>
+
+                        <script>
+                            // make the regionalPromptDisplayText invisible unless it has something in it:
+                            document.getElementById('regionalPromptDisplayText').style.display = 'none';
+
+                            // make the regionalPromptDisplayText visible if the regionalPromptDisplayText has something in it:
+                            document.getElementById('prompt').addEventListener('input', function() {
+                                if (this.value.includes('<rp>')) {
+                                    document.getElementById('regionalPromptDisplayText').style.display = 'block';
+                                } else {
+                                    document.getElementById('regionalPromptDisplayText').style.display = 'none';
+                                }
+                            })
+                        </script>
 
                         <div class="form-control">
                             <label for="negativeprompt">
                                 Negative Prompt: <span id="negativePromptWordCount">(70)</span>
                                 <span class="tooltip" onclick="showTooltip(this)">❓</span>
-                                <div class="tooltiptext">Use this field to describe what you do not want to see in the image.</div>
+                                <div class="tooltiptext">Type here what you don't want in the image.
+                                You can use "," to separate different things you don't want in the image.
+                                For example: "ugly, dogs, no hat, no forest"<br><br>
+                                To adjust how much focus or Strength specific word(s) have you can use the following syntax:<br>
+                                (word), ((word)), ((word1, word2))<br>(word:1.25), ((word:1.25)), ((word1, word2:1.25))<br>
+                                (word:0.75), ((word:0.75)), ((word1, word2:0.75))<br><br>
+                                These are just examples of setting the strength(s) of the word(s) in the prompt, you can use any number between 0.1 and 3.0 to adjust the strength of the word(s) in the prompt.
+                                </div>
                             </label>
                             <textarea id="negativeprompt" name="negativeprompt" rows="2">nsfw, monochrome, black and white, worst quality, low quality, watermark, signature, bad anatomy, bad hands, deformed limbs, blurry, cropped, cross-eyed, extra arms, extra legs, extra limbs, extra pupils, bad proportions, poorly drawn hands, simple background, bad background, bad lighting, bad perspective</textarea>
                         </div>
@@ -1316,7 +1374,7 @@
                             textareas.forEach(textarea => {
                                 // Function to adjust height
                                 textarea.style.height = 'auto'; // Reset height to recalculate
-                                textarea.style.height = textarea.scrollHeight + 'px';
+                                textarea.style.height = Number(textarea.scrollHeight) + 40 + 'px';
 
                             })
                         }
@@ -1327,9 +1385,6 @@
                             textarea.addEventListener('input', saveLoadTextAreaHeight);
                             textarea.addEventListener('change', saveLoadTextAreaHeight);
                         })
-
-                        // give me a ubuntu command to kill a process id of 91298:
-                        // kill -9 91298
 
                         saveLoadTextAreaHeight();
 
@@ -1380,6 +1435,7 @@
                             <option value="sdxl-autismmix">(SDXL) Autism Mix ("Better" PonyXL, uses PonyXL Prompting)</option>
                             <option value="sdxl-sonichasautismmix">(SDXL) SonicHasAutismMix (SonicDiffusionXL & AutismMix merge, uses PonyXL Prompting)</option>
                             <option value="sdxl-ponyrealism">(SDXL) Pony Realism (Realistic, uses PonyXL Prompting)</option>
+                            <option value="sdxl-fluffysonic">(SDXL) FluffySonic (Sonic the Hedgehog by kitsune_sage, uses PonyXL Prompting)</option>
                             <option value="flux-unchained">(FLUX) Unchained (Everything, natural language prompting)</option>
                         </select>
                     </div>
@@ -1403,7 +1459,7 @@
                     <style>
                       
                         .loraContainer {
-                            max-height: 600px !important; /* Adjust as needed for your layout */
+                            max-height: 750px !important; /* Adjust as needed for your layout */
                             height: fit-content;
                             width: 100%;
                             overflow-y: auto; /* Allows scrolling within the container */
@@ -1898,7 +1954,10 @@
                                     lastRequestSD.loras = [];
                                 }
                                 lastRequestSD.loras.forEach(loraId => {
-                                    masterLoraData[loraId].selected = true;
+                                    // check if the loraId exists in the masterLoraData object:
+                                    if (masterLoraData[loraId]) {
+                                        masterLoraData[loraId].selected = true;
+                                    }
                                 });
 
                                 // category button logic, if the button is clicked then show only the loras in that category:
@@ -2193,6 +2252,14 @@
                     #displayCanvas {
                         z-index: 9; /* Below the maskCanvas */
                     }
+
+                    .additionalSettings {
+                        background-color: rgba(0, 0, 0, 0.2);
+                        padding: 10px;
+                        border-radius: 10px;
+                        margin-top: 10px;
+                        border: 2px solid rgb(255, 255, 255);
+                    }
                 </style>
 
             
@@ -2200,7 +2267,7 @@
                     <summary>Image2Image, Inpainting</summary>
 
                     <div class="form-control">
-                        <label for="img2imgCheckbox">
+                        <label>
                             Enable Image2Image:
                             <span class="tooltip" onclick="showTooltip(this)">❓</span>
                                 <div class="tooltiptext">
@@ -2210,7 +2277,7 @@
                         <input type="checkbox" id="img2imgCheckbox" name="img2imgCheckbox">
                     </div>
                     
-                    <div class="form-control" id="img2imgControls" style="display: none;">
+                    <div class="form-control additionalSettings" id="img2imgControls" style="display: none;">
                         <label>
                             Upload Image:
                             <span class="tooltip" onclick="showTooltip(this)">❓</span>
@@ -2253,7 +2320,7 @@
 
                     <div class="form-control" id="openposeControls">
                         <canvas id="stickCanvas" width="512" height="756" style="background-color: black;"></canvas>
-                        <script src="../scripts/openpose.js" type="text/javascript"></script>
+                        <script src="../scripts/openpose.js" type="text/javascript" defer></script>
                     </div>
 
                     <script>
@@ -2288,7 +2355,7 @@
 
                     
 
-                    <div class="form-control" id="inpaintingControls" style="display: none;" >
+                    <div class="form-control additionalSettings" id="inpaintingControls" style="display: none;" >
 
                         <label for="inpaintingStrength">
                             Inpainting Strength:
@@ -2337,7 +2404,7 @@
                             <canvas id="maskCanvas"></canvas>
                             <canvas id="displayCanvas"></canvas>
                         </div>
-                        <script src="../scripts/ai-inpainting.js?v3" type="text/javascript"></script>
+                        <script src="../scripts/ai-inpainting.js?v3" type="text/javascript" defer></script>
 
                         <script>
                             // get the penSize element
@@ -2356,6 +2423,241 @@
 
                     </div>
 
+                    <div class="form-control">
+                        <label>
+                            Enable Regional Prompt:
+                            <span class="tooltip" onclick="showTooltip(this)">❓</span>
+                                <div class="tooltiptext">
+                                    Use this checkbox to enable the Regional Prompt feature, which allows you to split the image into regions and give each region a different prompt<br>
+                                    This can be useful for creating images with different characters or objects in different regions<br>
+                                    Use `&lt;rp&gt;` to split the prompt into regions, like so: <br>
+                                    score_9, score_8_up, score_7_up, 2d, 2girls, duo, looking at viewer, in cabin, sofa, sitting &lt;rp&gt; amy rose, denim jeans, dark red sweater &lt;rp&gt; rouge the bat, black pants, black shirt
+                                </div>
+                        </label>
+                        <input type="checkbox" id="regionalPromptCheckbox" name="regionalPromptCheckbox">
+                    </div>
+
+                    <div id="regionalPromptControls" class="form-control additionalSettings" style="display: none">
+
+                        <label for="regionalPromptAStrength">
+                            Regional Prompt A Strength:
+                            <span class="tooltip" onclick="showTooltip(this)">❓</span>
+                                <div class="tooltiptext">
+                                    Use this slider to adjust the strength of Regional Prompt A<br>
+                                    Higher values will make the prompt more powerful but might have issues blending in with the rest of the image.
+                                </div>
+                                <input class="inline-slider" type="range" id="regionalPromptAStrength" name="regionalPromptAStrength" min="15" max="35" step="1" value="25">
+                                <span id="regionalPromptAStrengthValue" class="range-value">25%</span>
+                        </label>
+
+                        <br>
+
+                        <label for="regionalPromptBStrength">
+                            Regional Prompt B Strength:
+                            <span class="tooltip" onclick="showTooltip(this)">❓</span>
+                                <div class="tooltiptext">
+                                    Use this slider to adjust the strength of Regional Prompt B<br>
+                                    Higher values will make the prompt more powerful but might have issues blending in with the rest of the image.
+                                </div>
+                                <input class="inline-slider" type="range" id="regionalPromptBStrength" name="regionalPromptBStrength" min="15" max="35" step="1" value="25">
+                                <span id="regionalPromptBStrengthValue" class="range-value">25%</span>
+                        </label>
+
+                        <br>
+
+                        <label for="regionalPromptSplitPosition">   
+                            Regional Prompt Split Position:
+                            <span class="tooltip" onclick="showTooltip(this)">❓</span>
+                                <div class="tooltiptext">
+                                    Use this slider to adjust the position of the split between the regions, the default is 50%<br>
+                                    Higher values will move the split to the right, lower values will move it to the left
+                                </div>
+                                <input class="inline-slider" type="range" id="regionalPromptSplitPosition" name="regionalPromptSplitPosition" min="35" max="65" step="1" value="50">
+                                <span id="regionalPromptSplitPositionValue" class="range-value">50%</span>
+                        </label>
+                        <br><br>
+
+                        <!-- splitting logic and preview with a canvas showing the A/B/C etc with the aspectratio being used for the template: -->
+                        
+                        <div id="regionalPromptDisplay"></div>
+                        
+                        <script>
+                        
+                            function updateRegionalDisplay() {
+                                // clear the regionalPromptDisplay
+                                document.getElementById('regionalPromptDisplay').innerHTML = '';
+                                document.getElementById('regionalPromptDisplayText').innerHTML = '';
+
+                                if (!document.getElementById('regionalPromptCheckbox').checked) {
+                                    return;
+                                }
+
+                                canvas = document.createElement('canvas');
+
+                                aspectRatio = document.getElementById('aspectRatio').value;
+                                model = document.getElementById('model').value;
+
+                                splitValue = document.getElementById('regionalPromptSplitPosition').value;
+
+                                regionalPromptAStrength = document.getElementById('regionalPromptAStrength').value;
+                                regionalPromptBStrength = document.getElementById('regionalPromptBStrength').value;
+
+                                dimensions = {width:0,height:0}
+                                if (model.startsWith('sdxl') || model.startsWith('flux')) {
+                                    switch(aspectRatio) {
+                                        case 'square':
+                                            dimensions = {width: 768, height: 768}
+                                            break;
+                                        case 'portrait':
+                                            dimensions = {width: 768, height: 1024}
+                                            break;
+                                        case 'landscape':
+                                            dimensions = {width: 1024, height: 768}
+                                            break;
+                                        case '16:9':
+                                            dimensions = {width: 1024, height: 576}
+                                            break;
+                                        case '9:16':
+                                            dimensions = {width: 576, height: 1024}
+                                            break;
+                                        case '21:9':
+                                            dimensions = {width: 1344, height: 576}
+                                            break;
+                                        case '9:21':
+                                            dimensions = {width: 576, height: 1344}
+                                            break;
+                                    }
+                                } else {
+                                    switch(aspectRatio) {
+                                        case 'square':
+                                            dimensions = {width: 512, height: 512}
+                                            break;
+                                        case 'portrait':
+                                            dimensions = {width: 512, height: 768}
+                                            break;
+                                        case 'landscape':
+                                            dimensions = {width: 768, height: 512}
+                                            break;
+                                        case '16:9':
+                                            dimensions = {width: 768, height: 432}
+                                            break;
+                                        case '9:16':
+                                            dimensions = {width: 432, height: 768}
+                                            break;
+                                        case '21:9':
+                                            dimensions = {width: 1024, height: 432}
+                                            break;
+                                        case '9:21':
+                                            dimensions = {width: 432, height: 1024}
+                                            break;
+                                    }
+                                }
+
+                                canvas.width = dimensions.width / 2;
+                                canvas.height = dimensions.height /2
+
+                                ctx = canvas.getContext('2d');
+
+                                ctx.fillStyle = 'black';
+                                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                                // Split the canvas into two regions with different colors
+                                ctx.fillStyle = 'red';
+                                ctx.fillRect(0, 0, canvas.width * (splitValue / 100), canvas.height);
+                                ctx.fillStyle = 'blue';
+                                ctx.fillRect(canvas.width * (splitValue / 100), 0, canvas.width, canvas.height);
+
+                                // Set text properties
+                                ctx.fillStyle = 'white';
+                                ctx.font = '48px Arial';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'middle';
+
+                                // Calculate center positions for 'A' and 'B'
+                                const centerA = (canvas.width * (splitValue / 100)) / 2;
+                                const centerB = canvas.width * (splitValue / 100) + (canvas.width * (1 - splitValue / 100)) / 2;
+
+                                // Draw letters in the centers of each region
+                                ctx.fillText('A', centerA, canvas.height / 2);
+                                ctx.fillText('B', centerB, canvas.height / 2);
+
+                                // add text beneath the prompt id for the different splits
+
+                                
+
+                                promptText = document.getElementById('prompt').value;
+                                promptSplits = promptText.split('<rp>');
+
+                                // remove the first element:
+                                promptSplits.shift();
+
+                                // add the promptSplits to the regionalPromptDisplayText with the appropriate color:
+                                // its just 2 so DONT do a loop:\
+                                newDiv = document.createElement('div');
+
+                                // add the text to the newDiv
+                                split1 = "<p style='color: rgb(255, 100, 100)'>A: " + promptSplits[0] + "</p>";
+                                split2 = "<p style='color: rgb(100, 100, 255)'>B: " + promptSplits[1] + "</p>";
+
+                                newDiv.innerHTML = split1 + split2;
+
+
+
+                                // Append newDiv to the 'regionalPromptDisplay' div
+                                document.getElementById('regionalPromptDisplay').appendChild(newDiv);
+                                document.getElementById('regionalPromptDisplayText').appendChild(newDiv);
+
+                                // Append the canvas to 'regionalPromptDisplay'
+                                document.getElementById('regionalPromptDisplay').appendChild(canvas);
+                            
+
+                            }
+
+                            document.getElementById('regionalPromptCheckbox').addEventListener('change', function() {
+                                updateRegionalDisplay();
+                            });
+
+                            document.getElementById('regionalPromptSplitPosition').addEventListener('input', function() {
+                                document.getElementById('regionalPromptSplitPositionValue').innerText = this.value + '%';
+                                updateRegionalDisplay();
+                            });
+
+                            document.getElementById('regionalPromptAStrength').addEventListener('input', function() {
+                                document.getElementById('regionalPromptAStrengthValue').innerText = this.value + '%';
+                            });
+
+                            document.getElementById('regionalPromptBStrength').addEventListener('input', function() {
+                                document.getElementById('regionalPromptBStrengthValue').innerText = this.value + '%';
+                            });
+
+
+
+                            document.getElementById('prompt').addEventListener('change', function() {
+                                updateRegionalDisplay();
+                            });
+                            document.getElementById('prompt').addEventListener('input', function() {
+                                updateRegionalDisplay();
+                            });
+
+                            
+
+
+                            document.getElementById('regionalPromptSplitPosition').dispatchEvent(new Event('input'));
+
+                            document.getElementById('aspectRatio').addEventListener('change', function() {
+                                updateRegionalDisplay();
+                            });
+
+                            document.getElementById('model').addEventListener('change', function() {
+                                updateRegionalDisplay();
+                            });
+                            
+                            
+
+                        </script>
+                            
+                    </div>
+
                 </details>
 
 
@@ -2364,10 +2666,12 @@
                 // get the inpaintingCheckbox and img2imgCheckbox elements
                 const inpaintingCheckbox = document.getElementById('inpaintingCheckbox');
                 const img2imgCheckbox = document.getElementById('img2imgCheckbox');
+                const regionalPromptCheckbox = document.getElementById('regionalPromptCheckbox');
 
                 // get the inpaintingControls and img2imgControls elements
                 const inpaintingControls = document.getElementById('inpaintingControls');
                 const img2imgControls = document.getElementById('img2imgControls');
+                const regionalPromptControls = document.getElementById('regionalPromptControls');
         
                 function disableCheckboxes(target) {
                     if(target != "inpaintingCheckbox") {
@@ -2376,6 +2680,9 @@
                     } if (target != "img2imgCheckbox") {
                         img2imgCheckbox.checked = false;
                         img2imgControls.style.display = 'none';
+                    } if (target != "regionalPromptCheckbox") {
+                        regionalPromptCheckbox.checked = false;
+                        regionalPromptControls.style.display = 'none';
                     }
 
                     // open the details element with the target id: "extrasDetails":
@@ -2393,12 +2700,14 @@
                             img2imgCheckbox.checked = true;
                             img2imgControls.style.display = 'block';
                             break;
+                        case "regionalPromptCheckbox":
+                            regionalPromptCheckbox.checked = true;
+                            regionalPromptControls.style.display = 'block';
+                            break;
                     }
                 }
 
-                // add an event listener for when the inpaintingCheckbox changes
                 inpaintingCheckbox.addEventListener('change', function() {
-                    // if the inpaintingCheckbox is checked
                     if (this.checked) {
                         disableCheckboxes("inpaintingCheckbox")
                     }
@@ -2406,9 +2715,14 @@
 
                 // add an event listener for when the img2imgCheckbox changes
                 img2imgCheckbox.addEventListener('change', function() {
-                    // if the img2imgCheckbox is checked
                     if (this.checked) {
                         disableCheckboxes("img2imgCheckbox")
+                    }
+                });
+
+                regionalPromptCheckbox.addEventListener('change', function() {
+                    if (this.checked) {
+                        disableCheckboxes("regionalPromptCheckbox")
                     }
                 });
 
@@ -2536,13 +2850,13 @@
                         
                     if (model.value.includes('sdxl')) {
                         setSteps(10, 30);
-                        setCfguidance(3, 12)
+                        setCfguidance(2, 5)
                     } else if (model.value.includes('flux')) {
                         setSteps(4, 20);
                         setCfguidance(1, 1);
                     } else if (!model.value.includes('sdxl') && !model.value.includes('flux')) {
                         setSteps(20, 40);
-                        setCfguidance(4, 12);
+                        setCfguidance(3, 10);
                     }
                         
                     document.getElementById('stepsMax').innerText = `/${steps.max}`;
@@ -2576,11 +2890,6 @@
                     updateLabels();
                 });
 
-                window.onload = function() {
-                    // fire events for the steps and cfguidance sliders to update the labels:
-                    document.getElementById('steps').dispatchEvent(new Event('input'));
-                    document.getElementById('cfguidance').dispatchEvent(new Event('input'));
-                }
             </script>
                 
             <div class="form-control">
@@ -2621,13 +2930,17 @@
                     </label>
                     <input type="checkbox" id="upscaleCheckbox" name="upscaleCheckbox">
 
-                    <!-- <label>
-                        15% Larger Image: <span><a id="largerImageCreditsPrice">25</a> Credits
+                    <label>
+                        2x Images: <span><a id="doubleImagesCreditsPrice">25</a> Credits
                         <span class="tooltip" onclick="showTooltip(this)">❓</span>
                             <div class="tooltiptext">
-                                Use this checkbox to generate a larger image<br>
-                                The image will be generated at a 25% larger size, useful for images to be zoomed out further
-                    </label> -->
+                                Use this checkbox to generate double the images!<br>
+                                SD 1.5: 8 images<br>
+                                SDXL: 8 images<br>
+                                FLUX: 4 images
+                            </div>
+                    </label>
+                    <input type="checkbox" id="doubleImagesCheckbox" name="doubleImagesCheckbox">
 
                     <% if (session.loggedIn) { %>
                     <label>
@@ -2635,7 +2948,7 @@
                         <span class="tooltip" onclick="showTooltip(this)">❓</span>
                             <div class="tooltiptext">
                                 Use this checkbox to enable the fast queue for the AI Image Generator<br>
-                                The fast queue will prioritize your image in the queue, reducing the wait time
+                                The fast queue will prioritize your image in the queue, massively reducing the time it takes to generate the image
                             </div>
                     </label>
                     <button class="fastqueueButton" form="generatorForm" id="fastqueueButton" type="submit">Fast Queue</button>
@@ -2876,10 +3189,22 @@
 
                     extras = {
                         removeWatermark: true,
-                        upscale: true
+                        upscale: true,
+                        doubleImages: true
                     }
 
                     let runningCost = 0
+
+                    activeExtras = {
+                        removeWatermark: document.getElementById('removeWatermarkCheckbox').checked,
+                        upscale: document.getElementById('upscaleCheckbox').checked,
+                        doubleImages: document.getElementById('doubleImagesCheckbox').checked
+                    }
+                    activeBonus = {
+                        remoteWatermark: false,
+                        upscale: false,
+                        doubleImages: false
+                    }
 
                     fastqueueCost = getFastqueuePrice(loraCount, model)
                     if (document.getElementById('fastqueueButton').classList.contains('active')) {
@@ -2888,16 +3213,44 @@
 
                     extrasCosts = getExtrasPrice(extras, model)
 
-                    if (document.getElementById('removeWatermarkCheckbox').checked) {
+                    if (activeExtras.removeWatermark) {
                         runningCost += extrasCosts.removeWatermark
                     }
-
-                    if (document.getElementById('upscaleCheckbox').checked) {
+                    if (activeExtras.upscale) {
                         runningCost += extrasCosts.upscale
                     }
+                    if (activeExtras.doubleImages) {
+                        runningCost += extrasCosts.doubleImages
+                    }
+
+                    // activate bonus for upscale and doubleImages IF they are both active:
+                    if (activeExtras.upscale && activeExtras.doubleImages) {
+                        activeBonus.upscale = true
+                        activeBonus.doubleImages = true
+                    } else {
+                        activeBonus.upscale = false
+                        activeBonus.doubleImages = false
+                    }
+
+                    // if there are any bonus, add them to the runningCost and the respective extrasCosts:
+                    if (extrasCosts.removeWatermarkBonus > 0 && activeExtras.removeWatermark && activeBonus.remoteWatermark) {
+                        runningCost += extrasCosts.removeWatermarkBonus
+                        extrasCosts.removeWatermark += extrasCosts.removeWatermarkBonus
+                    }
+                    if (extrasCosts.upscaleBonus > 0 && activeExtras.upscale && activeBonus.upscale) {
+                        runningCost += extrasCosts.upscaleBonus
+                        extrasCosts.upscale += extrasCosts.upscaleBonus
+                    }
+                    if (extrasCosts.doubleImagesBonus > 0 && activeExtras.doubleImages && activeBonus.doubleImages) {
+                        runningCost += extrasCosts.doubleImagesBonus
+                        extrasCosts.doubleImages += extrasCosts.doubleImagesBonus
+                    }
+
                     
                     document.getElementById('removeWatermarkCreditsPrice').innerText = extrasCosts.removeWatermark
                     document.getElementById('upscaleCreditsPrice').innerText = extrasCosts.upscale
+                    document.getElementById('doubleImagesCreditsPrice').innerText = extrasCosts.doubleImages
+
 
 
                     document.getElementById('fastqueueCreditsPrice').innerText = fastqueueCost
@@ -2931,6 +3284,9 @@
                     prepareData()
                 });
                 document.getElementById('upscaleCheckbox').addEventListener('change', function() {
+                    prepareData()
+                });
+                document.getElementById('doubleImagesCheckbox').addEventListener('change', function() {
                     prepareData()
                 });
 
@@ -3252,8 +3608,8 @@
         document.getElementById('imageOverlay').addEventListener('click', hideOverlay);
     </script>
 
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://code.jquery.com/ui/1.13.1/jquery-ui.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" defer></script>
+    <script src="https://code.jquery.com/ui/1.13.1/jquery-ui.min.js" defer></script>
 
     <script>
         let timeout = null;  // This timeout variable should be outside the updateWordCount function
@@ -3399,7 +3755,7 @@
     </script>
     
     <script> <%- scripts.aiForm %> </script>
-    <script src="https://www.jscammie.com/scripts/ai-autocomplete.js?v19"></script>
+    <script src="https://www.jscammie.com/scripts/ai-autocomplete.js?v19" defer></script>
 
     <div class="overlay" id="overlayBooru"></div>
     <div class="booruPopupContent" id="booruPopupContent"></div>

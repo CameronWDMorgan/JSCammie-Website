@@ -11,6 +11,7 @@ const userSuggestionSchema = require('./schemas/userSuggestionSchema.js');
 const userHistorySchema = require('./schemas/userHistorySchema.js');
 const userCreditsHistorySchema = require('./schemas/userCreditsHistorySchema.js');
 const generationLoraSchema = require('./schemas/generationLoraSchema.js');
+const userBooruCommentsSchema = require('./schemas/userBooruCommentsSchema.js');
 
 async function connectToDatabase() {
 	try {
@@ -18,7 +19,7 @@ async function connectToDatabase() {
 		await mongoose.set('strictQuery', false)
 		console.log('Connected to database')
 	} catch (error) {
-		console.log(error)
+		console.log(`Error connecting to database: ${error}`)
 	}
 }
 
@@ -76,10 +77,6 @@ async function getSchemaDocumentOnce(schema, query) {
 
 		let document
 
-		// console.log everything passed through:
-		console.log(schema)
-		console.log(query)
-
 		switch (schema) {
 			case 'userBooru':
 				document = await userBooruSchema.findOne(query)
@@ -99,6 +96,12 @@ async function getSchemaDocumentOnce(schema, query) {
 			case 'userCreditsHistory':
 				document = await userCreditsHistorySchema.findOne(query)
 				break;
+			case 'generationLora':
+				document = await generationLoraSchema.findOne(query)
+				break;
+			case 'userBooruComments':
+				document = await userBooruCommentsSchema.findOne(query)
+				break;
 			default:
 				document = null
 		}
@@ -110,7 +113,7 @@ async function getSchemaDocumentOnce(schema, query) {
 		return document
 
 	} catch (error) {
-		console.log(error)
+		console.log(`Error getting schema: ${error}`)
 		return {status: 'error', message: 'Error getting schema'}
 	}
 
@@ -171,6 +174,13 @@ async function getSchemaDocuments(schema, query) {
 					document = await generationLoraSchema.find(query)
 				}
 				break;
+			case 'userBooruComments':
+				if (query == {}) {
+					document = await userBooruCommentsSchema.find({})
+				} else {
+					document = await userBooruCommentsSchema.find(query)
+				}
+				break;
 			default:
 				document = null
 		}
@@ -182,7 +192,7 @@ async function getSchemaDocuments(schema, query) {
 		return document
 
 	} catch (error) {
-		console.log(error)
+		console.log(`Error getting schema: ${error}`)
 		return {status: 'error', message: 'Error getting schema'}
 	}
 
@@ -207,6 +217,15 @@ async function updateSchemaDocumentOnce(schema, query, update) {
 			case 'userHistory':
 				await userHistorySchema.findOneAndUpdate(query, update)
 				break;
+			case 'userCreditsHistory':
+				await userCreditsHistorySchema.findOneAndUpdate(query, update)
+				break;
+			case 'generationLora':
+				await generationLoraSchema.findOneAndUpdate(query, update)
+				break;
+			case 'userBooruComments':
+				await userBooruCommentsSchema.findOneAndUpdate(query, update)
+				break;
 			default:
 				return {status: 'error', message: 'Invalid schema'}
 		}
@@ -216,10 +235,94 @@ async function updateSchemaDocumentOnce(schema, query, update) {
 		return {status: 'success', message: `Schema "${schema}" updated`}
 
 	} catch (error) {
-		console.log(error)
+		console.log(`Error updating schema: ${error}`)
 		return {status: 'error', message: 'Error updating schema'}
 	}
 	
+}
+
+async function createSchemaDocument(schema, document) {
+	try {
+		switch (schema) {
+			case 'userBooru':
+				await userBooruSchema.create(document)
+				break;
+			case 'userBooruTags':
+				await userBooruTagsSchema.create(document)
+				break;
+			case 'userProfile':
+				await userProfileSchema.create(document)
+				break;
+			case 'userSuggestion':
+				await userSuggestionSchema.create(document)
+				break;
+			case 'userHistory':
+				await userHistorySchema.create(document)
+				break;
+			case 'userCreditsHistory':
+				await userCreditsHistorySchema.create(document)
+				break;
+			case 'generationLora':
+				await generationLoraSchema.create(document)
+				break;
+			case 'userBooruComments':
+				await userBooruCommentsSchema.create(document)
+				break;
+			default:
+				return {status: 'error', message: 'Invalid schema'}
+		}
+		
+		console.log(`Schema "${schema}" created`)
+
+		return {status: 'success', message: `Schema "${schema}" created`}
+
+	} catch (error) {
+		console.log(`Error creating schema: ${error}`)
+		return {status: 'error', message: 'Error creating schema'}
+	}
+	
+}
+
+async function deleteSchemaDocument(schema, query) {
+	try {
+		switch (schema) {
+			case 'userBooru':
+				await userBooruSchema.findOneAndDelete(query)
+				break;
+			case 'userBooruTags':
+				await userBooruTagsSchema.findOneAndDelete(query)
+				break;
+			case 'userProfile':
+				await userProfileSchema.findOneAndDelete(query)
+				break;
+			case 'userSuggestion':
+				await userSuggestionSchema.findOneAndDelete(query)
+				break;
+			case 'userHistory':
+				await userHistorySchema.findOneAndDelete(query)
+				break;
+			case 'userCreditsHistory':
+				await userCreditsHistorySchema.findOneAndDelete(query)
+				break;
+			case 'generationLora':
+				await generationLoraSchema.findOneAndDelete(query)
+				break;
+			case 'userBooruComments':	
+				await userBooruCommentsSchema.findOneAndDelete(query)
+				break;
+			default:
+				return {status: 'error', message: 'Invalid schema'}
+		}
+	
+		console.log(`Schema "${schema}" deleted`)
+
+		return {status: 'success', message: `Schema "${schema}" deleted`}
+
+	} catch (error) {
+		console.log(`Error deleting schema: ${error}`)
+		return {status: 'error', message: 'Error deleting schema'}
+	}
+
 }
 
 
@@ -231,5 +334,7 @@ module.exports = {
 	getSchemaDocumentOnce,
 	getSchemaDocuments,
 	updateSchemaDocumentOnce,
+	createSchemaDocument,
+	deleteSchemaDocument,
 	connectToDatabase
 }

@@ -2,9 +2,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Free Stable Diffusion AI Image Generator FLUX/PDXL/SD1.5 | JSCammie.com</title>
+    <title>FREE Stable Diffusion AI Generator FLUX/PDXL/SD1.5 | JSCammie.com</title>
     <meta name="description" content="Free FLUX, PDXL and SD 1.5 Stable Diffusion Generator | Generate free images SFW & NSFW with multiple models, loras & more!">
-    <meta name="keywords" content="flux ai porn, flux ai nsfw, flux ai hentai, flux dev, flux schnell, flux loras, flux free, flux ai free, nsfw, uncensored, free, online, inpainting, img2img, txt2img, stable diffusion, ai image generator, sdxl ai image generator, ai free online, sfw, nsfw, sdxl, sd1.5, loras, lora, embeddings, pdxl, pony diffusion">
+    <meta name="keywords" content="no sign up, no restrictions, flux ai, flux dev, flux schnell, flux loras, flux free, flux ai free, nsfw, uncensored, free, online, inpainting, img2img, txt2img, stable diffusion, ai image generator, sdxl ai image generator, ai free online, sfw, nsfw, sdxl, sd1.5, loras, lora, embeddings, pdxl, pony diffusion">
     <meta name="author" content="JSCammie">
 
     <%- include('../partials/_headerAll') %>
@@ -85,6 +85,8 @@
         }
         .form-control textarea{
             font-size: 20;
+            overflow: hidden;
+            height: 500px
         }
         .form-control span {
             margin-top: 0.5rem;
@@ -343,17 +345,17 @@
 
         .loraCardGrid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
             grid-template-rows: auto;
             grid-column-gap: 5px;
             grid-row-gap: 5px;
             /* round the corners: */
-
+            overflow: hidden;
         }
 
-        .loraContainer {
-            /* remove scrollbar: */
-            scrollbar-width: none;
+        .lorabox {
+            border-radius: 20px;
+            border: none;
         }
 
         /* .form-control { */
@@ -412,6 +414,10 @@
 </head>
 <body>
 
+    <div id="description" style="display: none;">
+        JSCammie is a Free FLUX, PDXL and SD 1.5 Stable Diffusion Generator | Generate free images SFW & NSFW with multiple models, loras & more!
+    </div>
+
     <style>
         .loadingGradient {
             /* animate the gradient spinning: */
@@ -442,7 +448,7 @@
     </div>
 
     <!-- popup that displays how long it took to load, for example: 3.65s -->
-    <div style="position: fixed; top: 0; right: 0; padding: 10px; background-color: #00000015; border-radius: 0 0 0 10px; z-index: 1000;">
+    <div id="loadTimeDiv" style="position: fixed; top: 0; right: 0; padding: 10px; background-color: #00000015; border-radius: 0 0 0 10px; z-index: 1000;">
         <p id="loadTime">Loading...</p>
     </div>
 
@@ -470,6 +476,7 @@
 
                 setTimeout(() => {
                     loadTime.remove();
+                    document.getElementById('loadTimeDiv').remove();
                 }, 500);
             }, 500);
         });
@@ -482,6 +489,9 @@
             }
             if (document.readyState == "complete") {
                 loadingBar.style.width = '100%';
+                // fire events for the steps and cfguidance sliders to update the labels:
+                document.getElementById('steps').dispatchEvent(new Event('input'));
+                document.getElementById('cfguidance').dispatchEvent(new Event('input'));
             }
         }
 
@@ -600,11 +610,13 @@
 
             </style>
 
+            
+
             <details>
                 <% if (aiSaveSlots) { %>
-                <summary>Save Slots (<%=aiSaveSlots.length%>)</summary>
+                <summary>Save Slots (<%=aiSaveSlots.length%>) Click to View!</summary>
                 <% } else { %>
-                <summary>Save Slots (0)</summary>
+                <summary>Save Slots (0) Click to View!</summary>
                 <% } %>
                 <div class="form-control">
                     <!-- Display Existing Save Slots -->
@@ -901,13 +913,15 @@
                                 return;
                             }
 
+                            // loras and lora_strengths are strings of arrays like: "['lora1','lora2']" and "['1','2']", make sure to remove the brackets and split by comma, also remove the quotes:
+
                             let aiData = {
                                 prompt: yamlData[0],
                                 negativeprompt: yamlData[1],
                                 aspectRatio: yamlData[2],
                                 model: yamlData[3],
-                                loras: yamlData[4] ? yamlData[4].split(',').map(s => s.trim()) : [],
-                                lora_strengths: yamlData[5] ? yamlData[5].split(',').map(s => s.trim()) : [],
+                                loras: yamlData[4].replace('[','').replace(']','').split(',').map(lora => lora.replace(/'/g, '').trim()),
+                                lora_strengths: yamlData[5].replace('[','').replace(']','').split(',').map(strength => strength.replace(/'/g, '').trim()),
                                 steps: yamlData[6],
                                 cfg: yamlData[8],
                                 seed: yamlData[9]
@@ -942,8 +956,25 @@
                             document.getElementById('prompt').dispatchEvent(new Event('change'));
                             document.getElementById('negativeprompt').dispatchEvent(new Event('change'));
 
+                            // if the model value starts sdxl- AND isnt in the select box then default to sdxl-autismmix:
+                            if (!document.getElementById('model').querySelector(`option[value="${aiData.model}"]`)) {
+                                if (aiData.model.startsWith('sdxl-')) {
+                                    document.getElementById('model').value = 'sdxl-autismmix';
+                                }
+                                if (aiData.model.startsWith('flux-')) {
+                                    document.getElementById('model').value = 'flux-unchained';
+                                }
+                                if (!aiData.model.startsWith('sdxl-') && !aiData.model.startsWith('flux-')) {
+                                    document.getElementById('model').value = 'fluffysonic';
+                                }
+                            } else {
+                                document.getElementById('model').value = aiData.model;
+                            }
+
                             // fire the change event for the model select box and the aspect ratio select box:
                             document.getElementById('model').dispatchEvent(new Event('change'));
+
+
                             document.getElementById('aspectRatio').dispatchEvent(new Event('change'));
 
                             // set all the loras to unchecked:
@@ -964,14 +995,20 @@
                                 masterLoraData[loraId].strength = masterLoraData[loraId].defaultStrength;
                             }
 
-                            // new new whonack code (use masterLoraData to set the elements to .selected ALSO do the lora_strengths settings (its just an array so have some kind of counter or index to set the value of the slider to the value in the array)):
-                            
-                            for (let i = 0; i < aiData.loras.length; i++) {
-                                let loraId = aiData.loras[i];
-                                let loraStrength = aiData.lora_strengths[i];
+                            // if there are no loras then dont do anything:
+                            if (aiData.loras.length > 0) {
+                                // check the checkboxes for the loras in the save slot:
+                                for (let i = 0; i < aiData.loras.length;) {
+                                    let loraId = aiData.loras[i];
+                                    let loraStrength = aiData.lora_strengths[i];
 
-                                masterLoraData[loraId].selected = true;
-                                masterLoraData[loraId].strength = loraStrength;
+                                    console.log(`loraId: ${loraId}\nloraStrength: ${loraStrength}`)
+
+                                    masterLoraData[loraId].selected = true;
+                                    masterLoraData[loraId].strength = Number(loraStrength);
+                                
+                                    i++
+                                }
                             }
 
                             loadLoras();
@@ -1023,7 +1060,21 @@
                             document.getElementById('prompt').value = saveSlotPrompt;
                             document.getElementById('negativeprompt').value = saveSlotNegativePrompt;
                             document.getElementById('aspectRatio').value = saveSlotAspectRatio;
-                            document.getElementById('model').value = saveSlotModel;
+                            
+                            // if the model value starts sdxl- AND isnt in the select box then default to sdxl-autismmix:
+                            if (!document.getElementById('model').querySelector(`option[value="${saveSlotModel}"]`)) {
+                                if (saveSlotModel.startsWith('sdxl-')) {
+                                    document.getElementById('model').value = 'sdxl-autismmix';
+                                }
+                                if (saveSlotModel.startsWith('flux-')) {
+                                    document.getElementById('model').value = 'flux-unchained';
+                                }
+                                if (!saveSlotModel.startsWith('sdxl-') && !saveSlotModel.startsWith('flux-')) {
+                                    document.getElementById('model').value = 'fluffysonic';
+                                }
+                            } else {
+                                document.getElementById('model').value = saveSlotModel
+                            }
                             
                             // convert the loras string into an array:
                             saveSlotLorasArray = saveSlotLoras.split(',');
@@ -1114,20 +1165,12 @@
                     
                 </div>
             </details>
+
+            <a class="tooltip" onclick="showTooltip(this)">❓</a>
+            <div class="tooltiptext">
+                Save-Slots are a way of saving and loading the current settings, very good for saving templates to generate the best images for later use, this requires you to be logged in to use.<br><br>If you'd like to save your settings without logging in then you can use the "Export/Import .AIDATA" buttons beneath this text to save your settings to a file on your computer/phone!
+            </div>
             
-
-            <!-- ejs template if statement, if session.lastRequestSD !== null or undefined then: -->
-            <% if (session.lastRequestSD === null || session.lastRequestSD === undefined) { %>
-                
-                
-            <% } else { %>
-                <!-- session.lastRequestSD span object to read later: -->
-                <span id="lastRequestSD" style="display: none;">
-                    <%- JSON.stringify(session.lastRequestSD) %>
-                </span>
-                
-            <% } %>
-
 
             <style>
                 /* Common styles for buttons */
@@ -1170,9 +1213,15 @@
                 }
             </style>
             <div style="flex: auto;">
-                <button class="button exportaidatabutton" type="button" onclick="exportAIData()">Export AI Data</button>
-                <label for="importAiData" class="button importaidatalabel">Import AI Data:</label>
+                <button class="button exportaidatabutton" type="button" onclick="exportAIData()">Export .AIDATA</button>
+                <label for="importAiData" class="button importaidatalabel">Import .AIDATA</label>
                 <input id="importAiData" class="importaidatainput" type="file">
+                <span class="tooltip" onclick="showTooltip(this)">❓</span>
+                <div class="tooltiptext">Import .AIDATA:<br>
+                Allows the user to import a .AIDATA file to load the settings into the AI Image Generator, this can be used to load settings like the loras used, the prompt, model, etc etc; to copy settings from booru posts and to use settings from other users.<br>
+                <br>Export .AIDATA:<br>
+                Allows the user to export the current settings to a .AIDATA file, this can be used to save settings for later use and share settings with other users.
+                </div>
             </div>
             
             <script>
@@ -1197,88 +1246,14 @@
             <form id="generatorForm">
 
                 <style>
-                    textarea {
-                        overflow: hidden;
-                    }
+                    
 
                 </style>
-
-                <style>
-                    .tooltiptext {
-                        visibility: hidden;
-                        opacity: 0;
-                        transition: visibility 0s, opacity 0.3s;
-                        /* make it take up no room on the page by default: */
-                        position: absolute;
-                        padding: 10px;
-                        margin: 10px;
-                        background-color: rgba(0, 0, 0, 0.5);
-                        color: rgb(255, 144, 144);
-                        
-                    }
-
-                    /* have a round border around the thingy: */
-
-                    .tooltip {
-                        cursor: pointer;
-                        border-radius: 50%;
-                        border: 1px solid rgb(255, 255, 255);
-                        width: 20px;
-                        height: 20px;
-                        display: inline-block;
-                        text-align: center;
-                        line-height: 20px;
-                    }
-
-                </style>
-
-                <script>
-                    function showTooltip(element) {
-                        const tooltip = element.nextElementSibling;
-
-                        // tooltip state:
-                        if (tooltip.style.visibility === 'visible') {
-                            tooltip.style.opacity = '0';
-                            // wait 0.3 seconds then hide the tooltip:
-                            setTimeout(() => {
-                                tooltip.style.visibility = 'hidden';
-                                tooltip.style.position = 'absolute';
-                            }, 300)
-                            return;
-                        } else {
-                            tooltip.style.position = 'relative';
-                            tooltip.style.visibility = 'visible';
-                            tooltip.style.opacity = '1';
-                            // wait 5 seconds then hide the tooltip, but if they toggle the tooltip on and off reset the timeout:
-                            setTimeout(() => {
-                                tooltip.style.opacity = '0';
-                                setTimeout(() => {
-                                    tooltip.style.visibility = 'hidden';
-                                    tooltip.style.position = 'absolute';
-                                }, 300)
-                            }, 15000)
-                        }
-                    }
-                </script>
 
                 <details open>
                     
                     <summary>Prompt & Negative Prompt</summary>
-
-                        <!-- have a autocompleteCheckbox and a strengthArrowkeysCheckbox in a flex box side by side: -->
-
-                        <div class="form-control settings-container">
-                            <div class="setting" hidden style="display: none;">
-                                <label for="strengthArrowkeysCheckbox">Disable Strength Arrowkeys:</label>
-                                <input type="checkbox" id="strengthArrowkeysCheckbox">
-                            </div>
-                            <div class="setting">
-                                <label for="autocompleteCheckbox">Disable Autocomplete:</label>
-                                <input type="checkbox" id="autocompleteCheckbox">
-                            </div>
-                        </div>
                         
-
                         <style>
                             .wordCountGreen {
                                 color: green;
@@ -1291,13 +1266,56 @@
                             }
                         </style>
 
-                        <div style="position: relative;" id="autocomplete-div"></div>
+                        <style>
+                            #autocomplete-div {
+                                display: block;
+                                z-index: 1000;
+                                background-color: rgba(0, 0, 0, 0.2);
+                                border: 1px solid black;
+                                width: 100%;
+                                max-height: 100px; /* Limit height */
+                                height: 100px;
+                                overflow-y: auto; /* Add vertical scroll if items exceed height */
+                            }
+
+                            .autocomplete-item {
+                                padding: 4px;
+                                background-color: rgba(103, 131, 255, 0.3);
+                                border: 1px solid black;
+                                width: fit-content;
+                                cursor: pointer;
+                                position: relative;
+                                font-size: 20px
+                            }
+
+                            .autocomplete-item-1 {
+                                background-color: rgba(255, 0, 0, 0.3) !important;
+                            }
+
+                            .autocomplete-item-5 {
+                                background-color: rgba(238, 255, 0, 0.3) !important;
+                            }
+
+                            .autocomplete-item-10 {
+                                background-color: rgba(0, 255, 0, 0.3) !important;
+                            }
+
+                        </style>
+
+                        <div class="frosted" style="position: relative;" id="autocomplete-div"></div>
 
                         <div class="form-control">
                             <label for="prompt">
                                 Prompt: <span id="promptWordCount">(70)</span>
                                 <span class="tooltip" onclick="showTooltip(this)">❓</span>
-                                <div class="tooltiptext">Use this field to describe what you want to see in the image.</div>
+                                <div class="tooltiptext">Type here what you want in the image.
+                                You can use "," to separate different things you want in the image.
+                                For example: "A cute cat, with a hat, in a forest"<br><br>
+                                To adjust how much focus or Strength specific word(s) have you can use the following syntax:<br>
+                                (word), ((word)), ((word1, word2))<br>(word:1.25), ((word:1.25)), ((word1, word2:1.25))<br>
+                                (word:0.75), ((word:0.75)), ((word1, word2:0.75))<br><br>
+                                These are just examples of setting the strength(s) of the word(s) in the prompt, you can use any number between 0.1 and 3.0 to adjust the strength of the word(s) in the prompt.
+                                </div>
                             </label>
                             <textarea id="prompt" name="prompt" rows="2" required></textarea>
                         </div>
@@ -1306,7 +1324,14 @@
                             <label for="negativeprompt">
                                 Negative Prompt: <span id="negativePromptWordCount">(70)</span>
                                 <span class="tooltip" onclick="showTooltip(this)">❓</span>
-                                <div class="tooltiptext">Use this field to describe what you do not want to see in the image.</div>
+                                <div class="tooltiptext">Type here what you don't want in the image.
+                                You can use "," to separate different things you don't want in the image.
+                                For example: "ugly, dogs, no hat, no forest"<br><br>
+                                To adjust how much focus or Strength specific word(s) have you can use the following syntax:<br>
+                                (word), ((word)), ((word1, word2))<br>(word:1.25), ((word:1.25)), ((word1, word2:1.25))<br>
+                                (word:0.75), ((word:0.75)), ((word1, word2:0.75))<br><br>
+                                These are just examples of setting the strength(s) of the word(s) in the prompt, you can use any number between 0.1 and 3.0 to adjust the strength of the word(s) in the prompt.
+                                </div>
                             </label>
                             <textarea id="negativeprompt" name="negativeprompt" rows="2">nsfw, monochrome, black and white, worst quality, low quality, watermark, signature, bad anatomy, bad hands, deformed limbs, blurry, cropped, cross-eyed, extra arms, extra legs, extra limbs, extra pupils, bad proportions, poorly drawn hands, simple background, bad background, bad lighting, bad perspective</textarea>
                         </div>
@@ -1322,7 +1347,7 @@
                             textareas.forEach(textarea => {
                                 // Function to adjust height
                                 textarea.style.height = 'auto'; // Reset height to recalculate
-                                textarea.style.height = textarea.scrollHeight + 'px';
+                                textarea.style.height = Number(textarea.scrollHeight) + 40 + 'px';
 
                             })
                         }
@@ -1333,9 +1358,6 @@
                             textarea.addEventListener('input', saveLoadTextAreaHeight);
                             textarea.addEventListener('change', saveLoadTextAreaHeight);
                         })
-
-                        // give me a ubuntu command to kill a process id of 91298:
-                        // kill -9 91298
 
                         saveLoadTextAreaHeight();
 
@@ -1386,6 +1408,7 @@
                             <option value="sdxl-autismmix">(SDXL) Autism Mix ("Better" PonyXL, uses PonyXL Prompting)</option>
                             <option value="sdxl-sonichasautismmix">(SDXL) SonicHasAutismMix (SonicDiffusionXL & AutismMix merge, uses PonyXL Prompting)</option>
                             <option value="sdxl-ponyrealism">(SDXL) Pony Realism (Realistic, uses PonyXL Prompting)</option>
+                            <option value="sdxl-fluffysonic">(SDXL) FluffySonic (Sonic the Hedgehog by kitsune_sage, uses PonyXL Prompting)</option>
                             <option value="flux-unchained">(FLUX) Unchained (Everything, natural language prompting)</option>
                         </select>
                     </div>
@@ -1409,7 +1432,7 @@
                     <style>
                       
                         .loraContainer {
-                            max-height: 600px !important; /* Adjust as needed for your layout */
+                            max-height: 750px !important; /* Adjust as needed for your layout */
                             height: fit-content;
                             width: 100%;
                             overflow-y: auto; /* Allows scrolling within the container */
@@ -1506,7 +1529,48 @@
                             /* styling for the sorting buttons, make sure they are next to eachother horizontally and not above/below! 
                             use purple colours and active class to show which one is selected! */
                             
-                            #sortAlphaBtn, #sortNewestBtn {
+                            .sorting-btn {
+                                background-color: #4caf6a40;
+                                border: 3px solid #4caf6a !important;
+                                color: white;
+                                padding: 7px 15px;
+                                text-align: center;
+                                font-size: 16px;
+                                border-radius: 10px;
+                                cursor: pointer;
+                                display: inline-block;
+                                margin: 4px 2px;
+                                transition: background-color 0.3s, transform 0.7s !important;
+                                transform-origin: center;
+                            }
+
+                            .sorting-btn:hover {
+                                background-color: #4CAF50;
+                                transform: scale(1.08) rotate(1deg);
+                            }
+
+                            /* detect active class and apply style: */
+
+                            .sorting-btn.active {
+                                background-color: #4CAF50;
+                                transform: scale(1.08)
+                            }
+
+                            .category-btn.deactive {
+                                background-color: #24242440;
+                                border: 3px solid #000000 !important;
+                                color: rgb(94, 94, 94);
+                                padding: 7px 15px;
+                                text-align: center;
+                                font-size: 16px;
+                                border-radius: 10px;
+                                cursor: pointer;
+                                display: inline-block;
+                                margin: 4px 2px;
+                                transition: background-color 0.3s, transform 0.7s !important;
+                                transform-origin: center;
+                            }
+                            .category-btn {
                                 background-color: #8c4caf40;
                                 border: 3px solid #8c4caf !important;
                                 color: white;
@@ -1520,16 +1584,13 @@
                                 transition: background-color 0.3s, transform 0.7s !important;
                                 transform-origin: center;
                             }
-
-                            #sortAlphaBtn:hover, #sortNewestBtn:hover {
+                            .category-btn:hover {
                                 background-color: #ce9be9;
                                 transform: scale(1.08) rotate(1deg);
                             }
-
-                            /* detect active class and apply style: */
-
-                            #sortAlphaBtn.active, #sortNewestBtn.active {
+                            .category-btn.active {
                                 background-color: #8C4CAF;
+                                transform: scale(1.08) 
                             }
                             
                         </style>
@@ -1542,8 +1603,10 @@
                                     Use these buttons to sort the Loras alphabetically or by newest added/updated.
                                 </div>
                             </div>
-                            <button id="sortAlphaBtn" type="button">Sort Alphabetically</button>
-                            <button id="sortNewestBtn" type="button">Sort by Newest</button>
+                            <button class="sorting-btn" id="sortAlphaBtn" type="button">Sort Alphabetically</button>
+                            <button class="sorting-btn" id="sortNewestBtn" type="button">Sort by Newest</button>
+                            <button class="sorting-btn" id="sortUsesBtn" type="button">Sort by Uses</button>
+                            <button class="sorting-btn" id="sortLastUsedBtn" type="button">Sort by Last Used</button>
                         </div>
 
                         <!-- showSafeCheckbox, showSuggestiveCheckbox, showNSFWCheckbox -->
@@ -1612,7 +1675,11 @@
                         <script>
                             
 
-                            let lastRequestSD = JSON.parse(document.getElementById('lastRequestSD').textContent || '{}');
+                            <% if (session.lastRequestSD) { %>
+                                let lastRequestSD = <%- JSON.stringify(session.lastRequestSD) %>;
+                            <% } else { %>
+                                let lastRequestSD = {};
+                            <% } %>
 
                             var favorites = {};
 
@@ -1641,7 +1708,9 @@
                                             rating: `<%= value.rating || 'n/a' %>`,
                                             image: `<%= value.image %>`,
                                             selected: false,
-                                            defaultStrength: <%= value.strength || 'Null' %>
+                                            defaultStrength: <%= value.strength || 'Null' %>,
+                                            usesCount: BigInt(`<%= value.usesCount || '0' %>`),
+                                            lastUsed: `<%= value.lastUsed || '0' %>`
                                         }
                                     <% }); %>
                                 <% } %>
@@ -1654,6 +1723,51 @@
                             function toggleFavorite(loraId) {
                                 favorites[loraId] = !favorites[loraId];
                                 loadLoras();
+                            }
+
+                            function loraChecks(key, value, model, showSafe, showSuggestive, showNSFW, showNA, loraSearch, name) {
+                                // Model is SDXL and lora isnt SDXL
+                                if (model.startsWith("sdxl") && !key.includes("-sdxl")) {
+                                    // console.log(`${name} is not compatible with ${model}`)
+                                    masterLoraData[key].selected = false;
+                                    return false;
+                                } 
+                                if (model.startsWith("flux") && !key.includes("-flux")) {
+                                    masterLoraData[key].selected = false;
+                                    return false;
+                                } 
+                                if (!model.startsWith("sdxl") && !model.startsWith("flux")) {
+                                    if (key.includes("-sdxl") || key.includes("-flux")) {
+                                        masterLoraData[key].selected = false;
+                                        return false;
+                                    }
+                                }
+
+                                // Check if the Lora is safe, suggestive, nsfw, or n/a
+                                if (value.rating === 'safe' && !showSafe) {
+                                    return false;
+                                } else if (value.rating === 'suggestive' && !showSuggestive) {
+                                    return false;
+                                } else if (value.rating === 'nsfw' && !showNSFW) {
+                                    return false;
+                                } else if (value.rating === 'n/a' && !showNA) {
+                                    return false;
+                                }
+
+                                // Check if the Lora .name or any .words matches the search query:
+                                // if (!name.includes(loraSearch) && !value.words.includes(loraSearch) && !key.includes(loraSearch) && !value.description.includes(loraSearch)) {
+                                //     return false; 
+                                // }
+
+                                // split the loraSearch into an array of words by spaces and commas:
+                                loraSearchArray = loraSearch.split(/[\s,]+/);
+                                
+                                // check if the lora .name, .words, .description, key, have all of the words in the loraSearchArray anywhere in them:
+                                if (!loraSearchArray.every(word => name.includes(word) || value.words.includes(word) || key.includes(word) || value.description.includes(word))) {
+                                    return false;
+                                }
+
+                                return true
                             }
 
                             // recreate the above code, using filtering from the model select box to show only the loras that are compatible with the selected model, and the safety ratings checkboxes to show only the loras that are safe, suggestive, nsfw, or n/a:
@@ -1676,6 +1790,8 @@
                                 // sorting logic:
                                 let sortAlphaBtn = document.getElementById('sortAlphaBtn');
                                 let sortNewestBtn = document.getElementById('sortNewestBtn');
+                                let sortUsesBtn = document.getElementById('sortUsesBtn');
+                                let sortLastUsedBtn = document.getElementById('sortLastUsedBtn');
 
                                 if (sortAlphaBtn.classList.contains('active')) {
                                     // sort the loras alphabetically:
@@ -1684,6 +1800,16 @@
                                     // sort the loras by newest ms timestamp "1717352144698.4163" as example:
                                     masterLoraData = Object.fromEntries(Object.entries(masterLoraData).sort((a, b) => {
                                         return parseFloat(b[1].dateCreated) - parseFloat(a[1].dateCreated);
+                                    }));
+                                } else if(sortUsesBtn.classList.contains('active')) {
+                                    // sort the loras by uses count:
+                                    masterLoraData = Object.fromEntries(Object.entries(masterLoraData).sort((a, b) => {
+                                        return parseFloat(b[1].usesCount) - parseFloat(a[1].usesCount);
+                                    }));
+                                } else if (sortLastUsedBtn.classList.contains('active')) {
+                                    // sort the loras by last used ms timestamp "1717352144698" as example:
+                                    masterLoraData = Object.fromEntries(Object.entries(masterLoraData).sort((a, b) => {
+                                        return parseFloat(b[1].lastUsed) - parseFloat(a[1].lastUsed);
                                     }));
                                 }
 
@@ -1711,44 +1837,14 @@
 
                                     // Check if the Lora is compatible with the selected model
 
-                                    // Model is SDXL and lora isnt SDXL
-                                    if (model.startsWith("sdxl") && !key.includes("-sdxl")) {
-                                        // console.log(`${name} is not compatible with ${model}`)
+                                    // if loraChecks returns false then continue to the next lora:
+                                    if (!loraChecks(key, value, model, showSafe, showSuggestive, showNSFW, showNA, loraSearch, name)) {
                                         return;
-                                    } 
-                                    if (model.startsWith("flux") && !key.includes("-flux")) {
-                                        return;
-                                    } 
-                                    if (!model.startsWith("sdxl") && !model.startsWith("flux")) {
-                                        if (key.includes("-sdxl") || key.includes("-flux")) {
-                                            return;
+                                    } else {
+                                        // only show the loras in the selected category:
+                                        if (lastSelectedCategory.toLowerCase() !== key.split('-')[0]) {
+                                            return false;
                                         }
-                                    }
-
-                                    // Model is FLUX and lora isnt FLUX
-                                    
-
-                                    
-
-                                    // Check if the Lora is safe, suggestive, nsfw, or n/a
-                                    if (value.rating === 'safe' && !showSafe) {
-                                        return;
-                                    } else if (value.rating === 'suggestive' && !showSuggestive) {
-                                        return;
-                                    } else if (value.rating === 'nsfw' && !showNSFW) {
-                                        return;
-                                    } else if (value.rating === 'n/a' && !showNA) {
-                                        return;
-                                    }
-
-                                    // Check if the Lora .name or any .words matches the search query:
-                                    if (!name.includes(loraSearch) && !value.words.includes(loraSearch)) {
-                                        return;
-                                    }
-
-                                    // only show the loras in the selected category:
-                                    if (lastSelectedCategory.toLowerCase() !== key.split('-')[0]) {
-                                        return;
                                     }
 
                                     
@@ -1778,6 +1874,31 @@
                                     })
                                 })
 
+                                // if a category button has no loras then add class deactive to it:
+                                document.querySelectorAll('.category-btn').forEach(button => {
+                                    let category = button.innerText.toLowerCase();
+                                    let categoryLoras = Object.entries(masterLoraData).filter(([key, value]) => key.split('-')[0] === category);
+                                    let categoryLorasArrays = {}
+                                    // check loras in the category:
+                                    categoryLoras.forEach(([key, value]) => {
+                                        name = value.name.toLowerCase();
+                                        if (loraChecks(key, value, model, showSafe, showSuggestive, showNSFW, showNA, loraSearch, name)) {
+                                            categoryLorasArrays[key] = value;
+                                        }
+                                    })
+
+                                    if (Object.keys(categoryLorasArrays).length === 0) {
+                                        button.classList.add('deactive');
+                                        // button.classList.remove('active');
+                                        button.disabled = true;
+                                    } else {
+                                        button.classList.remove('deactive');
+                                        // button.classList.add('active');
+                                        button.disabled = false;
+                                    }
+                                    
+                                })
+
                             }
 
                             // add window onload function:
@@ -1785,11 +1906,11 @@
 
                                 // Set form values to the last request values
                                 document.getElementById('prompt').value = lastRequestSD.prompt || '';
-                                document.getElementById('negativeprompt').value = lastRequestSD.negativeprompt || '';
-                                document.getElementById('aspectRatio').value = lastRequestSD.aspectRatio || '';
-                                document.getElementById('model').value = lastRequestSD.model || '';
-                                document.getElementById('steps').value = lastRequestSD.steps || '15';
-                                document.getElementById('cfguidance').value = lastRequestSD.cfguidance || '7.5';
+                                document.getElementById('negativeprompt').value = lastRequestSD.negativeprompt || 'nsfw, monochrome, black and white, worst quality, low quality, watermark, signature, bad anatomy, bad hands, deformed limbs, blurry, cropped, cross-eyed, extra arms, extra legs, extra limbs, extra pupils, bad proportions, poorly drawn hands, simple background, bad background, bad lighting, bad perspective';
+                                document.getElementById('aspectRatio').value = lastRequestSD.aspectRatio || 'square';
+                                document.getElementById('model').value = lastRequestSD.model || 'fluffysonic';
+                                document.getElementById('steps').value = lastRequestSD.steps || '20';
+                                document.getElementById('cfguidance').value = lastRequestSD.cfguidance || '6';
                                 document.getElementById('seed').value = lastRequestSD.seed || '-1';
                                 document.getElementById('scheduler').value = lastRequestSD.scheduler || "eulera";
 
@@ -1801,47 +1922,56 @@
                                 document.getElementById('model').dispatchEvent(new Event('change'));
                                 document.getElementById('aspectRatio').dispatchEvent(new Event('change'));
 
-                                let autocompleteenabled = lastRequestSD.autocompleteenabled || false;
-                                if (autocompleteenabled === true) {
-                                    document.getElementById('autocompleteCheckbox').checked = true;
-                                } else {
-                                    document.getElementById('autocompleteCheckbox').checked = false;
-                                }
-
-                                let strengthenabled = lastRequestSD.strengthenabled || false;
-                                if (strengthenabled === true) {
-                                    document.getElementById('strengthArrowkeysCheckbox').checked = true;
-                                } else {
-                                    document.getElementById('strengthArrowkeysCheckbox').checked = false;
-                                }
-
                                 // set the loras as selected inside of the masterLoraData object:
+                                if (!lastRequestSD.loras) {
+                                    lastRequestSD.loras = [];
+                                }
                                 lastRequestSD.loras.forEach(loraId => {
-                                    masterLoraData[loraId].selected = true;
+                                    // check if the loraId exists in the masterLoraData object:
+                                    if (masterLoraData[loraId]) {
+                                        masterLoraData[loraId].selected = true;
+                                    }
                                 });
 
                                 // category button logic, if the button is clicked then show only the loras in that category:
                                 document.querySelectorAll('.category-btn').forEach(button => {
                                     button.addEventListener('click', function() {
                                         lastSelectedCategory = button.innerText;
+                                        // set class to active for the button that was clicked:
+                                        document.querySelectorAll('.category-btn').forEach(button => {
+                                            button.classList.remove('active');
+                                        })
+                                        button.classList.add('active');
                                         // load the loras:
                                         loadLoras();
                                     })
                                 })
 
                                 // sorting button logic, if the button is clicked then sort the loras alphabetically or by newest:
-                                document.getElementById('sortAlphaBtn').addEventListener('click', function() {
-                                    document.getElementById('sortAlphaBtn').classList.add('active');
-                                    document.getElementById('sortNewestBtn').classList.remove('active');
-                                    // load the loras:
-                                    loadLoras();
-                                })
+                                // document.getElementById('sortAlphaBtn').addEventListener('click', function() {
+                                //     document.getElementById('sortAlphaBtn').classList.add('active');
+                                //     document.getElementById('sortNewestBtn').classList.remove('active');
+                                //     // load the loras:
+                                //     loadLoras();
+                                // })
 
-                                document.getElementById('sortNewestBtn').addEventListener('click', function() {
-                                    document.getElementById('sortNewestBtn').classList.add('active');
-                                    document.getElementById('sortAlphaBtn').classList.remove('active');
-                                    // load the loras:
-                                    loadLoras();
+                                // document.getElementById('sortNewestBtn').addEventListener('click', function() {
+                                //     document.getElementById('sortNewestBtn').classList.add('active');
+                                //     document.getElementById('sortAlphaBtn').classList.remove('active');
+                                //     // load the loras:
+                                //     loadLoras();
+                                // })
+
+                                // new code that uses the class of .sorting-btn to add event listeners to all of them:
+                                document.querySelectorAll('.sorting-btn').forEach(button => {
+                                    button.addEventListener('click', function() {
+                                        document.querySelectorAll('.sorting-btn').forEach(button => {
+                                            button.classList.remove('active');
+                                        })
+                                        button.classList.add('active');
+                                        // load the loras:
+                                        loadLoras();
+                                    })
                                 })
 
                                 // using class="safetyRatingCheckbox" to filter the loras by their safety ratings:
@@ -1849,10 +1979,21 @@
                                     checkbox.addEventListener('change', function() {
                                         // load the loras:
                                         loadLoras();
+                                        updateLoraSelectionsSummary()
                                     })
                                 })
 
                                 document.getElementById('sortAlphaBtn').classList.add('active');
+                                document.getElementById('style-CategoryButton').classList.add('active');
+
+                                // on model change:
+                                document.getElementById('model').addEventListener('change', function() {
+
+
+                                    // load the loras:
+                                    loadLoras();
+                                    updateLoraSelectionsSummary();
+                                })
 
                                 loadLoras();
                                 updateLoraSelectionsSummary();
@@ -1873,10 +2014,46 @@
                                 loraSelectionsSummary = document.getElementById('loraSelectionsSummary');
                                 loraSelectionsSummary.innerHTML = '';
                                 selectedLoras = Object.entries(masterLoraData).filter(([key, value]) => value.selected);
-                                totalLoras = Object.entries(masterLoraData).length;
+                                // total loras needs to respect the model type ("doesnt have sdxl or flux in the key", "sdxl in key", "flux in key")
+
+                                totalLoras = Object.entries(masterLoraData).filter(([key, value]) => {
+                                    if (document.getElementById('model').value.startsWith("sdxl")) {
+                                        return key.includes("-sdxl");
+                                    } else if (document.getElementById('model').value.startsWith("flux")) {
+                                        return key.includes("-flux");
+                                    } else {
+                                        return !key.includes("-sdxl") && !key.includes("-flux");
+                                    }
+                                }).length;
+
+                                totalRatingLoraCount = 0
+
+                                // now have a seperate totalLoras for the safety ratings checkboxes, make sure it also follows the model:
+                                totalRatingLoraCount = Object.entries(masterLoraData).filter(([key, value]) => {
+                                    if (document.getElementById('model').value.startsWith("sdxl")) {
+                                        return key.includes("-sdxl");
+                                    } else if (document.getElementById('model').value.startsWith("flux")) {
+                                        return key.includes("-flux");
+                                    } else {
+                                        return !key.includes("-sdxl") && !key.includes("-flux");
+                                    }
+                                }).filter(([key, value]) => {
+                                    if (document.getElementById('showSafeCheckbox').checked && value.rating === 'safe') {
+                                        return true;
+                                    } else if (document.getElementById('showSuggestiveCheckbox').checked && value.rating === 'suggestive') {
+                                        return true;
+                                    } else if (document.getElementById('showNSFWCheckbox').checked && value.rating === 'nsfw') {
+                                        return true;
+                                    } else if (document.getElementById('showNACheckbox').checked && value.rating === 'n/a') {
+                                        return true;
+                                    } else {
+                                        return false;
+                                    }
+                                }).length;
+
 
                                 document.getElementById('totalLorasSelected').innerText = selectedLoras.length;
-                                document.getElementById('totalLoras').innerText = totalLoras;
+                                document.getElementById('totalLoras').innerText = `${totalRatingLoraCount} (${totalLoras})`;
 
                                 if (selectedLoras.length === 0) {
                                     loraSelectionsSummary.innerHTML = '<p>No Loras selected</p>';
@@ -1889,30 +2066,44 @@
 
                                     let wordsFormatted = ""
 
-                                    // trimmmedWord = word.trim()
-                                        // `<a class="lora-words">
-                                        //     <strong>Words ${index + 1}:</strong> ${trimmmedWord.trim()}<br>
-                                        //     <br>
-                                        //     <button class="lora-words-copy-button" onclick="copyXWordsToClipboard(\`${trimmmedWord}\`)">Copy Words</button>
-                                        // </a><br>`
-
                                     value.words.split(';').map((word, index) => {
                                         noWhitespaceWord = word.trim()
+                                        // remove any start or end commas:
+                                        if (noWhitespaceWord.startsWith(',')) {
+                                            noWhitespaceWord = noWhitespaceWord.slice(1)
+                                        }
+                                        if (noWhitespaceWord.endsWith(',')) {
+                                            noWhitespaceWord = noWhitespaceWord.slice(0, -1)
+                                        }
                                         wordsFormatted += `<a class="lora-words">
-                                            <strong>Words ${index + 1}:</strong> ${noWhitespaceWord}<br>
-                                            <br>
+                                            Words ${index + 1}: ${noWhitespaceWord}<br>
                                             <button class="lora-words-copy-button" onclick="copyXWordsToClipboard(\`${noWhitespaceWord}\`)">Copy Words</button>
                                         </a><br>`
                                     })
 
+                                    if (value.lastUsed == '0') {
+                                        value.lastUsed = 'Never Used'
+                                    } else {
+                                        value.lastUsed = new Date(parseFloat(value.lastUsed)).toLocaleString()
+                                    }
+
+                                    let loraIdFormatted = ""
+
+                                    allowedUsers = ['1039574722163249233', '550239177837379594']
+
+                                    if (allowedUsers.includes(document.getElementById('user-session').value)) {
+                                        loraIdFormatted = `<a class="lora-id"><strong>ID:</strong> ${key}<br><button class="lora-words-copy-button" onclick="copyXWordsToClipboard(\`${key}\`)">Copy ID</button></a>`
+                                    }
+
                                     loraSummary.innerHTML = `
                                         <div class="lora-toggle">
-                                            <input type="checkbox" value="${key}" checked onchange="masterLoraData['${key}'].selected = this.checked; loadLoras(); updateLoraSelectionsSummary();">
+                                            <input id="enable-${key}" type="checkbox" value="${key}" checked onchange="masterLoraData['${key}'].selected = this.checked; loadLoras(); updateLoraSelectionsSummary();">
                                             <label for="enable-${key}">
-                                                <span class="lora-category">${key.split('-')[0].charAt(0).toUpperCase() + key.split('-')[0].slice(1)}</span> | ${value.name || 'Null'}
+                                                <span class="lora-category">${key.split('-')[0].charAt(0).toUpperCase() + key.split('-')[0].slice(1)}</span> | ${value.name || 'Null'} | Uses: ${value.usesCount}
                                             </label>
                                         </div>
                                         <div class="lora-info">
+                                            ${loraIdFormatted}
                                             <p class="lora-description"><strong>Description:</strong> ${value.description || 'Null'}</p>
                                             <p class="lora-strength"><strong>Default Strength:</strong> ${value.strength || 'Null'}</p>
                                             ${wordsFormatted}
@@ -1921,7 +2112,8 @@
                                                 <a id="strength-${key}-value" style="transform: translateY(-32px) !important; margin: 4px; font-size: 28px">${value.strength}</a>
                                             </p>
                                             <button class="lora-reset-strength-button" onclick="setStrength('${key}', '${value.defaultStrength}')">Reset Strength</button>
-                                            <p class="lora-date"><strong>Date Created/Updated:</strong> ${new Date(parseFloat(value.dateCreated)).toLocaleString()}</p>
+
+                                            <p class="lora-date"><strong>Date Created/Updated:</strong> ${new Date(parseFloat(value.dateCreated)).toLocaleString()} | Last Used: ${value.lastUsed}</p>
                                             <p class="lora-link"><strong>Link:</strong> <a href="${value.link || '#'}">Clickable Link</a></p>
                                         </div>
                                     `;
@@ -2001,7 +2193,7 @@
                     <br>
                 </div>
 
-                <input name="user-session" id="user-session" value="<%-session.accountId%>" hidden>
+                <input name="user-session" id="user-session" value="<%=session.accountId%>" hidden>
 
 
                 
@@ -2033,10 +2225,18 @@
                     #displayCanvas {
                         z-index: 9; /* Below the maskCanvas */
                     }
+
+                    .additionalSettings {
+                        background-color: rgba(0, 0, 0, 0.2);
+                        padding: 10px;
+                        border-radius: 10px;
+                        margin-top: 10px;
+                        border: 2px solid rgb(255, 255, 255);
+                    }
                 </style>
 
             
-                <details id="extrasDetails" class="left-align-no-flex">
+                <details id="extrasDetails" class="left-align-no-flex" open>
                     <summary>Image2Image, Inpainting</summary>
 
                     <div class="form-control">
@@ -2050,7 +2250,7 @@
                         <input type="checkbox" id="img2imgCheckbox" name="img2imgCheckbox">
                     </div>
                     
-                    <div class="form-control" id="img2imgControls" style="display: none;">
+                    <div class="form-control additionalSettings" id="img2imgControls" style="display: none;">
                         <label>
                             Upload Image:
                             <span class="tooltip" onclick="showTooltip(this)">❓</span>
@@ -2093,7 +2293,7 @@
 
                     <div class="form-control" id="openposeControls">
                         <canvas id="stickCanvas" width="512" height="756" style="background-color: black;"></canvas>
-                        <script src="../scripts/openpose.js" type="text/javascript"></script>
+                        <script src="../scripts/openpose.js" type="text/javascript" defer></script>
                     </div>
 
                     <script>
@@ -2128,7 +2328,7 @@
 
                     
 
-                    <div class="form-control" id="inpaintingControls" style="display: none;" >
+                    <div class="form-control additionalSettings" id="inpaintingControls" style="display: none;" >
 
                         <label for="inpaintingStrength">
                             Inpainting Strength:
@@ -2177,7 +2377,7 @@
                             <canvas id="maskCanvas"></canvas>
                             <canvas id="displayCanvas"></canvas>
                         </div>
-                        <script src="../scripts/ai-inpainting.js?v3" type="text/javascript"></script>
+                        <script src="../scripts/ai-inpainting.js?v3" type="text/javascript" defer></script>
 
                         <script>
                             // get the penSize element
@@ -2196,6 +2396,221 @@
 
                     </div>
 
+                    <div class="form-control">
+                        <label for="regionalPromptCheckbox">
+                            Enable Regional Prompt:
+                            <span class="tooltip" onclick="showTooltip(this)">❓</span>
+                                <div class="tooltiptext">
+                                    Use this checkbox to enable the Regional Prompt feature, which allows you to split the image into regions and give each region a different prompt<br>
+                                    This can be useful for creating images with different characters or objects in different regions
+                                </div>
+                        </label>
+                        <input type="checkbox" id="regionalPromptCheckbox" name="regionalPromptCheckbox">
+                    </div>
+
+                    <div id="regionalPromptControls" class="form-control additionalSettings" style="display: none">
+                        <label for="regionalPromptA">
+                            Regional Prompt A:
+                            <span class="tooltip" onclick="showTooltip(this)">❓</span>
+                                <div class="tooltiptext">
+                                    Use this input to set the prompt for the first region<br>
+                                </div>
+                                <textarea id="regionalPromptA" rows="3" name="regionalPromptA"></textarea>
+                        </label>
+
+                        <label for="regionalPromptAStrength">
+                            Regional Prompt A Strength:
+                            <span class="tooltip" onclick="showTooltip(this)">❓</span>
+                                <div class="tooltiptext">
+                                    Use this slider to adjust the strength of Regional Prompt A<br>
+                                    Higher values will make the prompt more powerful but might have issues blending in with the rest of the image.
+                                </div>
+                                <input class="inline-slider" type="range" id="regionalPromptAStrength" name="regionalPromptAStrength" min="15" max="35" step="1" value="25">
+                                <span id="regionalPromptAStrengthValue" class="range-value">25%</span>
+                        </label>
+
+                        <br>
+
+
+                        <label for="regionalPromptB">
+                            Regional Prompt B:
+                            <span class="tooltip" onclick="showTooltip(this)">❓</span>
+                                <div class="tooltiptext">
+                                    Use this input to set the prompt for the second region<br>
+                                </div>
+                                <textarea id="regionalPromptB" rows="3" name="regionalPromptB"></textarea>
+                        </label>
+
+                        <label for="regionalPromptBStrength">
+                            Regional Prompt B Strength:
+                            <span class="tooltip" onclick="showTooltip(this)">❓</span>
+                                <div class="tooltiptext">
+                                    Use this slider to adjust the strength of Regional Prompt B<br>
+                                    Higher values will make the prompt more powerful but might have issues blending in with the rest of the image.
+                                </div>
+                                <input class="inline-slider" type="range" id="regionalPromptBStrength" name="regionalPromptBStrength" min="15" max="35" step="1" value="25">
+                                <span id="regionalPromptBStrengthValue" class="range-value">25%</span>
+                        </label>
+
+                        <br>
+
+                        <label for="regionalPromptSplitPosition">   
+                            Regional Prompt Split Position:
+                            <span class="tooltip" onclick="showTooltip(this)">❓</span>
+                                <div class="tooltiptext">
+                                    Use this slider to adjust the position of the split between the regions, the default is 50%<br>
+                                    Higher values will move the split to the right, lower values will move it to the left
+                                </div>
+                                <input class="inline-slider" type="range" id="regionalPromptSplitPosition" name="regionalPromptSplitPosition" min="35" max="65" step="1" value="50">
+                                <span id="regionalPromptSplitPositionValue" class="range-value">50%</span>
+                        </label>
+                        <br><br>
+
+                        <!-- splitting logic and preview with a canvas showing the A/B/C etc with the aspectratio being used for the template: -->
+                        
+                        <div id="regionalPromptDisplay"></div>
+                        
+                        <script>
+                        
+                            function updateRegionalDisplay() {
+                                // clear the regionalPromptDisplay
+                                document.getElementById('regionalPromptDisplay').innerHTML = '';
+
+                                canvas = document.createElement('canvas');
+
+                                aspectRatio = document.getElementById('aspectRatio').value;
+                                model = document.getElementById('model').value;
+
+                                splitValue = document.getElementById('regionalPromptSplitPosition').value;
+
+                                regionalPromptAStrength = document.getElementById('regionalPromptAStrength').value;
+                                regionalPromptBStrength = document.getElementById('regionalPromptBStrength').value;
+
+                                dimensions = {width:0,height:0}
+                                if (model.startsWith('sdxl') || model.startsWith('flux')) {
+                                    switch(aspectRatio) {
+                                        case 'square':
+                                            dimensions = {width: 768, height: 768}
+                                            break;
+                                        case 'portrait':
+                                            dimensions = {width: 768, height: 1024}
+                                            break;
+                                        case 'landscape':
+                                            dimensions = {width: 1024, height: 768}
+                                            break;
+                                        case '16:9':
+                                            dimensions = {width: 1024, height: 576}
+                                            break;
+                                        case '9:16':
+                                            dimensions = {width: 576, height: 1024}
+                                            break;
+                                        case '21:9':
+                                            dimensions = {width: 1344, height: 576}
+                                            break;
+                                        case '9:21':
+                                            dimensions = {width: 576, height: 1344}
+                                            break;
+                                    }
+                                } else {
+                                    switch(aspectRatio) {
+                                        case 'square':
+                                            dimensions = {width: 512, height: 512}
+                                            break;
+                                        case 'portrait':
+                                            dimensions = {width: 512, height: 768}
+                                            break;
+                                        case 'landscape':
+                                            dimensions = {width: 768, height: 512}
+                                            break;
+                                        case '16:9':
+                                            dimensions = {width: 768, height: 432}
+                                            break;
+                                        case '9:16':
+                                            dimensions = {width: 432, height: 768}
+                                            break;
+                                        case '21:9':
+                                            dimensions = {width: 1024, height: 432}
+                                            break;
+                                        case '9:21':
+                                            dimensions = {width: 432, height: 1024}
+                                            break;
+                                    }
+                                }
+
+                                canvas.width = dimensions.width / 2;
+                                canvas.height = dimensions.height /2
+
+                                ctx = canvas.getContext('2d');
+
+                                ctx.fillStyle = 'black';
+                                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                                // Split the canvas into two regions with different colors
+                                ctx.fillStyle = 'red';
+                                ctx.fillRect(0, 0, canvas.width * (splitValue / 100), canvas.height);
+                                ctx.fillStyle = 'blue';
+                                ctx.fillRect(canvas.width * (splitValue / 100), 0, canvas.width, canvas.height);
+
+                                // Set text properties
+                                ctx.fillStyle = 'white';
+                                ctx.font = '48px Arial';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'middle';
+
+                                // Calculate center positions for 'A' and 'B'
+                                const centerA = (canvas.width * (splitValue / 100)) / 2;
+                                const centerB = canvas.width * (splitValue / 100) + (canvas.width * (1 - splitValue / 100)) / 2;
+
+                                // Draw letters in the centers of each region
+                                ctx.fillText('A', centerA, canvas.height / 2);
+                                ctx.fillText('B', centerB, canvas.height / 2);
+
+
+
+                                document.getElementById('regionalPromptDisplay').appendChild(canvas);
+                            }
+
+                            // add an event listener for when the regionalPromptSplitPosition changes
+                            document.getElementById('regionalPromptSplitPosition').addEventListener('input', function() {
+                                // update the regionalPromptSplitPositionValue
+                                document.getElementById('regionalPromptSplitPositionValue').innerText = this.value + '%';
+                                // update the regional display
+                                updateRegionalDisplay();
+                            });
+
+                            document.getElementById('regionalPromptAStrength').addEventListener('input', function() {
+                                // update the regionalPromptAStrengthValue
+                                document.getElementById('regionalPromptAStrengthValue').innerText = this.value + '%';
+                            });
+
+                            document.getElementById('regionalPromptBStrength').addEventListener('input', function() {
+                                // update the regionalPromptBStrengthValue
+                                document.getElementById('regionalPromptBStrengthValue').innerText = this.value + '%';
+                            });
+
+                            
+
+
+                            // fire the input event for the regionalPromptSplitPosition
+                            document.getElementById('regionalPromptSplitPosition').dispatchEvent(new Event('input'));
+
+                            // check aspectRatio and model to determine the dimensions of the canvas:
+                            document.getElementById('aspectRatio').addEventListener('change', function() {
+                                // update the regional display
+                                updateRegionalDisplay();
+                            });
+
+                            document.getElementById('model').addEventListener('change', function() {
+                                // update the regional display
+                                updateRegionalDisplay();
+                            });
+                            
+                            
+
+                        </script>
+                            
+                    </div>
+
                 </details>
 
 
@@ -2204,10 +2619,12 @@
                 // get the inpaintingCheckbox and img2imgCheckbox elements
                 const inpaintingCheckbox = document.getElementById('inpaintingCheckbox');
                 const img2imgCheckbox = document.getElementById('img2imgCheckbox');
+                const regionalPromptCheckbox = document.getElementById('regionalPromptCheckbox');
 
                 // get the inpaintingControls and img2imgControls elements
                 const inpaintingControls = document.getElementById('inpaintingControls');
                 const img2imgControls = document.getElementById('img2imgControls');
+                const regionalPromptControls = document.getElementById('regionalPromptControls');
         
                 function disableCheckboxes(target) {
                     if(target != "inpaintingCheckbox") {
@@ -2216,6 +2633,9 @@
                     } if (target != "img2imgCheckbox") {
                         img2imgCheckbox.checked = false;
                         img2imgControls.style.display = 'none';
+                    } if (target != "regionalPromptCheckbox") {
+                        regionalPromptCheckbox.checked = false;
+                        regionalPromptControls.style.display = 'none';
                     }
 
                     // open the details element with the target id: "extrasDetails":
@@ -2233,12 +2653,14 @@
                             img2imgCheckbox.checked = true;
                             img2imgControls.style.display = 'block';
                             break;
+                        case "regionalPromptCheckbox":
+                            regionalPromptCheckbox.checked = true;
+                            regionalPromptControls.style.display = 'block';
+                            break;
                     }
                 }
 
-                // add an event listener for when the inpaintingCheckbox changes
                 inpaintingCheckbox.addEventListener('change', function() {
-                    // if the inpaintingCheckbox is checked
                     if (this.checked) {
                         disableCheckboxes("inpaintingCheckbox")
                     }
@@ -2246,9 +2668,14 @@
 
                 // add an event listener for when the img2imgCheckbox changes
                 img2imgCheckbox.addEventListener('change', function() {
-                    // if the img2imgCheckbox is checked
                     if (this.checked) {
                         disableCheckboxes("img2imgCheckbox")
+                    }
+                });
+
+                regionalPromptCheckbox.addEventListener('change', function() {
+                    if (this.checked) {
+                        disableCheckboxes("regionalPromptCheckbox")
                     }
                 });
 
@@ -2376,13 +2803,13 @@
                         
                     if (model.value.includes('sdxl')) {
                         setSteps(10, 30);
-                        setCfguidance(3, 12)
+                        setCfguidance(2, 5)
                     } else if (model.value.includes('flux')) {
                         setSteps(4, 20);
                         setCfguidance(1, 1);
                     } else if (!model.value.includes('sdxl') && !model.value.includes('flux')) {
                         setSteps(20, 40);
-                        setCfguidance(4, 12);
+                        setCfguidance(3, 10);
                     }
                         
                     document.getElementById('stepsMax').innerText = `/${steps.max}`;
@@ -2416,27 +2843,8 @@
                     updateLabels();
                 });
 
-                window.onload = function() {
-                    // fire events for the steps and cfguidance sliders to update the labels:
-                    document.getElementById('steps').dispatchEvent(new Event('input'));
-                    document.getElementById('cfguidance').dispatchEvent(new Event('input'));
-                }
             </script>
                 
-
-            <div id="additionalInfo"></div><br>
-            <div id="response"></div>
-            <div id="queuePosition" style="display: none;">
-                Your position in queue: <span style="color: gold;" id="positionNumber"></span>
-                <span class="tooltip" onclick="showTooltip(this)">❓</span>
-                    <div class="tooltiptext">
-                        This is your position in the queue, you will be notified by a sound when your image is ready<br>
-                        The number in brackets () is the total queue length, as the queue is split into 2 parts
-                    </div>
-            </div>
-            
-            <br>
-
             <div class="form-control">
 
                 <label for="creditsShop">
@@ -2475,13 +2883,25 @@
                     </label>
                     <input type="checkbox" id="upscaleCheckbox" name="upscaleCheckbox">
 
+                    <label>
+                        2x Images: <span><a id="doubleImagesCreditsPrice">25</a> Credits
+                        <span class="tooltip" onclick="showTooltip(this)">❓</span>
+                            <div class="tooltiptext">
+                                Use this checkbox to generate double the images!<br>
+                                SD 1.5: 8 images<br>
+                                SDXL: 8 images<br>
+                                FLUX: 4 images
+                            </div>
+                    </label>
+                    <input type="checkbox" id="doubleImagesCheckbox" name="doubleImagesCheckbox">
+
                     <% if (session.loggedIn) { %>
                     <label>
                         Fast Queue: <span><a id="fastqueueCreditsPrice">25</a> Credits
                         <span class="tooltip" onclick="showTooltip(this)">❓</span>
                             <div class="tooltiptext">
                                 Use this checkbox to enable the fast queue for the AI Image Generator<br>
-                                The fast queue will prioritize your image in the queue, reducing the wait time
+                                The fast queue will prioritize your image in the queue, massively reducing the time it takes to generate the image
                             </div>
                     </label>
                     <button class="fastqueueButton" form="generatorForm" id="fastqueueButton" type="submit">Fast Queue</button>
@@ -2580,7 +3000,39 @@
                             </div>
                     </label>
                     <a target="_blank" href="https://www.jscammie.com/image-history">View Image History</a>
-                    <br><br>
+                    <br>
+                    <label>
+                        Booru Page:
+                        <span class="tooltip" onclick="showTooltip(this)">❓</span>
+                            <div class="tooltiptext">
+                                Use this link to view the booru page for the AI Image Generator<br>
+                                You can view the images generated by the AI Image Generator, and download them<br>
+                                This will open in a new tab!
+                            </div>
+                    </label>
+                    <a target="_blank" href="https://www.jscammie.com/booru">View Image Board/ Booru</a>
+                    <br>
+                </div>
+
+                <div id="imageHistoryCount"></div>
+
+                <script>
+                    let imageHistoryCount = '<%=imageHistoryCount%>';
+                    
+                    window.onload = function() {
+                        // document.getElementById('imageHistoryCount').innerText = `You have generated ${imageHistoryCount}/15000 images!`;
+                    }
+                    
+                </script>
+
+                <div id="additionalInfo"></div><br>
+                <div id="response"></div>
+                <div id="queuePosition" style="display: none;">
+                    Your position in queue: <span style="color: gold;" id="positionNumber"></span>
+                    <span class="tooltip" onclick="showTooltip(this)">❓</span>
+                        <div class="tooltiptext">
+                            This is your position in the queue, you will be notified by a sound when your image is ready<br>
+                        </div>
                 </div>
 
                 <label>
@@ -2679,44 +3131,79 @@
                     
                     loraCount = 0
 
-                    let loraSelections = document.querySelectorAll('.loraGridContainer')
-
-                    for (let i = 0; i < loraSelections.length; i++) {
-                        let checkboxes = loraSelections[i].querySelectorAll('input[type="checkbox"]')
-                        for (let j = 0; j < checkboxes.length; j++) {
-                            if (checkboxes[j].checked) {
-                                loraCount += 1
-                            }
+                    Object.entries(masterLoraData).forEach(([key, value]) => {
+                        if (value.selected) {
+                            loraCount += 1
                         }
-                    }
+                    });
 
 
                     let model = document.getElementById('model').value
 
                     extras = {
                         removeWatermark: true,
-                        upscale: true
+                        upscale: true,
+                        doubleImages: true
                     }
 
                     let runningCost = 0
+
+                    activeExtras = {
+                        removeWatermark: document.getElementById('removeWatermarkCheckbox').checked,
+                        upscale: document.getElementById('upscaleCheckbox').checked,
+                        doubleImages: document.getElementById('doubleImagesCheckbox').checked
+                    }
+                    activeBonus = {
+                        remoteWatermark: false,
+                        upscale: false,
+                        doubleImages: false
+                    }
 
                     fastqueueCost = getFastqueuePrice(loraCount, model)
                     if (document.getElementById('fastqueueButton').classList.contains('active')) {
                         runningCost += fastqueueCost
                     }
 
-                    extrasCosts = getExtrasPrice(extras)
+                    extrasCosts = getExtrasPrice(extras, model)
 
-                    if (document.getElementById('removeWatermarkCheckbox').checked) {
+                    if (activeExtras.removeWatermark) {
                         runningCost += extrasCosts.removeWatermark
                     }
-
-                    if (document.getElementById('upscaleCheckbox').checked) {
+                    if (activeExtras.upscale) {
                         runningCost += extrasCosts.upscale
                     }
+                    if (activeExtras.doubleImages) {
+                        runningCost += extrasCosts.doubleImages
+                    }
+
+                    // activate bonus for upscale and doubleImages IF they are both active:
+                    if (activeExtras.upscale && activeExtras.doubleImages) {
+                        activeBonus.upscale = true
+                        activeBonus.doubleImages = true
+                    } else {
+                        activeBonus.upscale = false
+                        activeBonus.doubleImages = false
+                    }
+
+                    // if there are any bonus, add them to the runningCost and the respective extrasCosts:
+                    if (extrasCosts.removeWatermarkBonus > 0 && activeExtras.removeWatermark && activeBonus.remoteWatermark) {
+                        runningCost += extrasCosts.removeWatermarkBonus
+                        extrasCosts.removeWatermark += extrasCosts.removeWatermarkBonus
+                    }
+                    if (extrasCosts.upscaleBonus > 0 && activeExtras.upscale && activeBonus.upscale) {
+                        runningCost += extrasCosts.upscaleBonus
+                        extrasCosts.upscale += extrasCosts.upscaleBonus
+                    }
+                    if (extrasCosts.doubleImagesBonus > 0 && activeExtras.doubleImages && activeBonus.doubleImages) {
+                        runningCost += extrasCosts.doubleImagesBonus
+                        extrasCosts.doubleImages += extrasCosts.doubleImagesBonus
+                    }
+
                     
                     document.getElementById('removeWatermarkCreditsPrice').innerText = extrasCosts.removeWatermark
                     document.getElementById('upscaleCreditsPrice').innerText = extrasCosts.upscale
+                    document.getElementById('doubleImagesCreditsPrice').innerText = extrasCosts.doubleImages
+
 
 
                     document.getElementById('fastqueueCreditsPrice').innerText = fastqueueCost
@@ -2750,6 +3237,9 @@
                     prepareData()
                 });
                 document.getElementById('upscaleCheckbox').addEventListener('change', function() {
+                    prepareData()
+                });
+                document.getElementById('doubleImagesCheckbox').addEventListener('change', function() {
                     prepareData()
                 });
 
@@ -3071,8 +3561,8 @@
         document.getElementById('imageOverlay').addEventListener('click', hideOverlay);
     </script>
 
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://code.jquery.com/ui/1.13.1/jquery-ui.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" defer></script>
+    <script src="https://code.jquery.com/ui/1.13.1/jquery-ui.min.js" defer></script>
 
     <script>
         let timeout = null;  // This timeout variable should be outside the updateWordCount function
@@ -3218,7 +3708,10 @@
     </script>
     
     <script> <%- scripts.aiForm %> </script>
-    <script src="https://www.jscammie.com/scripts/ai-autocomplete.js?v19"></script>
+    <script src="https://www.jscammie.com/scripts/ai-autocomplete.js?v19" defer></script>
+
+    <div class="overlay" id="overlayBooru"></div>
+    <div class="booruPopupContent" id="booruPopupContent"></div>
 
 </body>
 </html>

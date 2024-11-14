@@ -41,6 +41,9 @@
             canvas.width = 720;
             canvas.height = 720
 
+            let targetFps = 200;
+            let physicsFps = 200;
+
             var gravity = 0.5;
 
             function drawRotateObject(object, angle) {
@@ -211,9 +214,6 @@
             });
             objects.push(debugInfo);
 
-            let targetFps = 60;
-            let physicsFps = 60;
-
             function gameLoop() {
                 setTimeout(function() {
 
@@ -221,7 +221,7 @@
 
                     if (delta > 2) {
                         delta = 2;
-                    } else if (delta < 0.5) {
+                    } else if (delta < 0.1) {
                         delta = 0.1;
                     }
 
@@ -300,28 +300,29 @@
                     }
                     // console.log('D drag applied');
                 }
+
+                if (keys.w == false && player.yVelocity < 0) {
+                    player.yVelocity += drag;
+                    if (player.yVelocity > 0) {
+                        player.yVelocity = 0;
+                    }
+                    // console.log('W drag applied');
+                }
+
+                if (keys.s == false && player.yVelocity > 0) {
+                    player.yVelocity -= drag;
+                    if (player.yVelocity < 0) {
+                        player.yVelocity = 0;
+                    }
+                    // console.log('S drag applied');
+                }
                 
-                player.calcYVelocity = player.yVelocity * delta
-                player.calcXVelocity = player.xVelocity * delta
+                player.calcYVelocity = player.yVelocity / delta
+                player.calcXVelocity = player.xVelocity / delta
 
                 // potential next position:
                 potentialY = player.y + player.calcYVelocity
                 potentialX = player.x + player.calcXVelocity
-
-                // check for collision with any object that is in the next position:
-                for (var i = 0; i < objects.length; i++) {
-                    if (player.objectId !== objects[i].objectId) {
-                        if (objects[i].hasCollision) {
-                            // check if the edges of the player are within the edges of the object, make sure to double the width and height of the player to account for the center point:
-                            if (potentialY + player.height / 2 > objects[i].y - objects[i].height / 2 && potentialY - player.height / 2 < objects[i].y + objects[i].height / 2 && potentialX + player.width / 2 > objects[i].x - objects[i].width / 2 && potentialX - player.width / 2 < objects[i].x + objects[i].width / 2) {
-                                // collision detected:
-                                // make it so the player can't move into the object:
-                                player.calcYVelocity = 0
-                                player.calcXVelocity = 0
-                            }
-                        }
-                    }
-                }
 
                 player.y -= player.calcYVelocity
                 player.x += player.calcXVelocity

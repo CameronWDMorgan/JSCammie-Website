@@ -4,7 +4,7 @@
     <title>Booru | JSCammie.com</title>
     <!-- metadata: -->
     <meta name="description" content="SFW/NSFW Image Booru for JSCammie.com"/>
-    <meta name="keywords" content="booru, images, ai generated, sfw, nsfw, suggestive, ai image board"/>
+    <meta name="keywords" content="ai booru, booru, images, ai generated, sfw, nsfw, extreme, fetish, score, sdxl, sd 1.5, flux, suggestive, ai image board"/>
     <meta name="author" content="JSCammie"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 
@@ -43,8 +43,9 @@
             <input id="searchInput" type="text" placeholder="Search..." style="width: 100%; padding: 10px; border-radius: 10px; margin-bottom: 20px;" />
             <br>
             <select id="searchSorting">
-                <option value="votes">Votes</option>
-                <option value="recent">Recent</option>
+                <option value="trending">🔥 Trending</option>
+                <option value="votes">⬆️ Votes</option>
+                <option value="recent">⏱️ Recent</option>
             </select>
             <br>
             <div id="safetyCheckboxes">
@@ -117,10 +118,6 @@
         <details class="moreInfoDropdown">
             <summary>What is this?</summary>
             <p>
-                <!-- <p>Here you can view all the images that have been uploaded to the booru!</p>
-        <p>Images are sorted by votes by default, but you can change the sorting method using the dropdown above!</p>
-        <p>You can upload generated images once you are <a href="/login" target="_blank">logged in</a> either on the <a href="/" target="_blank">Generator itself</a>, or in the <a href="/image-history">Image History</a> page!</p>
-        <p>Click on an image to view it in full size!</p> -->
                 Here you can view all the images that have been uploaded to the booru!
                 <br>
                 Images are sorted and filtered by the options above!
@@ -140,6 +137,130 @@
         
         <div id="booruPosts" class="booruPostsGrid"></div>
         <div id="pageControls" class="pageControls"></div>
+
+        <br>
+
+        <!-- Add a modal for banning the user -->
+        <div id="banModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeBanModal()">&times;</span>
+                <h3>Ban User from Booru</h3>
+                <label for="banReason">Reason for ban:</label>
+                <textarea id="banReason" rows="4" cols="50" placeholder="Enter the reason..."></textarea>
+                <br>
+                <button onclick="banUser()">Ban</button>
+                <button onclick="closeBanModal()">Cancel</button>
+            </div>
+        </div>
+
+        <style>
+            /* Modal styling */
+            .modal {
+                display: none; /* Hidden by default */
+                position: absolute;
+                z-index: 9999; /* Sit on top */
+                left: 0;
+                top: 0;
+                width: 100%; /* Full width */
+                height: 100%; /* Full height */
+                overflow: auto; /* Enable scroll if needed */
+                background-color: rgba(0, 0, 0, 0.5);
+                justify-content: center;
+                align-items: center;
+                width: 100%;
+                height: 100%;
+            }
+
+            .modal-content {
+                background-color: #3b0000;
+                margin: 15% auto; /* 15% from the top and centered */
+                padding: 20px;
+                border: 1px solid #888;
+                width: 80%; /* Could be more or less, depending on screen size */
+                display: none; /* Hidden by default */
+                border-radius: 10px;
+                flex-direction: column;
+                top: 0;
+            }
+
+            .close {
+                position: absolute;
+                top: 10px;
+                right: 15px;
+                cursor: pointer;
+                font-size: 20px;
+            }
+        </style>
+
+        <script>
+            // Function to show the ban modal
+            function showBanModal(accountId) {
+                document.getElementById("banModal").style.display = "flex";
+                // set the modal-content to be visible:
+                document.querySelector(".modal-content").style.display = "block";
+                window.banAccountId = accountId; // Store the account ID for later use
+            }
+
+            // Function to close the ban modal
+            function closeBanModal() {
+                document.getElementById("banModal").style.display = "none";
+                document.querySelector(".modal-content").style.display = "none";
+            }
+            
+            // Function to adjust the modal's position when scrolling
+            function adjustModalPosition() {
+                const modalContent = document.querySelector(".modal-content");
+                modalContent.style.position = "absolute";
+                modalContent.style.top = window.scrollY + "px"; // Adjust top position based on scroll
+            }
+            window.onscroll = function() {
+                adjustModalPosition();
+            };
+
+
+
+            // Function to ban the user
+            function banUser() {
+                const reason = document.getElementById("banReason").value;
+                if (!reason) {
+                    alert("Please provide a reason for the ban.");
+                    return;
+                }
+
+                // // Send the ban request (replace with your ban API logic)
+                // alert(`Banning user ${window.banAccountId} for reason: ${reason}, booruId: ${booruId}`);
+                // ask the user to confirm the ban:
+                if (confirm(`Are you sure you want to ban this user?`)) {
+                    // send the ban request:
+                    fetch(`/booru/ban/${window.banAccountId}`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                            reason: reason,
+                        }),
+                    })
+                        .then((res) => res.json())
+                        .then((data) => {
+                            console.log(data);
+                            if (data.status == "success") {
+                                alert("User has been banned successfully from the booru.");
+                            } else {
+                                alert("Failed to ban user. Please try again later.");
+                            }
+                        })
+                        .catch((err) => {
+                            console.error(err);
+                            alert("Failed to ban user. Please try again later.");
+                        });
+                }
+
+                // Close the modal after banning
+                closeBanModal();
+                
+            }
+        </script>
 
         <script>
             let masterBooruData = {}
@@ -205,8 +326,9 @@
                                 <a href="/booru/setRating/${value.booru_id}/nsfw">Set NSFW</a>
                                 <a href="/booru/setRating/${value.booru_id}/suggestive">Set Suggestive</a>
                                 <a href="/booru/setRating/${value.booru_id}/sfw">Set SFW</a>
+                                <a href="#" onclick="showBanModal('${value.account_id}')">Ban User</a>
                             </div>
-                        `
+                        `;
                     }
 
                     let booruThumbnailHTML = `
@@ -214,7 +336,6 @@
                     `
 
                     let postDiv = ``
-
                     let moderatorPrompt = ``
 
                     if (userProfile?.badges?.moderator) { 
@@ -286,6 +407,7 @@
 
             window.onload = function() {
                 setupBooruPosts()
+                adjustModalPosition()
             }
 
         </script>

@@ -143,6 +143,7 @@
             <select id="suggestionsTypeSearch">
                 <option value="all">All</option>
                 <option value="lora">Lora</option>
+                <option value="model">Model</option>
                 <option value="feature">Feature</option>
                 <option value="bug">Bug</option>
             </select>
@@ -256,7 +257,7 @@
                 suggestionDiv.innerHTML = `
                     <span hidden id="suggestionId">${suggestion.suggestionId}</span>
                     <p id="${suggestion.suggestionId}-safety">${suggestion.safety === 'nsfw' ? 'NSFW' : 'SFW'} ${suggestion.promoted ? '<a style="color: gold;">⭐Promoted</a>' : ''}</p>
-                    <a class="suggestionTopBar">${suggestion.type === 'lora' ? '💜Lora' : suggestion.type === 'feature' ? '💚Feature' : '❤️Bug'} | ${suggestion.title} | </a>
+                    <a class="suggestionTopBar">${suggestion.type === 'lora' ? '💜Lora' : suggestion.type === 'feature' ? '💚Feature' : suggestion.type === 'bug' ? '❤️Bug' : '🧡Model'} | ${suggestion.title} | </a>
                     <a class="suggestionTopBar">
                         <button class="votingButton" id="upvote">Upvotes: ${suggestion.upvotes.length}</button>
                         <button class="votingButton" id="downvote">Downvotes: ${suggestion.downvotes.length}</button>

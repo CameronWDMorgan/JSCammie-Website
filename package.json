@@ -9,7 +9,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "bcrypt": "^5.1.1",
     "body-parser": "^1.20.2",
+    "compression": "^1.7.4",
     "console-stamp": "^3.1.2",
     "cookie-session": "^2.1.0",
     "cors": "^2.8.5",

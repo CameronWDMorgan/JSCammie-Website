@@ -45,6 +45,8 @@ const userProfileSchema = new Schema({
     credits: { type: String, default: "500" },
     dailies: dailiesSchema,
     profileImg: { type: String, default: "http://www.jscammie.com/noimagefound.png" },
+    booruPostBanned: { type: Boolean, default: false },
+    booruPostBanReason: { type: String, default: "Breaking Rules" },
 })
 
 const name = 'userAccount'

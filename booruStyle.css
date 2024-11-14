@@ -38,6 +38,23 @@
 	min-width: 300px;
 	min-height: 300px;
 }
+
+#postDiv {
+  position: relative; /* Required for centering the image inside the div */
+  overflow: hidden; /* Hide overflow in case the content is too large */
+  text-align: left; /* Make sure other elements inside aren't centered */
+}
+
+#postDiv .postImage {
+  display: block; /* Make image behave like a block-level element */
+  margin: 0 auto; /* Center the image horizontally */
+  max-width: 100%; /* Ensure the image doesn't overflow horizontally */
+  max-height: 90vh; /* Make sure the image doesn't exceed the screen height */
+  width: auto; /* Keep the image's aspect ratio */
+  height: auto; /* Keep the image's aspect ratio */
+}
+
+
 .votesDiv {
 	display: flex;
 	justify-content: space-between;

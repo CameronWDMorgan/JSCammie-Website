@@ -59,13 +59,6 @@ function booruSearchInitialize() {
 
             let searchResults
 
-            // filter tags based on the last word
-            // searchTags.forEach(tag => {
-            //     if (tag.tag.includes(lastWord)) {
-            //         searchResults.push(tag);
-            //     }
-            // });
-
 			searchResults = searchTags
 
             console.log(searchResults);
@@ -147,7 +140,7 @@ function booruSearchInitialize() {
     if (sortQuery) {
         document.getElementById("searchSorting").value = sortQuery;
     } else {
-        document.getElementById("searchSorting").value = "recent";
+        document.getElementById("searchSorting").value = "trending";
     }
 
     searchButton.onclick = function() {

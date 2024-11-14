@@ -79,8 +79,9 @@
             <input id="searchInput" type="text" placeholder="Search..." style="width: 100%; padding: 10px; border-radius: 10px; margin-bottom: 20px;" />
             <br>
             <select id="searchSorting">
-                <option value="votes">Votes</option>
-                <option value="recent">Recent</option>
+                <option value="trending">🔥 Trending</option>
+                <option value="votes">⬆️ Votes</option>
+                <option value="recent">⏱️ Recent</option>
             </select>
             <br>
             <div id="safetyCheckboxes">
@@ -155,6 +156,7 @@
                 <h1>${profileProfile.username}</h1>
                 <p>${profileProfile.userBio}</p>
             </div>
+            ${userProfile.accountId === profileProfile.accountId ? `<a href="/settings">Edit Profile</a>` : ""}
         </div>
         <div id="booruPosts" class="booruPostsGrid"></div>
         `

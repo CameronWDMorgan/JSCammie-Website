@@ -2,7 +2,7 @@
 <html>
 <head>
     <!-- use metadata from booruImage to fill title and tags etc etc: -->
-    <title>AI Image | <%=booruImage.safety.toUpperCase()%> | <%= booruImage.prompt %> | JSCammie.com</title>
+    <title><%=booruImage.safety.toUpperCase()%> | <%= booruImage.prompt %> | JSCammie.com</title>
     <meta name="description" content="<%= booruImage.prompt %>"/>
     <meta name="keywords" content="<%= booruImage.prompt %>"/>
     <meta name="author" content="JSCammie"/>
@@ -15,8 +15,7 @@
     <meta content="https://embed.com/embedimage.png" property="og:image" />
     <meta content="#43B581" data-react-helmet="true" name="theme-color" /> -->
 
-    <meta property="og:title" content="AI Image | <%= booruImage.model %> | JSCammie.com" />
-    <meta property="og:description" content="<%= booruImage.prompt %>" />
+    <meta property="og:title" content="<%= postProfile.username %> | <%= booruImage.model %> | JSCammie.com" />
     <meta property="og:image" content="<%= booruImage.content_url %>" />
     <meta property="og:url" content="https://jscammie.com/booru/post/<%= booruImage.booru_id %>" />
     <meta content="#43B581" data-react-helmet="true" name="theme-color" />
@@ -155,7 +154,7 @@
                         </div>
                     </a>
                                      
-                    <img src="${booruImage.content_url}" alt="Booru Image" style="max-width: 100%;"/>
+                    <img class="postImage" src="${booruImage.content_url}" alt="Booru Image" style="max-width: 100%;"/>
                     <div class="postButtons" id="postButtons">
                         <button id="upvoteButton${booruImage.booru_id}" onclick="votePost('upvote', '${booruImage.booru_id}')">${booruImage.upvotes.length} ⬆️</button>
                         <button id="downvoteButton${booruImage.booru_id}" onclick="votePost('downvote', '${booruImage.booru_id}')">${booruImage.downvotes.length} ⬇️</button>
@@ -163,9 +162,10 @@
                         ${postAccountIdButtons}
                         <button onclick="exportAIData()">Export to .AIDATA</button>
                     </div>
-                    
-                    <br>
-                        <h1>Post Details: </h1>
+
+                    <details>
+
+                    <summary>Post Details (Click to Expand)</summary>
                         <p>Prompt: ${booruImage.prompt}</p>
                         <p>Negative Prompt: ${booruImage.negative_prompt}</p>
                         <p>Model: ${booruImage.model}</p>
@@ -177,19 +177,73 @@
                         <p>Seed: ${booruImage.seed}</p>
                         <p>Timestamp: ${booruImage.timestamp}</p>
                         <p>Safety: ${booruImage.safety}</p>
-                    <br>
+                    </details>
                 `
+
+                loadComments()
+
             }
 
         </script>
+
+        <style>
+            .commentDiv {
+                display: flex;
+                flex-direction: column;
+                margin-bottom: 20px;
+                padding: 10px;
+                background-color: rgba(0, 0, 0, 0.2);
+                border-radius: 5px;
+                }
+
+                .commentInfo {
+                display: flex;
+                align-items: center;
+                text-decoration: none;
+                color: #333;
+                margin-bottom: 5px;
+                }
+
+                .commentProfileImage {
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                object-fit: cover;
+                margin-right: 10px;
+                }
+
+                .commentInfo h1 {
+                font-size: 16px;
+                margin: 0;
+                font-weight: 600;
+                }
+
+                .commentContent {
+                font-size: 17px;
+                color: #ffffff;
+                margin: 5px 0;
+                }
+
+                .timestamp {
+                font-size: 12px;
+                color: #888;
+                margin-top: 5px;
+                }
+
+                .commentButtons {
+                    display: flex;
+                }
+
+        </style>
 
         <div class="searchDiv">
             <div id="searchResultsDiv"></div>
             <input id="searchInput" type="text" placeholder="Search..." style="width: 100%; padding: 10px; border-radius: 10px; margin-bottom: 20px;" />
             <br>
             <select id="searchSorting">
-                <option value="votes">Votes</option>
-                <option value="recent">Recent</option>
+                <option value="trending">🔥 Trending</option>
+                <option value="votes">⬆️ Votes</option>
+                <option value="recent">⏱️ Recent</option>
             </select>
             <br>
             <div id="safetyCheckboxes">
@@ -231,6 +285,154 @@
         </div>
 
         <div id="postDiv"></div>
+        <!-- <div id="subbmitComment">
+            <input id="commentInput" type="text" placeholder="Comment..." style="width: 100%; padding: 10px; border-radius: 10px; margin-bottom: 20px;" />
+            <button id="commentButton" style="padding: 10px; border-radius: 10px; margin-bottom: 20px;">Comment</button>
+        </div> -->
+        <% if (session.loggedIn) { %>
+            <div id="subbmitComment">
+                <input id="commentInput" type="text" placeholder="Comment..." style="width: 100%; padding: 10px; border-radius: 10px; margin-bottom: 20px;" />
+                <button id="commentButton" style="padding: 10px; border-radius: 10px; margin-bottom: 20px;">Post Comment</button>
+            </div>
+        <% } %>
+        <button id="commentsLoadButton">Click to Load Comments</button>
+        <div id="commentsDiv"></div>
+
+
+        <script>
+            // load the comments from post req to booru/comments/:booru_id
+            let commentsDiv = document.getElementById("commentsDiv")
+            let commentsLoadButton = document.getElementById("commentsLoadButton")
+            
+            async function loadComments() {
+                fetch(`/booru/comment/get/${booruImage.booru_id}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status == "success" && data.comments.length != 0) {
+                        commentsLoadButton.style.display = "none"
+                    } else if (data.status == "error") {
+                        commentsDiv.innerHTML = `<p>${data.message}</p>`
+                        return
+                    } else {
+                        commentsDiv.innerHTML = `<p>No Comments to show!</p>`
+                        return
+                    }
+
+                    commentsDiv.innerHTML = ""
+                    data.comments.forEach(comment => {
+
+                        let commentButtons = ""
+
+                        
+
+                        if (userProfile.accountId == comment.accountId) {
+                            // show delete button for post owner and moderators:
+                            commentButtons = `
+                                <button onclick="deleteComment('${comment.commentId}')">Delete</button>
+                                <button onclick="voteComment('upvote', '${comment.commentId}')">${comment.upvotes}⬆️</button>
+                                <button onclick="voteComment('downvote', '${comment.commentId}')">${comment.downvotes}⬇️</button>
+                            `
+                        } else if (userProfile.badges.moderator) {
+                            // show delete button for post owner and moderators:
+                            commentButtons = `
+                                ${comment.commentId}
+                                <button onclick="deleteComment('${comment.commentId}')">Delete</button>
+                            `
+                        } else {
+                            commentButtons = `
+                                <button onclick="voteComment('upvote', '${comment.commentId}')">${comment.upvotes}⬆️</button>
+                                <button onclick="voteComment('downvote', '${comment.commentId}')">${comment.downvotes}⬇️</button>
+                            `
+                        }
+
+                        commentsDiv.innerHTML += `
+                            <div id="commentId-${comment.commentId}" class="commentDiv">
+                                <a href="/profile/${comment.accountId}" class="commentInfo">
+                                <img src="${comment.profileImg}" alt="Profile Image" class="commentProfileImage"/>
+                                <h1>${comment.username}</h1>
+                                </a>
+                                <p class="commentContent">${comment.comment}</p>
+                                <span class="timestamp">${new Date(Number(comment.timestamp)).toLocaleTimeString()} ${new Date(Number(comment.timestamp)).toLocaleDateString()}</span>
+                                <div class="commentButtons">${commentButtons}</div>
+                            </div>
+                        `;
+
+                    })
+                })
+            }
+
+            commentsLoadButton.onclick = () => {
+                loadComments()
+            }
+
+            // delete comment function:
+            async function deleteComment(commentId) {
+                if (confirm("Are you sure you want to delete this comment?")) {
+                    fetch(`/booru/comment/delete/${commentId}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.status == "success") {
+                            loadComments()
+                        } else {
+                            alert(data.message)
+                        }
+                    })
+                }
+            }
+
+            // post vote function:
+            async function voteComment(vote, commentId) {
+                fetch(`/booru/comment/vote/`, {
+                    method: "POST",
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        vote: vote,
+                        commentId: commentId
+                    })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status == "success") {
+                        loadComments()
+                    } else {
+                        alert(data.message)
+                    }
+                })
+            }
+
+            // post comment function:
+            let commentButton = document.getElementById("commentButton")
+            let commentInput = document.getElementById("commentInput")
+
+            commentButton.onclick = () => {
+                if (commentInput.value.length < 1) {
+                    alert("Comment must be at least 1 character long")
+                    return
+                }
+
+                fetch(`/booru/comment/post/${booruImage.booru_id}`, {
+                    method: "POST",
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        comment: commentInput.value
+                    })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status == "success") {
+                        commentInput.value = ""
+                        loadComments()
+                    } else {
+                        alert(data.message)
+                    }
+                })
+            }
+
+        </script>
 
     </div>
 

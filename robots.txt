@@ -1,0 +1,5 @@
+# Allow all search engines to crawl the website
+User-agent: *
+Disallow: /settings/
+Disallow: /home/
+Sitemap: https://www.jscammie.com/sitemap.xml

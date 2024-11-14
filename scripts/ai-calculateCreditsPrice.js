@@ -1,17 +1,17 @@
 function getFastqueuePrice(loraCount, model) {
 
 	let dynamicCreditsPrice = 0
-	const baseCreditsPrice = 20
+	const baseCreditsPrice = 35
 
 	dynamicCreditsPrice = baseCreditsPrice
 
 	// is it a model with value starting sdxl?
 	if (model.startsWith('sdxl')) {
-		dynamicCreditsPrice = dynamicCreditsPrice * 2.5
-		loraModifier = 3
-	} else if (model.startsWith('flux')) {
-		dynamicCreditsPrice = dynamicCreditsPrice * 4
+		dynamicCreditsPrice = dynamicCreditsPrice * 2
 		loraModifier = 3.5
+	} else if (model.startsWith('flux')) {
+		dynamicCreditsPrice = dynamicCreditsPrice * 2.75
+		loraModifier = 5
 	} else {
 		loraModifier = 1.25
 	}
@@ -32,22 +32,40 @@ function getExtrasPrice(extras, model='') {
 
 	let extrasPrice = {
 		removeWatermark: 0,
-		upscale: 0
+		upscale: 0,
+		doubleImages: 0,
+		removeWatermarkBonus: 0,
+		upscaleBonus: 0,
+		doubleImagesBonus: 0
 	}
 
 	// if { removeWatermark: true } is passed, add 150 credits
 	if (extras.removeWatermark) {
-		extrasPrice.removeWatermark += 500
+		extrasPrice.removeWatermark += 400
 	}
 
 	if (extras.upscale) {
-		extrasPrice.upscale += 125
+		extrasPrice.upscale += 150
 		if (model.startsWith('sdxl')) {
-			extrasPrice.upscale += 75
+			extrasPrice.upscale += 200
 		}
 		if (model.startsWith('flux')) {
-			extrasPrice.upscale += 250
+			extrasPrice.upscale += 300
 		}
+	}
+
+	if (extras.doubleImages) {
+		extrasPrice.doubleImages += getFastqueuePrice(1, model)
+		extrasPrice.doubleImages = Math.round(extrasPrice.doubleImages * 2)
+		if (model.startsWith('flux')) {
+			extrasPrice.doubleImages = Math.round(extrasPrice.doubleImages * 1.25)
+		}
+	}
+
+	// if both upscale and doubleImages are passed, multiply them to create the bonus:
+	if (extras.upscale && extras.doubleImages) {
+		extrasPrice.upscaleBonus = Math.round(extrasPrice.upscale * 0.5)
+		extrasPrice.doubleImagesBonus = Math.round(extrasPrice.doubleImages * 1.5)
 	}
 
 	return extrasPrice

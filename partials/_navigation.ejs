@@ -31,6 +31,7 @@
     margin: 0 5px;
     border-radius: 5px;
     transition: background-color 0.3s, color 0.3s;
+    border: 2px solid rgba(255, 255, 255, 0.2)
 }
 
 .navLink:hover,
@@ -144,7 +145,7 @@
             <a class="navlink" href="/booru">🖼️ Booru</a>
             <a class="navlink" href="https://ko-fi.com/jscammie">🥺 Donate</a>
             <% if (session.loggedIn) { %>
-                <a class="navlink" href="/logout">❌Logout</a>
+                <a class="navlink" href="/logout">❌ Logout</a>
                 <a class="navlink" href="/profile/<%=session.accountId%>">⭐ My Profile</a>
             <% } else { %>
                 <a class="navlink" href="/login">Login</a>
@@ -163,15 +164,17 @@
             <a href="/booru">🖼️ Booru</a>
             <a href="https://ko-fi.com/jscammie">🥺 Donate</a>
             <% if (session.loggedIn) { %>
-                <a href="/logout">❌Logout</a>
+                <a href="/logout">❌ Logout</a>
                 <a href="/profile/<%=session.accountId%>">⭐ My Profile</a>
             <% } else { %>
                 <a href="/login">Login</a>
             <% } %>
             <a href="https://discord.gg/AvbQuRmh7t">💬 Discord</a>
         </div>
-
-        <button id="creditsNav">Credits: <span id="creditsDisplay">0</span></button>
+        <div id="creditsButtonDiv">
+            <button id="creditsNav">Credits: <span id="creditsDisplay">0</span></button>
+        </div>
+        
 
         <!-- Dark Mode Button -->
         <button id="darkModeButton">
@@ -181,8 +184,58 @@
 </nav>
 
 <style>
-    #topSiteText {
+    /* make it so the credits text is below the credits button and centered: */
+    .creditsText {
+        position: absolute;
+        text-align: center;
+        font-size: 1em;
+        font-weight: bold;
+        color: white;
+        margin-top: -5px;
+        cursor: pointer;
         background-color: rgba(0, 0, 0, 0.5);
+        padding: 5px;
+        border-radius: 5px;
+        transition: background-color 0.3s ease, transform 0.2s ease;
+        z-index: 200;
+    }
+</style>
+
+<script>
+    creditsButtonDiv = document.getElementById('creditsButtonDiv');
+    // make the credits div say "Claim free credits!" underneath the "creditsNav" ID'd button:
+    creditsButtonDiv.innerHTML += '<p class="creditsText">Click to claim credits!</p>';
+
+    // center the credits text every few seconds:
+    function centerCreditsText() {
+        document.getElementsByClassName('creditsText')[0].style.left = (document.getElementById('creditsNav').offsetLeft + document.getElementById('creditsNav').offsetWidth / 2 - document.getElementsByClassName('creditsText')[0].offsetWidth / 2) + 'px';
+    }
+
+    centerCreditsText();
+
+    setInterval(() => {
+        centerCreditsText();
+    }, 100);
+
+    // event listener for the credits text to trigger the button click:
+    document.getElementsByClassName('creditsText')[0].addEventListener('click', () => {
+        document.getElementById('creditsNav').click();
+    });
+
+    // have the creditsText background pulsate:
+    setInterval(() => {
+        document.getElementsByClassName('creditsText')[0].style.backgroundColor = 'rgba(0, 0, 0, 0.2)';
+        setTimeout(() => {
+            document.getElementsByClassName('creditsText')[0].style.backgroundColor = 'rgba(0, 0, 0, 0.4)';
+        }, 500);
+    }, 1000);
+
+</script>
+
+
+<style>
+    #topSiteText {
+        background-color: rgba(0, 0, 0, 0.2);
         color: white;
         padding: 10px;
         text-align: center;
@@ -313,6 +366,15 @@
 
     // when the creditsNav button is clicked, show the creditsDailyPopup: on the center of the screen:
     document.getElementById('creditsNav').addEventListener('click', () => {
+        if (document.getElementById('creditsDailyPopup').style.display == 'none') {
+            // make it side by side the divs inside it:
+            document.getElementById('creditsDailyPopup').style.display = 'inline-block';
+        } else {
+            document.getElementById('creditsDailyPopup').style.display = 'none';
+        }
+    });
+
+    document.getElementById('creditsText').addEventListener('click', () => {
         if (document.getElementById('creditsDailyPopup').style.display == 'none') {
             // make it side by side the divs inside it:
             document.getElementById('creditsDailyPopup').style.display = 'inline-block';
@@ -504,6 +566,12 @@
             timeLeftMinutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
             timeLeftSeconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
             document.getElementById('168hrCreditsButtonTimeLeft').textContent = timeLeftDays + 'd ' + timeLeftHours + 'h ' + timeLeftMinutes + 'm ' + timeLeftSeconds + 's';
+        }
+
+        // if none of the buttons are claimable, then change the creditsText to "No rewards available":
+        if (document.getElementById('3hrCreditsButton').disabled == true && document.getElementById('12hrCreditsButton').disabled == true && document.getElementById('24hrCreditsButton').disabled == true && document.getElementById('168hrCreditsButton').disabled == true) {
+            console.log("NO REWARDS AVAILABLE")
+            document.getElementsByClassName('creditsText')[0].textContent = "No rewards available";
         }
     }
 
