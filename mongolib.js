@@ -12,6 +12,7 @@ const userHistorySchema = require('./schemas/userHistorySchema.js');
 const userCreditsHistorySchema = require('./schemas/userCreditsHistorySchema.js');
 const generationLoraSchema = require('./schemas/generationLoraSchema.js');
 const userBooruCommentsSchema = require('./schemas/userBooruCommentsSchema.js');
+const userNotificationSchema = require('./schemas/userNotificationSchema.js');
 
 async function connectToDatabase() {
 	try {
@@ -21,6 +22,20 @@ async function connectToDatabase() {
 	} catch (error) {
 		console.log(`Error connecting to database: ${error}`)
 	}
+}
+
+async function createUserNotification(accountId, message, type) {
+	let notificationObject = {
+		notificationId: `${accountId}-${Date.now()}-${type}-${Math.floor(Math.random() * 100)}`,
+		timestamp: Date.now(),
+		message: message,
+		accountId: accountId,
+		type: type
+	}
+
+	await userNotificationSchema.create(notificationObject)
+
+	return {status: 'success', message: 'Notification created'}
 }
 
 async function modifyUserCredits(accountId, amount, operation, message, testMode=false) {
@@ -199,6 +214,54 @@ async function getSchemaDocuments(schema, query) {
 }
 
 
+async function aggregateSchemaDocuments(schema, query) {
+	try {
+		let documents
+
+		switch (schema) {
+			case 'userBooru':
+				documents = await userBooruSchema.aggregate(query)
+				break;
+			case 'userBooruTags':
+				documents = await userBooruTagsSchema.aggregate(query)
+				break;
+			case 'userProfile':
+				documents = await userProfileSchema.aggregate(query)
+				break;
+			case 'userSuggestion':
+				documents = await userSuggestionSchema.aggregate(query)
+				break;
+			case 'userHistory':
+				documents = await userHistorySchema.aggregate(query)
+				break;
+			case 'userCreditsHistory':
+				documents = await userCreditsHistorySchema.aggregate(query)
+				break;
+			case 'generationLora':
+				documents = await generationLoraSchema.aggregate(query)
+				break;
+			case 'userBooruComments':
+				documents = await userBooruCommentsSchema.aggregate(query)
+				break;
+			case 'userNotification':
+				documents = await userNotificationSchema.aggregate(query)
+				break;
+			default:
+				documents = null
+		}
+
+		if (documents === null) {
+			return {status: 'error', message: 'Document not found'}
+		}
+
+		return documents
+
+	} catch (error) {
+		console.log(`Error aggregating schema: ${error}`)
+		return {status: 'error', message: 'Error aggregating schema'}
+	}
+}
+
 async function updateSchemaDocumentOnce(schema, query, update) {
 	try {
 		switch (schema) {
@@ -330,9 +393,11 @@ async function deleteSchemaDocument(schema, query) {
 
 // export all functions
 module.exports = {
+	createUserNotification,
 	modifyUserCredits,
 	getSchemaDocumentOnce,
 	getSchemaDocuments,
+	aggregateSchemaDocuments,
 	updateSchemaDocumentOnce,
 	createSchemaDocument,
 	deleteSchemaDocument,

@@ -174,6 +174,9 @@
         <div id="creditsButtonDiv">
             <button id="creditsNav">Credits: <span id="creditsDisplay">0</span></button>
         </div>
+        <div id="notificationsDiv">
+            <button id="notificationsNav">🔔</button>
+        </div>
         
 
         <!-- Dark Mode Button -->
@@ -268,7 +271,116 @@
     });
 </script>
 
+<div id="notificationsPopup" style="display: none;">
+    <p>Notifications:</p>
+    <div class="notificationList" id="notificationsList">
+        <p>No notifications</p>
+    </div>
+    <button id="loadNotificationsButton">Load more</button>
+</div>
 
+<style>
+
+    .activeNotificationsPopup {
+        display: block !important;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: var(--background-colour);
+        color: white;
+        padding: 8px;
+        border-radius: 12px;
+        border: 2px solid rgb(255, 143, 246);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        z-index: 1000;
+        max-width: 400px;
+        width: 90%;
+    }
+
+    .notification {
+        display: flex;
+        flex-direction: column;
+        margin: 8px;
+        padding: 8px;
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+    }
+
+    .notificationType {
+        font-size: 18px;
+        color: #ff9dfc;
+    }
+
+    .notificationMessage {
+        font-size: 16px;
+    }
+
+    .notificationList {
+        display: flex;
+        flex-direction: column;
+        height: 30vh;
+        overflow-y: scroll;
+    }
+
+</style>
+
+
+<script>
+    let notificationsPopup = document.getElementById('notificationsPopup');
+    let notificationsList = document.getElementById('notificationsList');
+    let loadNotificationsButton = document.getElementById('loadNotificationsButton');
+
+    // send a post request to get-notifications to get the notifications:
+    notificationsReceived = []
+
+    function getNotifications() {
+        fetch('/get-notifications', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                notificationsReceived: notificationsReceived
+            })
+        }).then(response => response.json())
+            .then(data => {
+                console.log(notificationsReceived)
+                if (notificationsList.textContent.trim() == "No notifications") {
+                    notificationsList.innerHTML = "";
+                }
+                data.notifications.forEach(notification => {
+                    notificationsReceived.push(notification.notificationId)
+                    notification = `
+                        <div class="notification">
+                            <div class="notificationType"> ${notification.type} | ${new Date(Number(notification.timestamp)).toLocaleString()} </div>
+                            <div class="notificationMessage"> ${notification.message} </div>
+                        </div>
+                    `
+
+                    notificationsList.innerHTML += notification;
+
+                });
+            });
+    }
+
+    // add an event listener to the notifications button:
+    document.getElementById('notificationsNav').addEventListener('click', () => {
+        if (!notificationsPopup.classList.contains('activeNotificationsPopup')) {
+            notificationsPopup.classList.add('activeNotificationsPopup');
+            getNotifications();
+        } else {
+            notificationsPopup.classList.remove('activeNotificationsPopup');
+        }
+    });
+
+    document.getElementById('loadNotificationsButton').addEventListener('click', () => {
+        getNotifications();
+    });
+
+
+
+</script>
 
 <div id="creditsDailyPopup" style="display: none;">
     <div class="dailiesDivSideBySide">

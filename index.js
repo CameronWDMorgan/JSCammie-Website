@@ -185,6 +185,9 @@ app.post('/receive-token', async (req, res) => {
 				'Authorization': `Bearer ${accessToken}`
 			}
 		});
+		if (!discordResponse.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
 		const discordUser = await discordResponse.json();
 
 		if (!discordUser.id) {
@@ -297,7 +300,7 @@ app.post('/promote-suggestion', async (req, res) => {
 	}
 
 	// check if the user has more than 300 credits:
-	let result = await mongolib.modifyUserCredits(accountId, 1000, '-', `Promoted Suggestion Titled: "${suggestion.title}"`, true)
+	let result = await mongolib.modifyUserCredits(accountId, 2500, '-', `Promoted Suggestion Titled: "${suggestion.title}"`, true)
 
 	if (result.status === 'error') {
 		res.send({
@@ -314,7 +317,8 @@ app.post('/promote-suggestion', async (req, res) => {
 		promoted: true
 	})
 
-	await mongolib.modifyUserCredits(accountId, 1000, '-', `Promoted Suggestion Titled: "${suggestion.title}"`)
+	await mongolib.modifyUserCredits(accountId, 2500, '-', `Promoted Suggestion Titled: "${suggestion.title}"`)
+	await mongolib.createUserNotification(req.session.accountId, `You promoted a suggestion titled: "${suggestion.title}"`, 'suggestion')
 
 	res.send({
 		status: 'success',
@@ -595,6 +599,8 @@ app.post('/remove-suggestion', async (req, res) => {
 		suggestionId: suggestionId
 	})
 
+	await mongolib.createUserNotification(req.session.accountId, `Your suggestion titled: "${suggestion.title}" was removed.`, 'moderation')
+
 	res.send({
 		status: 'success',
 		message: 'Suggestion removed'
@@ -643,6 +649,9 @@ app.post('/update-suggestion-status', async (req, res) => {
 	}, {
 		status: newStatus
 	})
+
+	// send notification to the author of the suggestion:
+	await mongolib.createUserNotification(suggestion.accountId, `Your suggestion titled: "${suggestion.title}" has been updated to status: ${newStatus}`, 'suggestion')
 
 	res.send({
 		status: 'success',
@@ -855,41 +864,6 @@ app.post('/autocomplete', async (req, res) => {
 	}
 });
 
-
-
-// ? test the autocomplete function:
-try {
-	timeBeforeTest = Date.now()
-	fetch('https://www.jscammie.com/autocomplete', {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify({
-				query: 'large'
-			})
-		})
-		.then(res => res.json())
-	timeAfterTest = Date.now()
-
-	// test again:
-	timeBeforeTest = Date.now()
-	fetch('https://www.jscammie.com/autocomplete', {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify({
-				query: 'small'
-			})
-		})
-		.then(res => res.json())
-	timeAfterTest = Date.now()
-
-} catch (error) {
-	console.log(`Error fetching autocomplete data: ${error}`)
-}
-
 let cachedYAMLData = null
 let AI_API_URL = "http://127.0.0.1:5003"
 
@@ -902,27 +876,38 @@ function sortObjectByKey(obj) {
 }
 
 // Function to fetch, sort, and cache YAML data
-function updateYAMLCache() {
+async function updateYAMLCache() {
 	try {
-		fetch(`${AI_API_URL}/get-lora-yaml`, {
-				method: 'GET',
-				headers: {
-					'Content-Type': 'application/json'
-				}
-			})
-			.then(response => response.json())
-			.then(data => {
-				console.log('YAML data fetched');
-				Object.keys(data).forEach(category => {
-					try {
-						data[category] = sortObjectByKey(data[category]);
-					} catch (error) {
-						console.log(`Error sorting data for category ${category}: ${error}`);
-					}
-				});
+		let response = await fetch(`${AI_API_URL}/get-lora-yaml`, {
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json'
+			}
+		})
 
-				cachedYAMLData = sortObjectByKey(data);
-			})
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
+
+		response = response.json()
+
+		// get data from response, old code was:
+		// .then(response => response.json())
+		// .then(data => {
+
+		let data = await response
+
+		console.log('YAML data fetched');
+		Object.keys(data).forEach(category => {
+			try {
+				data[category] = sortObjectByKey(data[category]);
+			} catch (error) {
+				console.log(`Error sorting data for category ${category}: ${error}`);
+			}
+		});
+
+		cachedYAMLData = sortObjectByKey(data);
+			
 	} catch (error) {
 		console.log(`Error fetching YAML data: ${error}`);
 	}
@@ -1186,6 +1171,8 @@ app.post('/dailies', async (req, res) => {
 	}
 
 	result = await mongolib.modifyUserCredits(req.session.accountId, creditsEarned, '+', `Dailies claimed: ${dailyType}`)
+	await mongolib.createUserNotification(req.session.accountId, `You claimed your ${dailyType} dailies and earned ${creditsEarned} credits`, 'dailies')
+
 	if (result.status == 'error') {
 		res.send({
 			status: result.status,
@@ -1285,6 +1272,10 @@ app.post('/token-length', async function(req, res) {
 				'Content-Type': 'application/json'
 			},
 		});
+
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
 
 		const json = await response.json();
 
@@ -1425,6 +1416,10 @@ app.post('/generate', async function(req, res) {
 			},
 		});
 
+		if (!postResponse.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
+
 		const jsonResponse = await postResponse.json();
 		res.send(jsonResponse);
 	} catch (error) {
@@ -1444,6 +1439,10 @@ app.get('/cancel_request/:request_id', async function(req, res) {
 			},
 		});
 
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
+
 		const json = await response.json();
 
 		res.send(json);
@@ -1462,6 +1461,10 @@ app.get('/queue_position/:request_id', async function(req, res) {
 				'Content-Type': 'application/json'
 			},
 		});
+
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
 
 		const json = await response.json();
 
@@ -1490,6 +1493,9 @@ app.get('/result/:request_id', async function(req, res) {
 				'Content-Type': 'application/json'
 			},
 		});
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
 
 		const json = await response.json();
 
@@ -1618,6 +1624,7 @@ app.get('/result/:request_id', async function(req, res) {
 
 			// creditsFinal = creditsCurrent - creditsRequired
 			result = await mongolib.modifyUserCredits(req.session.accountId, creditsRequired, '-', creditsMessage)
+			await mongolib.createUserNotification(req.session.accountId, `You spent ${creditsRequired} credits on generating images using ${json.historyData.model}`, 'generator')
 
 			json.credits = result.newCredits
 		}
@@ -2471,6 +2478,7 @@ app.get('/booru/setRating/:booru_id/:rating', async function(req, res) {
 
 	if (foundBooruImage.safety == "na") {
 		await mongolib.modifyUserCredits(creatorProfile.accountId, 50, '+', `Your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a> was rated ${rating.toUpperCase()}`)
+		await mongolib.createUserNotification(creatorProfile.accountId, `Your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a> was rated ${rating.toUpperCase()}`, 'booru')
 	}
 
 	await userBooruSchema.findOneAndUpdate({
@@ -2533,6 +2541,8 @@ app.get('/booru/delete/:booru_id', async function(req, res) {
 	await userBooruSchema.findOneAndDelete({
 		booru_id: booru_id
 	})
+
+	await mongolib.createUserNotification(foundBooruImage.account_id, `Your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a> was deleted`, 'moderation')
 
 	// delete the image from the userBooruTagsSchema:
 	// find every booruTagsSchema where the array booru_ids contains the booru_id:
@@ -2605,6 +2615,9 @@ app.post('/booru/ban/:accountId', async function(req, res) {
 			booruPostBanReason: req.body.reason
 		}
 	})
+
+	// send a notification to the target:
+	await mongolib.createUserNotification(accountId, `You have been banned from posting to the booru due to: ${req.body.reason}`, 'moderation')
 
 	res.send({
 		status: "success",
@@ -2700,6 +2713,7 @@ app.post('/booru/vote', async function(req, res) {
 					await mongolib.modifyUserCredits(account_id, creditsToGain, '+', `You Upvoted a <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a>`)
 					if (creatorProfile != null) {
 						await mongolib.modifyUserCredits(creatorProfile.accountId, creditsToGain, '+', `Someone upvoted your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a>`)
+						await mongolib.createUserNotification(creatorProfile.accountId, `Someone upvoted your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a>`, 'booru')
 					}
 
 				}
@@ -2807,6 +2821,8 @@ app.post('/booru/comment/post/:booru_id', async function(req, res) {
 		timestamp: Date.now()
 	})
 
+	await mongolib.createUserNotification(foundBooruImage.account_id, `Someone commented on your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a>`, 'booru')
+
 	res.send({
 		status: "success",
 		message: "Comment added"
@@ -2852,6 +2868,8 @@ app.get('/booru/comment/delete/:commentId', async function(req, res) {
 	await mongolib.deleteSchemaDocument("userBooruComments", {
 		commentId: commentId
 	})
+
+	await mongolib.createUserNotification(foundComment.accountId, `Your comment was deleted`, 'moderation')
 
 	res.send({
 		status: "success",
@@ -3113,6 +3131,39 @@ app.get('/credits-history', async function(req, res) {
 		creditsHistory: creditsHistory
 	});
 })
+
+app.post('/get-notifications', async function(req, res) {
+	let data = req.body
+	// accountId"", notificationsReceived[]
+
+	let userProfile = await mongolib.getSchemaDocumentOnce("userProfile", { accountId: data.accountId })
+
+	if (userProfile.status == 'error') {
+		res.send({
+			status: 'error',
+			message: 'User not found'
+		})
+		return
+	}
+
+	let receivedNotifications = new Set(data.notificationsReceived);
+
+	let notifications = await mongolib.aggregateSchemaDocuments("userNotification", [
+		{
+			$match: {
+				accountId: req.session.accountId,
+				notificationId: { $nin: Array.from(receivedNotifications) }
+			}
+		},
+		{
+			$sort: { timestamp: -1 }
+		},
+		{ $limit: 20 }
+	]);
+
+
+		res.send({ status: 'success', notifications: notifications })
+	})
 
 app.get('/settings', async function(req, res) {
 	let userProfile = await mongolib.getSchemaDocumentOnce("userProfile", {
