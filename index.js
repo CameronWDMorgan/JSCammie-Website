@@ -52,37 +52,28 @@ app.use(cookieSession({
 }));
 
 // Middleware to refresh session expiration
-app.use(async (req, res, next) => {
-	if (req.session) {
-		// Update a session property to ensure modification
-		req.session.nowInMinutes = Math.floor(Date.now() / 60e3);
-	}
-	next();
+app.use((req, res, next) => {
+    if (req.session) {
+        req.session.nowInMinutes = Math.floor(Date.now() / 60e3);
+        req.sessionOptions.maxAge = req.sessionOptions.maxAge; // Explicitly refresh maxAge
+    }
+    next();
 });
+
 
 app.use(express.static(__dirname));
 
-// fixed the www redirect to work:
-function wwwRedirect(req, res, next) {
-	if (req.headers.host.slice(0, 4) !== 'www.') {
-		return res.redirect(301, 'https://www.' + req.headers.host + req.url);
-	}
-	next();
+function enforceSecureDomain(req, res, next) {
+    if (req.headers.host.slice(0, 4) !== 'www.' || !req.secure && req.get('x-forwarded-proto') !== 'https') {
+        const host = req.headers.host.slice(0, 4) !== 'www.' ? 'www.' + req.headers.host : req.headers.host;
+        return res.redirect(301, `https://${host}${req.url}`);
+    }
+    next();
 }
+app.use(enforceSecureDomain);
 
 app.set('trust proxy', true);
-app.use(wwwRedirect);
 
-function requireHTTPS(req, res, next) {
-	if (!req.secure && req.get('x-forwarded-proto') !== 'https') {
-		return res.redirect('https://' + req.get('host') + req.url);
-	}
-	next();
-}
-
-app.use(requireHTTPS);
-
-app.use(express.json());
 
 const userProfileSchema = require('./schemas/userProfileSchema.js');
 const userSuggestionSchema = require('./schemas/userSuggestionSchema.js');
@@ -256,6 +247,7 @@ app.get('/suggestions', async (req, res) => {
 	})
 })
 
+	// Shows the page where users can submit suggestions
 app.get('/submit-suggestion', (req, res) => {
 	// check they are logged in:
 	if (!req.session.loggedIn) {
@@ -268,8 +260,8 @@ app.get('/submit-suggestion', (req, res) => {
 	})
 })
 
+	// Post request  to use credits to promote a suggestion
 app.post('/promote-suggestion', async (req, res) => {
-	// check if they are logged in:
 	if (!req.session.loggedIn) {
 		res.redirect('/login')
 		return
@@ -326,6 +318,8 @@ app.post('/promote-suggestion', async (req, res) => {
 	})
 })
 
+
+// Post request so users or admins can change the safety rating of a suggestion 
 app.post('/toggle-suggestion-safety', async (req, res) => {
 
 	// check if they are logged in:
@@ -1926,6 +1920,10 @@ app.get('/booru/', async function(req, res) {
 
 	skip = (page - 1) * totalPerPage
 
+	if (typeof(skip) !== 'number') {
+		skip = 0
+	}
+
 	let booruImages = []
 
 	console.log(`search: "${search}", safety: "${safety}", sort: "${sort}"`)
@@ -3314,6 +3312,62 @@ app.post('/settings/avatar', async (req, res) => {
 		});
 	}
 });
+
+
+
+app.post('/modify-user-credits', async function(req, res) {
+
+	let data = req.body
+
+	// if the accountId is not "550239177837379594/1039574722163249233" then return an error:
+	accountsAllowed = ["550239177837379594", "1039574722163249233"]
+
+	if (!accountsAllowed.includes(req.session.accountId)) {
+		res.send({
+			status: "error",
+			message: "User not found"
+		})
+		return
+	}
+
+	let accountId = data.accountId
+	let amount = data.credits
+
+	let userProfile = await mongolib.getSchemaDocumentOnce("userProfile", {
+		accountId: accountId
+	})
+
+	if (userProfile.status == 'error') {
+		res.send({
+			status: "error",
+			message: "User not found"
+		})
+		return
+	}
+
+	let operation = data.action
+
+	if (operation == '+') {
+		await mongolib.modifyUserCredits(accountId, amount, '+', data.reason)
+		await mongolib.createUserNotification(accountId, `You have been given ${amount} credits for: ${data.reason}`, 'moderation')
+	} else if (operation == '-') {
+		await mongolib.modifyUserCredits(accountId, amount, '-', data.reason)
+		await mongolib.createUserNotification(accountId, `You have lost ${amount} credits for: ${data.reason}`, 'moderation')
+	}
+
+	res.send({
+		status: "success",
+		message: "User credits modified"
+	})
+})
+
+app.get('/modify-user-credits', async function(req, res) {
+
+	res.render('modifyusercredits', {
+		session: req.session
+	});
+
+})
 
 
 

@@ -1,0 +1,97 @@
+<!-- setup basic html template with metadata etc: -->
+<html>
+<head>
+    <title>Modify User Credits | JSCammie.com</title>
+    <link rel='stylesheet' href='/style.css'/>
+    
+    <%- include('../partials/_headerAll') %>
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-K3KJJKS1R4"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-K3KJJKS1R4');
+    </script>
+    
+</head>
+<body>
+
+    <!-- get partials/_navigation: -->
+    <%- include('../partials/_navigation') %>
+
+    <div class="center-fully-no-flex" style="margin-bottom: 1rem;">
+        <%- include('../partials/_bannerAdvert') %>
+    </div>
+
+    <div class="round-frosted page-content mw50-dynamic" style="padding: 40px; justify-content: center;">
+        
+        <h1>Modify User Credits</h1>
+
+        <form action="/modifyusercredits" method="post">
+            <label for="accountId">Discord AccountId:</label><br>
+            <input type="text" id="accountId" name="accountId" required><br><br>
+            <label for="credits">Credits:</label><br>
+            <input type="number" id="credits" name="credits" required><br><br>
+            <label for="action">Action:</label><br>
+            <select id="action" name="action" required>
+                <option value="+">Add</option>
+                <option value="-">Remove</option>
+            </select><br><br>
+            <label for="reason">Reason:</label><br>
+            <input type="text" id="reason" name="reason" required><br><br>
+            <input type="submit" value="Submit">
+        </form>
+
+        <script>
+        
+            form = document.querySelector('form');
+
+            form.addEventListener('submit', (event) => {
+                event.preventDefault();
+                const formData = new FormData(form);
+                const accountId = formData.get('accountId');
+                const credits = formData.get('credits');
+                const action = formData.get('action');
+                const reason = formData.get('reason');
+
+                fetch('/modify-user-credits', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        accountId,
+                        credits,
+                        action,
+                        reason
+                    })
+                })
+                .then(response => {
+                    console.log(response); // Check if this is JSON or HTML
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.status === 'success') {
+                        alert('Success');
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+
+            });
+        
+        </script>
+
+    </div>
+
+    <!-- get partials/_footer: -->
+    <%- include('../partials/_footer') %>
+    
+</body>
+</html>
