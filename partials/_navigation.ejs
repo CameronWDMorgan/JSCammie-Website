@@ -2,6 +2,24 @@
 
 <script id="aclib" type="text/javascript" src="//acscdn.com/script/aclib.js"></script>
 
+<div id="navigationOverlay" class="navigationOverlay frosted"></div>
+
+<style>
+
+    .navigationOverlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        transition: all 0.75s;
+        z-index: 1000;
+    }
+
+</style>
+
 <style>
 /* Navigation Bar */
 .topNavBar {
@@ -202,6 +220,23 @@
         transition: background-color 0.3s ease, transform 0.2s ease;
         z-index: 200;
     }
+
+    .creditsHowToSummary {
+        background-color: rgba(0, 0, 0, 0.1);
+        font-size: 18px;
+        color: #ff9dfc;
+        border-radius: 8px;
+        padding: 8px;
+        transition: all 0.3s ease;
+        border: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .creditsHowToSummary:hover {
+        background-color: rgba(0,0,0,0);
+        border: 2px solid #ffffff;
+    }
+
+
 </style>
 
 <script>
@@ -254,6 +289,7 @@
         "Consider answering the Survey by clicking/tapping <a href='https://forms.gle/dbRsyWEA5RSZL3qb6'>'Here'</a> to help make the site better!",
         "Consider donating by clicking/tapping <a href='https://ko-fi.com/jscammie'>'Here'</a> to help keep the site running! 🥺",
         "Check out the <a href='https://www.jscammie.com/booru'>'Booru'</a> for some cool user-created images!",
+        "Check out the <a href='https://www.discord.gg/AvbQuRmh7t'>'Discord'</a> to compete in contests for credits and more!",
     ]
 
     let topSiteText = document.getElementById('topSiteText');
@@ -374,6 +410,14 @@
         }
     });
 
+    document.addEventListener('click', function (event) {
+        var isClickInside = document.getElementById('notificationsPopup').contains(event.target);
+        var isClickOnButton = document.getElementById('notificationsNav').contains(event.target);
+        if (!isClickInside && !isClickOnButton) {
+            document.getElementById('notificationsPopup').classList.remove('activeNotificationsPopup');
+        }
+    });
+
     document.getElementById('loadNotificationsButton').addEventListener('click', () => {
         getNotifications();
     });
@@ -383,26 +427,60 @@
 </script>
 
 <div id="creditsDailyPopup" style="display: none;">
-    <div class="dailiesDivSideBySide">
-        <p class="topTextCreditsButton">3 Hours Rewards (50 Credits)</p>
-        <button id="3hrCreditsButton" class="creditsButton"><span id="3hrCreditsButtonTimeLeft"></span> / 3 Hours</button>
-    </div>
-    <div class="dailiesDivSideBySide">
-        <p class="topTextCreditsButton">12 Hours Rewards (100 Credits)</p>
-        <button id="12hrCreditsButton" class="creditsButton"><span id="12hrCreditsButtonTimeLeft"></span> / 12 Hours</button>
-    </div>
-    <div class="dailiesDivSideBySide">
-        <p class="topTextCreditsButton">24 Hours Rewards (200 Credits)</p>
-        <button id="24hrCreditsButton" class="creditsButton"><span id="24hrCreditsButtonTimeLeft"></span> / 24 Hours</button>
-    </div>
-    <div class="dailiesDivSideBySide">
-        <p class="topTextCreditsButton">7 Days Rewards (500 Credits)</p>
-        <button id="168hrCreditsButton" class="creditsButton"><span id="168hrCreditsButtonTimeLeft"></span> / 7 Days</button>
+    <div class="dailiesDivGrid">
+        <div class="dailiesDivSideBySide">
+            <p class="topTextCreditsButton">3 Hours Rewards (50 Credits)</p>
+            <button id="3hrCreditsButton" class="creditsButton"><span id="3hrCreditsButtonTimeLeft"></span> / 3 Hours</button>
+        </div>
+        <div class="dailiesDivSideBySide">
+            <p class="topTextCreditsButton">12 Hours Rewards (100 Credits)</p>
+            <button id="12hrCreditsButton" class="creditsButton"><span id="12hrCreditsButtonTimeLeft"></span> / 12 Hours</button>
+        </div>
+        <div class="dailiesDivSideBySide">
+            <p class="topTextCreditsButton">24 Hours Rewards (200 Credits)</p>
+            <button id="24hrCreditsButton" class="creditsButton"><span id="24hrCreditsButtonTimeLeft"></span> / 24 Hours</button>
+        </div>
+        <div class="dailiesDivSideBySide">
+            <p class="topTextCreditsButton">7 Days Rewards (500 Credits)</p>
+            <button id="168hrCreditsButton" class="creditsButton"><span id="168hrCreditsButtonTimeLeft"></span> / 7 Days</button>
+        </div>
     </div>
 
     <div class="dailiesDivSideBySide">
         <p class="topTextCreditsButton">Credits History</p>
-        <a href="/credits-history" target="_blank" class="creditsButton">View</a>
+        <!-- <a href="/credits-history" target="_blank" class="creditsButton">View</a> -->
+        <button class="creditsButton" onclick="window.open('/credits-history', '_blank')">View</button>
+    </div>
+
+    <div class="howToGainCredits">
+    
+        <details>
+
+            <summary class="creditsHowToSummary">How to gain credits:</summary>
+
+            <!-- <li>
+                <p>Every 3 hours, 12 hours, 24 hours, and 7 days you can claim free credits! The amount of credits you can claim increases the longer you wait between claims.</p>
+                <p>Posting on the <a href="https://www.jscammie.com/booru">Booru</a> can also earn you credits when the image gets approved! (rated SFW/SUGGESTIVE/NSFW/EXTREME, by default they will be rated as NA and wont be visible to others)</p>
+                <p>Voting on posts on the <a href="https://www.jscammie.com/booru">Booru</a> can also earn you credits!</p>
+                <p>Getting 1st, 2nd, or 3rd place in the discord contests can earn you credits!</p>
+            </li> -->
+
+            <!-- make the above a list: -->
+            <ul>
+                <li>Every 3 hours, 12 hours, 24 hours, and 7 days you can claim free credits! The amount of credits you can claim increases the longer you wait between claims.</li>
+                <br>
+                <li>Posting on the <a href="https://www.jscammie.com/booru">Booru</a> can also earn you credits when the image gets approved! (rated SFW / SUGGESTIVE / NSFW / EXTREME, by default they will be rated as NA and wont be visible to others)</li>
+                <br>
+                <li>Voting on posts on the <a href="https://www.jscammie.com/booru">Booru</a> can also earn you credits!</li>
+                <br>
+                <li>Getting 1st, 2nd, or 3rd place in the discord contests can earn you credits!</li>
+                <br>
+                <li>Logging in gives you 500 credits as a starting bonus!</li>
+            </ul>
+
+        </details>
+  
+    
     </div>
 
 </div>
@@ -422,8 +500,14 @@
         border: 2px solid rgb(255, 143, 246);
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
         z-index: 1000;
-        max-width: 400px;
-        width: 90%;
+        max-width: 700px;
+        width: 75%;
+    }
+
+    .dailiesDivGrid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
     }
 
     .dailiesDivSideBySide {
@@ -438,11 +522,18 @@
         color: #ff9dfc;
     }
 
+    .howToGainCredits {
+        margin-top: 10px;
+        border-radius: 8px;
+        padding: 8px;
+        background-color: rgba(0, 0, 0, 0.2);
+    }
+
     .creditsButton {
         background-color: rgba(0, 0, 0, 0.2);
         color: white;
         padding: 12px;
-        border: none;
+        border: 2px solid rgba(255, 255, 255, 0.2);
         border-radius: 8px;
         cursor: pointer;
         font-size: 16px;
@@ -463,7 +554,7 @@
     }
 
     .creditsButton:disabled {
-        background-color: var(--highlight-colour-disabled);
+        background-color: rgba(0, 0, 0, 0.2);
         cursor: not-allowed;
         opacity: 0.6;
     }
@@ -486,14 +577,14 @@
         }
     });
 
-    document.getElementById('creditsText').addEventListener('click', () => {
-        if (document.getElementById('creditsDailyPopup').style.display == 'none') {
-            // make it side by side the divs inside it:
-            document.getElementById('creditsDailyPopup').style.display = 'inline-block';
-        } else {
-            document.getElementById('creditsDailyPopup').style.display = 'none';
-        }
-    });
+    // document.getElementById('creditsText').addEventListener('click', () => {
+    //     if (document.getElementById('creditsDailyPopup').style.display == 'none') {
+    //         // make it side by side the divs inside it:
+    //         document.getElementById('creditsDailyPopup').style.display = 'inline-block';
+    //     } else {
+    //         document.getElementById('creditsDailyPopup').style.display = 'none';
+    //     }
+    // });
 
     // when the user clicks outside of the creditsDailyPopup, hide it:
     document.addEventListener('click', function (event) {
@@ -773,6 +864,42 @@
             document.body.classList.remove('no-transition');
             document.getElementsByClassName('topNavBar')[0].classList.remove('no-transition');
         }, 50); // 50 milliseconds is usually enough, but this can be adjusted as needed
+    });
+
+</script>
+
+
+<script>
+
+    function showHideNavigationOverlay(value) {
+        if (value == 'show') {
+            document.getElementById('navigationOverlay').style.display = 'block';
+        } else if (value == 'hide') {
+            document.getElementById('navigationOverlay').style.display = 'none';
+        }
+    }
+
+    // add an event listener to the navigationOverlay to hide it when clicked:
+    document.getElementById('navigationOverlay').addEventListener('click', () => {
+        showHideNavigationOverlay('hide');
+    });
+
+    // event listeners for the creditsNav button to show the navigationOverlay and the notificationsPopup:
+    document.getElementById('creditsNav').addEventListener('click', () => {
+        showHideNavigationOverlay('show');
+    });
+
+    document.getElementById('notificationsNav').addEventListener('click', () => {
+        showHideNavigationOverlay('show');
+    });
+
+    // add ESC keyboard event listener to hide the navigationOverlay and any other popups if active
+    document.addEventListener('keydown', function (event) {
+        if (event.key === "Escape") {
+            showHideNavigationOverlay('hide');
+            document.getElementById('notificationsPopup').classList.remove('activeNotificationsPopup');
+            document.getElementById('creditsDailyPopup').style.display = 'none';
+        }
     });
 
 </script>
