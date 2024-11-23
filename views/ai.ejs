@@ -3707,6 +3707,28 @@
             });
         }
 
+        function checkRpCount(textarea) {
+            rpCount = (textarea.value.match(/<rp>/g) || []).length;
+
+            console.log(`RP Count: ${rpCount}`);
+
+            if (rpCount >= 2) {
+                if (!document.getElementById('regionalPromptCheckbox').checked) {
+                    document.getElementById('regionalPromptCheckbox').checked = true;
+                    document.getElementById('regionalPromptCheckbox').dispatchEvent(new Event('change'));
+                }
+            } else {
+                if (document.getElementById('regionalPromptCheckbox').checked) {
+                    document.getElementById('regionalPromptCheckbox').checked = false;
+                    document.getElementById('regionalPromptCheckbox').dispatchEvent(new Event('change'));
+                }
+            }
+        }
+
+        document.getElementById('prompt').addEventListener('input', function() {
+            checkRpCount(this);
+        });
+
         // Add event listeners for input on both the prompt textarea and the negative prompt input
         document.getElementById('prompt').addEventListener('input', updateWordCount);
         document.getElementById('negativeprompt').addEventListener('input', updateWordCount);
@@ -3751,6 +3773,11 @@
                 container.style.display = 'block';
             });
         });
+
+        
+
+        // event listener for the prompt textarea to check if the regionalpromptcheckbox is checked IF the prompt contains 2 <rp> tags:
+        
 
     </script>
     
