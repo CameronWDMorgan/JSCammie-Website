@@ -11,9 +11,6 @@ document.getElementById('generateButton').addEventListener('click', async functi
 
     console.log("test")
 
-    // get the formData from the form:
-    const formData = new FormData(document.getElementById('generatorForm'));
-
     // Disable the button and change its text
     const generateButton = document.getElementById('generateButton');
     generateButton.disabled = true;
@@ -24,16 +21,14 @@ document.getElementById('generateButton').addEventListener('click', async functi
 
     let accountId = document.getElementById('user-session').value
     
-    let targetSteps = formData.get('steps')
-    let targetModel = formData.get('model')
+    let targetSteps = document.getElementById('steps').value
+    let targetModel = document.getElementById('model').value
 
     let targetWidth = 512
     let targetHeight = 512
 
-    aspect_ratio = formData.get('aspectRatio')
+    aspect_ratio = document.getElementById('aspectRatio').value
 
-
-    // targetQuantity = formData.get('quantity')
 
     let targetQuantity = 4
 
@@ -54,7 +49,7 @@ document.getElementById('generateButton').addEventListener('click', async functi
         background: Object.keys(selectedLoras.filter(lora => lora.includes('background-')))
     };
 
-    let targetGuidance = formData.get('cfguidance')
+    let targetGuidance = document.getElementById('cfguidance').value
 
 
     let imageBase64
@@ -62,35 +57,37 @@ document.getElementById('generateButton').addEventListener('click', async functi
 
     console.log(`H${targetHeight} W${targetWidth} S${targetSteps} Q${targetQuantity} M${targetModel}`)
 
-    // Get the image file from the file input
-    const imageInput = document.getElementById('uploadedImage');
-    if (imageInput.files && imageInput.files[0]) {
-        formData.append('image', imageInput.files[0]);
-    }
+
+    let image = document.getElementById('uploadedImage').files[0] 
 
     let combinedLora = []
 
     let advancedCheckbox = "on"
 
-    let inpainting_toggle = formData.get('inpaintingCheckbox')
+    let inpainting_toggle = document.getElementById('inpaintingCheckbox').checked
 
     let inpaintingCheckbox = false
 
-    if(inpainting_toggle == "on") {
+    let maskUrl = null
+
+    let originalImage = null
+
+    if(inpainting_toggle == true) {
         inpaintingCheckbox = true;
         
         // Get the mask with a black background
         const maskDataUrl = getMaskWithBlackBackground();
     
-        // Append the mask image to the FormData
-        formData.append('mask', maskDataUrl);
+        // Append the mask image to maskUrl:
+        maskUrl = maskDataUrl;
+        
 
         // Get the original image from the file input:
         originalImage = document.getElementById('inpaintingImage').files[0];
 
-        strength = formData.get('inpaintingStrength')
+        strength = document.getElementById('inpaintingStrength').value
     } else {
-        strength = formData.get('img2imgStrength')
+        strength = document.getElementById('img2imgStrength').value
     }    
         
     console.log(`LORAS: ${selectedLoras}`);
@@ -138,7 +135,11 @@ document.getElementById('generateButton').addEventListener('click', async functi
 
     let schedulerValue = document.getElementById('scheduler').value
 
-    promptValue = formData.get('prompt')
+    promptValue = document.getElementById('prompt').value
+
+    // make it one string:
+
+    promptValue = promptValue.replace(/\n/g, ' ')
 
     fastqueueClasses = document.getElementById('fastqueueButton').classList
     if (fastqueueClasses.contains('active')) {
@@ -152,15 +153,16 @@ document.getElementById('generateButton').addEventListener('click', async functi
     extras = {
         removeWatermark: document.getElementById('removeWatermarkCheckbox').checked ?? false,
         upscale: document.getElementById('upscaleCheckbox').checked ?? false,
-        doubleImages: document.getElementById('doubleImagesCheckbox').checked ?? false
+        doubleImages: document.getElementById('doubleImagesCheckbox').checked ?? false,
+        removeBackground: document.getElementById('removeBackgroundCheckbox').checked ?? false,
     }
 
     if (document.getElementById('regionalPromptCheckbox').checked) {
         regionalPromptSettings = {
             status: "true",
-            regionalPromptSplitPosition: formData.get('regionalPromptSplitPosition'),
-            regionalPromptAStrength: formData.get('regionalPromptAStrength'),
-            regionalPromptBStrength: formData.get('regionalPromptBStrength')
+            regionalPromptSplitPosition: document.getElementById('regionalPromptSplitPosition').value,
+            regionalPromptAStrength: document.getElementById('regionalPromptAStrength').value,
+            regionalPromptBStrength: document.getElementById('regionalPromptBStrength').value,
         }
     } else {
         regionalPromptSettings = {status: "false"}
@@ -172,10 +174,10 @@ document.getElementById('generateButton').addEventListener('click', async functi
 
     let data = {
         prompt: promptValue,
-        negativeprompt: formData.get('negativeprompt'),
+        negativeprompt: document.getElementById('negativeprompt').value,
         aspect_ratio: aspect_ratio,
         steps: targetSteps,
-        seed: formData.get('seed'),
+        seed: document.getElementById('seed').value,
         model: targetModel,
         quantity: targetQuantity,
         lora: selectedLoras,
@@ -188,9 +190,9 @@ document.getElementById('generateButton').addEventListener('click', async functi
         request_type: request_type,
         advancedMode: advancedCheckbox,
         inpainting: inpaintingCheckbox,
-        inpaintingMask: formData.get('mask'),
+        inpaintingMask: maskUrl,
         accountId: accountId,
-        fastpass: formData.get('fastpass'),
+        fastpass: false,
         scheduler: schedulerValue,
         fastqueue: fastqueue,
         creditsRequired: 0,
@@ -361,9 +363,13 @@ document.getElementById('generateButton').addEventListener('click', async functi
                             // get the time in ms:
                             const time = new Date().getTime();
 
-                            const audio = new Audio('https://www.jscammie.com/generationdone.wav');
-                            audio.play();
+                            if (results.misc_generationReadyBeep == true) {
+                                const audio = new Audio('https://www.jscammie.com/generationdone.wav');
+                                audio.play();
+                            }
 
+
+                            
                             for (const [key, value] of Object.entries(results)) {
                                 console.log(`${key}: ${value}`);
                             }

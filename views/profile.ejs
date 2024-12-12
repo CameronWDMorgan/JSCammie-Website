@@ -38,8 +38,8 @@
         var profileProfile = {
             accountId: `<%= profileProfile.accountId %>`,
             username: `<%= profileProfile.username %>`,
-            profileImg: `<%= profileProfile.profileImg || "http://www.jscammie.com/noimagefound.png" %>`,
-            userBio: `<%= profileProfile.userBio || "TEST BIO" %>`,
+            profileImg: `<%= profileProfile.profileImg || "https://www.jscammie.com/noimagefound.png" %>`,
+            userBio: `<%= profileProfile.settings?.user_bio || "TEST BIO" %>`,
             }
 
         var userProfile = {

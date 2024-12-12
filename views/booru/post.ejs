@@ -105,6 +105,14 @@
                 document.body.removeChild(a);
             }
 
+            function openInGenerator() {
+                // jscammie.com/?prompt=hello&negativeprompt=world&aspectRatio=square&model=fluffysonic&steps=20&cfguidance=3&seed=-1&scheduler=eulera&loras=[]&lora_strengths=[]
+
+                let url = `https://jscammie.com/?prompt=${encodeURIComponent(booruImage.prompt)}&negativeprompt=${encodeURIComponent(booruImage.negative_prompt)}&aspectRatio=${booruImage.aspect_ratio}&model=${booruImage.model}&steps=${booruImage.steps}&cfguidance=${booruImage.cfg}&seed=${booruImage.seed}&loras=[${booruImage.loras}]&lora_strengths=[${booruImage.lora_strengths}]&`
+
+                window.open(url, '_blank')
+            }
+
             var postProfile = {
                 accountId: `<%= postProfile.accountId %>`,
                 username: `<%= postProfile.username %>`,
@@ -161,6 +169,7 @@
                         ${moderatorButtons}
                         ${postAccountIdButtons}
                         <button onclick="exportAIData()">Export to .AIDATA</button>
+                        <button onclick="openInGenerator()">Open in Generator</button>
                     </div>
 
                     <details>

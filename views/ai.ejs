@@ -454,6 +454,7 @@
 
     <script>
         // remove the loading screen when the page is fully loaded:
+
         window.addEventListener('load', function() {
             // get the loading screen element:
             const loadingScreen = document.getElementById('loadingScreen');
@@ -506,6 +507,7 @@
 
     <script>
         let loraDataKeys = ['style', 'effect', 'concept', 'clothing', 'character', 'pose', 'background']
+
     </script>
 
     <%- include('../partials/_navigation') %>
@@ -519,6 +521,96 @@
         <div class="flex-div" style="padding: 40px; padding-bottom: 0px; justify-content: center;">
 
             <h2>Welcome to the AI Image Generator!</h2>
+
+            <style>
+            
+                .simpleAdvancedButton.active {
+                    background-color: #4CAF50; 
+                }
+            
+            </style>
+
+            <div id="simpleAdvancedToggle">
+                <!-- tooltip: -->
+                <a class="tooltip" onclick="showTooltip(this)">❓</a>
+                <div class="tooltiptext">
+                    <p>Simple Mode:</p>
+                    <p>Simple mode is a more user-friendly version of the AI Image Generator, with less options and settings to configure.</p>
+                    <p>Advanced Mode:</p>
+                    <p>Advanced mode is a more complex version of the AI Image Generator, with more options and settings to configure.</p>
+                </div>
+                <button id="simpleToggle" class="simpleAdvancedButton">Simple</button>
+                <button id="advancedToggle" class="simpleAdvancedButton active">Advanced</button>
+            </div>
+
+
+
+
+            <script>
+            
+                // get the simple and advanced toggle buttons:
+                let simpleToggle = document.getElementById('simpleToggle');
+                let advancedToggle = document.getElementById('advancedToggle');
+
+                // get all the advancedElements
+                let advancedElements = document.getElementsByClassName('advancedElement');
+
+                // add event listeners to the simple and advanced toggle buttons:
+                simpleToggle.addEventListener('click', function() {
+                    // remove the active class from the advanced toggle button:
+                    advancedToggle.classList.remove('active');
+                    // add the active class to the simple toggle button:
+                    simpleToggle.classList.add('active');
+
+                    // hide all the advanced elements:
+                    for (let i = 0; i < advancedElements.length; i++) {
+                        advancedElements[i].style.display = 'none';
+                    }
+
+                    // depending on the model prefix sdxl- flux- or no prefix (doesnt have sdxl- or flux-) change the cfg, steps etc:
+
+                    let model = document.getElementById('model').value;
+
+                    // get the first 5 charcters of the model:
+                    let modelPrefix = model.substring(0, 5);
+
+                    function setSimpleDefaults(steps, cfg) {
+                        // set the default values for the simple mode:
+                        document.getElementById('steps').value = steps;
+                        document.getElementById('cfguidance').value = cfg
+                        document.getElementById('seed').value = '-1';
+                    }
+
+                    switch(modelPrefix) {
+                        case 'sdxl-':
+                            setSimpleDefaults(30, 3.5)
+                            break;
+                        case 'flux-':
+                            setSimpleDefaults(20, 1)
+                            break;
+                        default:
+                            setSimpleDefaults(40, 6)
+                            break;
+                    }
+
+                });
+
+                advancedToggle.addEventListener('click', function() {
+                    // remove the active class from the simple toggle button:
+                    simpleToggle.classList.remove('active');
+                    // add the active class to the advanced toggle button:
+                    advancedToggle.classList.add('active');
+
+                    // show all the advanced elements:
+                    for (let i = 0; i < advancedElements.length; i++) {
+                        advancedElements[i].style.display = 'block';
+                    }
+                });
+
+            </script>
+
+
+
 
             <!-- style the save slot buttons, with on hover effects -->
             <style>
@@ -692,9 +784,6 @@
                         <p>Save Slots Loaded in <%=timeSaveSlotsMS%>ms</p>
                     <% } %>
 
-                    <!-- Form to Create a New Save Slot -->
-
-                    <!-- if user is logged in let them use the form, else show a grayed out version with text ontop -->
                     <% if (session.loggedIn) { %>
                         <form id="createSlotForm">
                             <input type="text" id="saveSlotName" name="name" placeholder="Slot Name">
@@ -716,14 +805,27 @@
 
 
                     <script>
-                        // JavaScript to handle form submission and slot loading
-
-                        document.getElementById('createSlotForm').addEventListener('submit', function(event) {
+                        document.getElementById('createSlotForm').addEventListener('submit', async function(event) {
                             event.preventDefault();
 
                             slotName = document.getElementById('saveSlotName').value
 
-                            if (!confirm(`Are you sure you want to create the slot: "${slotName}"?`)) {
+                            let options = {
+                                message: "Are you sure you want to create the slot?",
+                                question: true,
+                                options: {
+                                    yes: function() {
+                                        console.log('yes clicked')
+                                    },
+                                    no: function() {
+                                        console.log('no clicked')
+                                    }
+                                }
+                            }
+
+                            let userResponse = await globalAlert(options)
+
+                            if (userResponse == 'no') {
                                 return; // Exit the function if the user clicks 'Cancel'
                             }
 
@@ -769,11 +871,26 @@
                             });
                         });
 
-                        function updateSlot(slotId) {
+                        async function updateSlot(slotId) {
                             // add a popup asking for confirmation to update the slot:
                             slotName = document.getElementById(`saveSlot-${slotId}`).getElementsByTagName('summary')[0].innerText
 
-                            if (!confirm(`Are you sure you want to update the slot: "${slotName}"?`)) {
+                            let options = {
+                                message: `Are you sure you want to update the slot: ${slotName}?`,
+                                question: true,
+                                options: {
+                                    yes: function() {
+                                        console.log('yes clicked')
+                                    },
+                                    no: function() {
+                                        console.log('no clicked')
+                                    }
+                                }
+                            }
+
+                            let userResponse = await globalAlert(options)
+
+                            if (userResponse == 'no') {
                                 return; // Exit the function if the user clicks 'Cancel'
                             }
 
@@ -821,211 +938,33 @@
                             }).then(response => response.json())
                             .then(data => {
                                 // Handle response
-                                alert('Updated Save Slot!')
                                 refreshSaveSlots()
                             });
                         }
 
-                        function exportAIData() {
-                            // Get the AI data from the form
-                            let aiData = {
-                                prompt: document.getElementById('prompt').value,
-                                negativeprompt: document.getElementById('negativeprompt').value,
-                                aspectRatio: document.getElementById('aspectRatio').value,
-                                model: document.getElementById('model').value,
-                                loras: [],
-                                lora_strengths: [],
-                                steps: document.getElementById('steps').value,
-                                quantity: 2,
-                                cfg: document.getElementById('cfguidance').value,
-                                seed: document.getElementById('seed').value,
-                            }
+                        async function loadSlot(slotId) {
 
-                            // Get the selected Loras:
-                            let loraSelectionContainers = document.getElementsByClassName('loraSelection');
-
-                            // get all loraSelectionsSummarys to get the lora strength from them:
-                            document.querySelectorAll('#loraSelectionsSummary .lora-details input[type="range"]').forEach(slider => {
-                                aiData.lora_strengths.push(slider.value)
-                            })
-
-                            for (let i = 0; i < loraSelectionContainers.length; i++) {
-                                const loraSelection = loraSelectionContainers[i];
-                                // Get all checkboxes within the current loraSelection container
-                                const checkboxes = loraSelection.querySelectorAll('input[type="checkbox"]:checked');
-                                
-                                // Loop through the checked checkboxes and add their value (assuming value is used as ID) to the loras string
-                                checkboxes.forEach(checkbox => {
-                                    aiData.loras.push(checkbox.value);
-                                });
-                            }
-
-                            // export it to a yaml file:
-                            let yamlData = {
-                                "prompt": aiData.prompt,
-                                "negativeprompt": aiData.negativeprompt,
-                                "aspectRatio": aiData.aspectRatio,
-                                "model": aiData.model,
-                                "loras": aiData.loras,
-                                "lora_strengths": aiData.lora_strengths,
-                                "steps": aiData.steps,
-                                "quantity": aiData.quantity,
-                                "cfg": aiData.cfg,
-                                "seed": aiData.seed
-                            }
-
-                            // save it to a file and download it without jsyaml:
-                            let yamlString = `${aiData.prompt}<SPLIT>${aiData.negativeprompt}<SPLIT>${aiData.aspectRatio}<SPLIT>${aiData.model}<SPLIT>${aiData.loras}<SPLIT>${aiData.lora_strengths}<SPLIT>${aiData.steps}<SPLIT>${aiData.quantity}<SPLIT>${aiData.cfg}<SPLIT>${aiData.seed}`
-
-                            let blob = new Blob([yamlString], {type: 'text/yaml'});
-                            let url = URL.createObjectURL(blob);
-                            let a = document.createElement('a');
-                            a.href = url;
-                            a.download = `${aiData.model}.aidata`;
-                            document.body.appendChild(a);
-                            a.click();
-                            window.URL.revokeObjectURL(url);
-                            document.body.removeChild(a);
-
-
-                        }
-
-
-
-                        function importAiData(data) {
-                            if (!confirm(`Are you sure you want to load this data?\n${data}`)) {
-                                return; // Exit the function if the user cancels the action
-                            }
-
-                            // Split data lines and then extract values after colon and trim spaces
-                            let yamlData = data.split('\n').map(line => line.includes(':') ? line.split(':')[1].trim() : '');
-
-                            // yamlData.length() is not a function, use length instead
-
-                            // if there isnt 10 values then the data is invalid, use <SPLIT> to split it instead, making sure <SPLIT> is removed from the data:
-                            if (yamlData.length !== 10) {
-                                yamlData = data.split('<SPLIT>').map(line => line.trim());
-                            }
-
-                            // if there still isnt 10 values then the data is invalid:
-                            if (yamlData.length !== 10) {
-                                alert('Invalid data, could not load AI data!');
-                                return;
-                            }
-
-                            // loras and lora_strengths are strings of arrays like: "['lora1','lora2']" and "['1','2']", make sure to remove the brackets and split by comma, also remove the quotes:
-
-                            let aiData = {
-                                prompt: yamlData[0],
-                                negativeprompt: yamlData[1],
-                                aspectRatio: yamlData[2],
-                                model: yamlData[3],
-                                loras: yamlData[4].replace('[','').replace(']','').split(',').map(lora => lora.replace(/'/g, '').trim()),
-                                lora_strengths: yamlData[5].replace('[','').replace(']','').split(',').map(strength => strength.replace(/'/g, '').trim()),
-                                steps: yamlData[6],
-                                cfg: yamlData[8],
-                                seed: yamlData[9]
-                            };
-
-                            function setValueSafely(elementId, value) {
-                                const element = document.getElementById(elementId);
-                                if (element) {
-                                    element.value = value;
-                                } else {
-                                    console.warn(`Element with ID '${elementId}' not found.`);
+                            // add a popup asking for confirmation to load the slot:
+                            let options = {
+                                message: `Are you sure you want to load the slot?`,
+                                question: true,
+                                options: {
+                                    yes: function() {
+                                        console.log('yes clicked')
+                                    },
+                                    no: function() {
+                                        console.log('no clicked')
+                                    }
                                 }
                             }
 
-                            // check if the value is undefined or null, if so then dont change it:
-                            function setValueSafelyIfNotUndefinedOrNull(elementId, value) {
-                                if (value !== undefined && value !== null) {
-                                    setValueSafely(elementId, value);
-                                }
-                            }
+                            let userResponse = await globalAlert(options)
 
-                            // Set the values in the form
-                            setValueSafelyIfNotUndefinedOrNull('prompt', aiData.prompt);
-                            setValueSafelyIfNotUndefinedOrNull('negativeprompt', aiData.negativeprompt);
-                            setValueSafelyIfNotUndefinedOrNull('aspectRatio', aiData.aspectRatio);
-                            setValueSafelyIfNotUndefinedOrNull('model', aiData.model);
-                            setValueSafelyIfNotUndefinedOrNull('steps', aiData.steps);
-                            setValueSafelyIfNotUndefinedOrNull('cfguidance', aiData.cfg);
-                            setValueSafelyIfNotUndefinedOrNull('seed', aiData.seed);
-
-                            // refresh prompt negpromt on input stuff:
-                            document.getElementById('prompt').dispatchEvent(new Event('change'));
-                            document.getElementById('negativeprompt').dispatchEvent(new Event('change'));
-
-                            // if the model value starts sdxl- AND isnt in the select box then default to sdxl-autismmix:
-                            if (!document.getElementById('model').querySelector(`option[value="${aiData.model}"]`)) {
-                                if (aiData.model.startsWith('sdxl-')) {
-                                    document.getElementById('model').value = 'sdxl-autismmix';
-                                }
-                                if (aiData.model.startsWith('flux-')) {
-                                    document.getElementById('model').value = 'flux-unchained';
-                                }
-                                if (!aiData.model.startsWith('sdxl-') && !aiData.model.startsWith('flux-')) {
-                                    document.getElementById('model').value = 'fluffysonic';
-                                }
-                            } else {
-                                document.getElementById('model').value = aiData.model;
-                            }
-
-                            // fire the change event for the model select box and the aspect ratio select box:
-                            document.getElementById('model').dispatchEvent(new Event('change'));
-
-
-                            document.getElementById('aspectRatio').dispatchEvent(new Event('change'));
-
-                            // set all the loras to unchecked:
-                            // document.querySelectorAll('.loraGridContainer input[type="checkbox"]').forEach(checkbox => {
-                            //     checkbox.checked = false;
-                            //     checkbox.dispatchEvent(new Event('change')); // Fire the change event if needed
-                            // });
-
-                            // ONLY UNCHECK THE CHECKBOX IF IT IS CHECKED, THIS ABOVE CODE IS TERRIBLE FOR PERFORMANCE:
-                            // document.querySelectorAll('.loraGridContainer input[type="checkbox"]:checked').forEach(checkbox => {
-                            //     checkbox.checked = false;
-                            //     checkbox.dispatchEvent(new Event('change')); // Fire the change event if needed
-                            // });
-
-                            // set all masterDataLoras to be unselected first:
-                            for (let loraId in masterLoraData) {
-                                masterLoraData[loraId].selected = false;
-                                masterLoraData[loraId].strength = masterLoraData[loraId].defaultStrength;
-                            }
-
-                            // if there are no loras then dont do anything:
-                            if (aiData.loras.length > 0) {
-                                // check the checkboxes for the loras in the save slot:
-                                for (let i = 0; i < aiData.loras.length;) {
-                                    let loraId = aiData.loras[i];
-                                    let loraStrength = aiData.lora_strengths[i];
-
-                                    console.log(`loraId: ${loraId}\nloraStrength: ${loraStrength}`)
-
-                                    masterLoraData[loraId].selected = true;
-                                    masterLoraData[loraId].strength = Number(loraStrength);
-                                
-                                    i++
-                                }
-                            }
-
-                            loadLoras();
-                            updateLoraSelectionsSummary();
-                                
-                        }
-
-
-
-
-                        function loadSlot(slotId) {
-
-                            slotName = document.getElementById(`saveSlot-${slotId}`).getElementsByTagName('summary')[0].innerText
-
-                            if (!confirm(`Are you sure you want to load the slot: "${slotName}"?`)) {
+                            if (userResponse == 'no') {
                                 return; // Exit the function if the user clicks 'Cancel'
                             }
+
+                            slotName = document.getElementById(`saveSlot-${slotId}`).getElementsByTagName('summary')[0].innerText
 
                             // load the slot with the given slotId
                             let saveData = document.getElementById(`saveSlot-${slotId}`)
@@ -1131,12 +1070,27 @@
                             
                         }
 
-                        function deleteSlot(slotId) {
+                        async function deleteSlot(slotId) {
                             event.preventDefault();
 
                             slotName = document.getElementById(`saveSlot-${slotId}`).getElementsByTagName('summary')[0].innerText
 
-                            if (!confirm(`Are you sure you want to DELETE the slot: "${slotName}"?`)) {
+                            let options = {
+                                message: `Are you sure you want to DELETE the slot: "${slotName}"?`,
+                                question: true,
+                                options: {
+                                    yes: function() {
+                                        console.log('yes clicked')
+                                    },
+                                    no: function() {
+                                        console.log('no clicked')
+                                    }
+                                }
+                            }
+
+                            let userResponse = await globalAlert(options)
+
+                            if (userResponse == 'no') {
                                 return; // Exit the function if the user clicks 'Cancel'
                             }
 
@@ -1152,6 +1106,203 @@
                                 // Handle response
                                 refreshSaveSlots()
                             });
+                        }
+
+                        function exportAIData() {
+                            // Get the AI data from the form
+                            let aiData = {
+                                prompt: document.getElementById('prompt').value,
+                                negativeprompt: document.getElementById('negativeprompt').value,
+                                aspectRatio: document.getElementById('aspectRatio').value,
+                                model: document.getElementById('model').value,
+                                loras: [],
+                                lora_strengths: [],
+                                steps: document.getElementById('steps').value,
+                                quantity: 2,
+                                cfg: document.getElementById('cfguidance').value,
+                                seed: document.getElementById('seed').value,
+                            }
+
+                            // Get the selected Loras:
+                            let loraSelectionContainers = document.getElementsByClassName('loraSelection');
+
+                            // get all loraSelectionsSummarys to get the lora strength from them:
+                            document.querySelectorAll('#loraSelectionsSummary .lora-details input[type="range"]').forEach(slider => {
+                                aiData.lora_strengths.push(slider.value)
+                            })
+
+                            for (let i = 0; i < loraSelectionContainers.length; i++) {
+                                const loraSelection = loraSelectionContainers[i];
+                                // Get all checkboxes within the current loraSelection container
+                                const checkboxes = loraSelection.querySelectorAll('input[type="checkbox"]:checked');
+                                
+                                // Loop through the checked checkboxes and add their value (assuming value is used as ID) to the loras string
+                                checkboxes.forEach(checkbox => {
+                                    aiData.loras.push(checkbox.value);
+                                });
+                            }
+
+                            // export it to a yaml file:
+                            let yamlData = {
+                                "prompt": aiData.prompt,
+                                "negativeprompt": aiData.negativeprompt,
+                                "aspectRatio": aiData.aspectRatio,
+                                "model": aiData.model,
+                                "loras": aiData.loras,
+                                "lora_strengths": aiData.lora_strengths,
+                                "steps": aiData.steps,
+                                "quantity": aiData.quantity,
+                                "cfg": aiData.cfg,
+                                "seed": aiData.seed
+                            }
+
+                            // save it to a file and download it without jsyaml:
+                            let yamlString = `${aiData.prompt}<SPLIT>${aiData.negativeprompt}<SPLIT>${aiData.aspectRatio}<SPLIT>${aiData.model}<SPLIT>${aiData.loras}<SPLIT>${aiData.lora_strengths}<SPLIT>${aiData.steps}<SPLIT>${aiData.quantity}<SPLIT>${aiData.cfg}<SPLIT>${aiData.seed}`
+
+                            let blob = new Blob([yamlString], {type: 'text/yaml'});
+                            let url = URL.createObjectURL(blob);
+                            let a = document.createElement('a');
+                            a.href = url;
+                            a.download = `${aiData.model}.aidata`;
+                            document.body.appendChild(a);
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                            document.body.removeChild(a);
+
+
+                        }
+
+                        async function prepAiData(data) {
+
+                            let options = {
+                                message: `Are you sure you want to load this .aidata?`,
+                                question: true,
+                                options: {
+                                    yes: function() {
+                                        console.log('yes clicked')
+                                    },
+                                    no: function() {
+                                        console.log('no clicked')
+                                    }
+                                }
+                            }
+
+                            let userResponse = await globalAlert(options)
+
+                            if (userResponse == 'no') {
+                                return; // Exit the function if the user clicks 'Cancel'
+                            }
+
+                            // Split data lines and then extract values after colon and trim spaces
+                            let yamlData = data.split('\n').map(line => line.includes(':') ? line.split(':')[1].trim() : '');
+
+                            // yamlData.length() is not a function, use length instead
+
+                            // if there isnt 10 values then the data is invalid, use <SPLIT> to split it instead, making sure <SPLIT> is removed from the data:
+                            if (yamlData.length !== 10) {
+                                yamlData = data.split('<SPLIT>').map(line => line.trim());
+                            }
+
+                            // if there still isnt 10 values then the data is invalid:
+                            if (yamlData.length !== 10) {
+                                return;
+                            }
+
+                            importAiData(yamlData);
+                        }
+
+                        function importAiData(yamlData) {
+
+                            let aiData = {
+                                prompt: yamlData[0],
+                                negativeprompt: yamlData[1],
+                                aspectRatio: yamlData[2],
+                                model: yamlData[3],
+                                loras: yamlData[4].replace('[','').replace(']','').split(',').map(lora => lora.replace(/'/g, '').trim()),
+                                lora_strengths: yamlData[5].replace('[','').replace(']','').split(',').map(strength => strength.replace(/'/g, '').trim()),
+                                steps: yamlData[6],
+                                cfg: yamlData[8],
+                                seed: yamlData[9]
+                            };
+
+                            function setValueSafely(elementId, value) {
+                                const element = document.getElementById(elementId);
+                                if (element) {
+                                    element.value = value;
+                                } else {
+                                    console.warn(`Element with ID '${elementId}' not found.`);
+                                }
+                            }
+
+                            // check if the value is undefined or null, if so then dont change it:
+                            function setValueSafelyIfNotUndefinedOrNull(elementId, value) {
+                                if (value !== undefined && value !== null) {
+                                    setValueSafely(elementId, value);
+                                }
+                            }
+
+                            // Set the values in the form
+                            setValueSafelyIfNotUndefinedOrNull('prompt', aiData.prompt);
+                            setValueSafelyIfNotUndefinedOrNull('negativeprompt', aiData.negativeprompt);
+                            setValueSafelyIfNotUndefinedOrNull('aspectRatio', aiData.aspectRatio);
+                            setValueSafelyIfNotUndefinedOrNull('model', aiData.model);
+                            loadLoras();
+                            setValueSafelyIfNotUndefinedOrNull('steps', aiData.steps);
+                            setValueSafelyIfNotUndefinedOrNull('cfguidance', aiData.cfg);
+                            setValueSafelyIfNotUndefinedOrNull('seed', aiData.seed);
+
+                            // refresh prompt negpromt on input stuff:
+                            document.getElementById('prompt').dispatchEvent(new Event('change'));
+                            document.getElementById('negativeprompt').dispatchEvent(new Event('change'));
+
+                            // if the model value starts sdxl- AND isnt in the select box then default to sdxl-autismmix:
+                            if (!document.getElementById('model').querySelector(`option[value="${aiData.model}"]`)) {
+                                if (aiData.model.startsWith('sdxl-')) {
+                                    document.getElementById('model').value = 'sdxl-autismmix';
+                                }
+                                if (aiData.model.startsWith('flux-')) {
+                                    document.getElementById('model').value = 'flux-unchained';
+                                }
+                                if (!aiData.model.startsWith('sdxl-') && !aiData.model.startsWith('flux-')) {
+                                    document.getElementById('model').value = 'fluffysonic';
+                                }
+                            } else {
+                                document.getElementById('model').value = aiData.model;
+                            }
+
+                            // fire the change event for the model select box and the aspect ratio select box:
+                            document.getElementById('model').dispatchEvent(new Event('change'));
+
+
+                            document.getElementById('aspectRatio').dispatchEvent(new Event('change'));
+
+                            // set all masterDataLoras to be unselected first:
+                            for (let loraId in masterLoraData) {
+                                masterLoraData[loraId].selected = false;
+                                masterLoraData[loraId].strength = masterLoraData[loraId].defaultStrength;
+                            }
+
+                            // if there are no loras then dont do anything:
+                            if (aiData.loras.length > 0) {
+                                // check the checkboxes for the loras in the save slot:
+                                for (let i = 0; i < aiData.loras.length;) {
+                                    let loraId = aiData.loras[i];
+                                    let loraStrength = aiData.lora_strengths[i];
+
+                                    if (!loraId) {
+                                        i++;
+                                        continue;
+                                    }
+
+                                    console.log(`loraId: ${loraId}\nloraStrength: ${loraStrength}`)
+
+                                    masterLoraData[loraId].selected = true;
+                                    masterLoraData[loraId].strength = Number(loraStrength);
+                                
+                                    i++
+                                }
+                            }
+                                
                         }
 
                     </script>
@@ -1212,15 +1363,59 @@
                     display: none;
                 }
             </style>
+
+
+            <script>
+                function copyGeneratorLink() {
+                // `https://jscammie.com/?prompt=${booruImage.prompt}&negativeprompt=${booruImage.negative_prompt}&aspectRatio=${booruImage.aspect_ratio}&model=${booruImage.model}&steps=${booruImage.steps}&cfguidance=${booruImage.cfg}&seed=${booruImage.seed}&loras=[${booruImage.loras}]&lora_strengths=[${booruImage.lora_strengths}]`
+
+                // get the current values of the form:
+                let prompt = document.getElementById('prompt').value;
+                let negativeprompt = document.getElementById('negativeprompt').value;
+                let aspectRatio = document.getElementById('aspectRatio').value;
+                let model = document.getElementById('model').value;
+                let steps = document.getElementById('steps').value;
+                let cfg = document.getElementById('cfguidance').value;
+                let seed = document.getElementById('seed').value;
+                let loras = Object.keys(masterLoraData).map(loraKey => {
+                    return masterLoraData[loraKey].selected ? loraKey : ''
+                }).filter(lora => lora !== '')
+                let lora_strengths = Object.keys(masterLoraData).map(loraKey => {
+                    return masterLoraData[loraKey].selected ? masterLoraData[loraKey].strength : ''
+                }).filter(strength => strength !== '')
+
+
+                // replace spaces with %20:
+                prompt = prompt.replace(/ /g, '%20');
+                negativeprompt = negativeprompt.replace(/ /g, '%20');
+
+                // create the link:
+                let link = `https://jscammie.com/?prompt=${prompt}&negativeprompt=${negativeprompt}&aspectRatio=${aspectRatio}&model=${model}&steps=${steps}&cfguidance=${cfg}&seed=${seed}&loras=[${loras}]&lora_strengths=[${lora_strengths}]&`
+
+                // copy the link to the clipboard:
+                navigator.clipboard.writeText(link).then(function() {
+                    console.log('Link copied to clipboard');
+                }, function(err) {
+                    console.log('Could not copy text: ', err);
+                });
+            }
+            </script>
+
             <div style="flex: auto;">
                 <button class="button exportaidatabutton" type="button" onclick="exportAIData()">Export .AIDATA</button>
                 <label for="importAiData" class="button importaidatalabel">Import .AIDATA</label>
-                <input id="importAiData" class="importaidatainput" type="file">
+                <input id="importAiData" class="importaidatainput" type="file" accept=".aidata">
                 <span class="tooltip" onclick="showTooltip(this)">❓</span>
                 <div class="tooltiptext">Import .AIDATA:<br>
                 Allows the user to import a .AIDATA file to load the settings into the AI Image Generator, this can be used to load settings like the loras used, the prompt, model, etc etc; to copy settings from booru posts and to use settings from other users.<br>
                 <br>Export .AIDATA:<br>
                 Allows the user to export the current settings to a .AIDATA file, this can be used to save settings for later use and share settings with other users.
+                </div>
+
+                <div>
+                    <button onclick="copyGeneratorLink()">Copy Generator Link</button>
+                    <div class="tooltip" onclick="showTooltip(this)">❓</div>
+                    <div class="tooltiptext">Copy the current settings to the clipboard as a link to the generator, this can be used to share settings with other users and to save settings for later use.</div>
                 </div>
             </div>
             
@@ -1231,7 +1426,7 @@
                     const reader = new FileReader();
                     reader.onload = function(e) {
                         const text = e.target.result;
-                        importAiData(text);
+                        prepAiData(text);
                     }
                     reader.readAsText(file);
                 });
@@ -1242,8 +1437,6 @@
                 });
 
             </script>
-
-            <form id="generatorForm">
 
                 <style>
                     
@@ -1339,7 +1532,7 @@
 
                             // make the regionalPromptDisplayText visible if the regionalPromptDisplayText has something in it:
                             document.getElementById('prompt').addEventListener('input', function() {
-                                if (this.value.includes('<rp>')) {
+                                if (this.value.toLowerCase().includes('<rp>')) {
                                     document.getElementById('regionalPromptDisplayText').style.display = 'block';
                                 } else {
                                     document.getElementById('regionalPromptDisplayText').style.display = 'none';
@@ -1700,13 +1893,17 @@
                         </div>
 
                         <script>
-                            
 
+                            
                             <% if (session.lastRequestSD) { %>
                                 let lastRequestSD = <%- JSON.stringify(session.lastRequestSD) %>;
                             <% } else { %>
                                 let lastRequestSD = {};
                             <% } %>
+
+                            if (window.location.href.includes('prompt=')) {
+                                lastRequestSD = {};
+                            }
 
                             var favorites = {};
 
@@ -1929,8 +2126,15 @@
                             }
 
                             // add window onload function:
-                            document.addEventListener('DOMContentLoaded', function() {                             
+                            document.addEventListener('DOMContentLoaded', function() {       
 
+                                // on model change:
+                                document.getElementById('model').addEventListener('change', function() {
+                                    // load the loras:
+                                    loadLoras();
+                                    updateLoraSelectionsSummary();
+                                })
+                                
                                 // Set form values to the last request values
                                 document.getElementById('prompt').value = lastRequestSD.prompt || '';
                                 document.getElementById('negativeprompt').value = lastRequestSD.negativeprompt || 'nsfw, monochrome, black and white, worst quality, low quality, watermark, signature, bad anatomy, bad hands, deformed limbs, blurry, cropped, cross-eyed, extra arms, extra legs, extra limbs, extra pupils, bad proportions, poorly drawn hands, simple background, bad background, bad lighting, bad perspective';
@@ -2013,18 +2217,52 @@
                                 document.getElementById('sortAlphaBtn').classList.add('active');
                                 document.getElementById('style-CategoryButton').classList.add('active');
 
-                                // on model change:
-                                document.getElementById('model').addEventListener('change', function() {
+                                // trigger model change event:
 
+                                if (window.location.href.includes('prompt=')) {
 
-                                    // load the loras:
-                                    loadLoras();
-                                    updateLoraSelectionsSummary();
-                                })
+                                    let urlParams = new URLSearchParams(window.location.search);
 
-                                loadLoras();
-                                updateLoraSelectionsSummary();
+                                    // jscammie.com/?prompt=hello&negativeprompt=world&aspectRatio=square&model=fluffysonic&steps=20&cfguidance=3&seed=-1&scheduler=eulera&loras=[]&lora_strengths=[]
 
+                                    // prompt/negative prompt might contain < or > or &lt; and &gt;:, replace them with < and > AND make sure you get the whole string:
+
+                                    let prompt = urlParams.get('prompt').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+
+                                    let negativeprompt = urlParams.get('negativeprompt').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+
+                                    let data = [
+                                        prompt,
+                                        negativeprompt,
+                                        urlParams.get('aspectRatio'),
+                                        urlParams.get('model'),
+                                        urlParams.get('loras'),
+                                        urlParams.get('lora_strengths'),
+                                        urlParams.get('steps'),
+                                        urlParams.get('cfguidance'),
+                                        urlParams.get('seed'),
+                                    ]
+
+                                    // data = [
+                                    //     urlParams.get('prompt'),
+                                    //     urlParams.get('negativeprompt'),
+                                    //     urlParams.get('aspectRatio'),
+                                    //     urlParams.get('model'),
+                                    //     urlParams.get('loras'),
+                                    //     urlParams.get('lora_strengths'),
+                                    //     urlParams.get('steps'),
+                                    //     urlParams.get('cfguidance'),
+                                    //     urlParams.get('seed'),                                        
+                                    // ]
+
+                                    console.log(data);
+
+                                    importAiData(data)
+
+                                }
+
+                                document.getElementById('model').dispatchEvent(new Event('change'));
+      
                             })
 
                         </script>
@@ -2423,7 +2661,7 @@
 
                     </div>
 
-                    <div class="form-control">
+                    <div class="form-control advancedElement">
                         <label>
                             Enable Regional Prompt:
                             <span class="tooltip" onclick="showTooltip(this)">❓</span>
@@ -2586,7 +2824,10 @@
                                 
 
                                 promptText = document.getElementById('prompt').value;
-                                promptSplits = promptText.split('<rp>');
+                                // promptSplits = promptText.split('<rp>');
+
+                                // needs to work with capitals and/or lowercase <rp> / <RP>:
+                                promptSplits = promptText.split(/<rp>/i);
 
                                 // remove the first element:
                                 promptSplits.shift();
@@ -2727,9 +2968,6 @@
                 });
 
             </script>
-                
-            </form>
-
         
         </div>
 
@@ -2757,7 +2995,7 @@
                 }
             </style>
 
-                <details open>
+                <details open class="advancedElement">
                     <summary>Settings (Steps, Quanitity & more)</summary>
                     <label for="steps">
                         Steps:
@@ -2849,10 +3087,10 @@
                     }
                         
                     if (model.value.includes('sdxl')) {
-                        setSteps(10, 30);
+                        setSteps(20, 40);
                         setCfguidance(2, 5)
                     } else if (model.value.includes('flux')) {
-                        setSteps(4, 20);
+                        setSteps(4, 24);
                         setCfguidance(1, 1);
                     } else if (!model.value.includes('sdxl') && !model.value.includes('flux')) {
                         setSteps(20, 40);
@@ -2941,6 +3179,16 @@
                             </div>
                     </label>
                     <input type="checkbox" id="doubleImagesCheckbox" name="doubleImagesCheckbox">
+
+                    <label>
+                        Remove Background: <span><a id="removeBackgroundCreditsPrice">25</a> Credits
+                        <span class="tooltip" onclick="showTooltip(this)">❓</span>
+                            <div class="tooltiptext">
+                                Use this checkbox to remove the background from the generated image<br>
+                                The background will be replaced with a transparent background
+                            </div>
+                    </label>
+                    <input type="checkbox" id="removeBackgroundCheckbox" name="removeBackgroundCheckbox">
 
                     <% if (session.loggedIn) { %>
                     <label>
@@ -3190,7 +3438,8 @@
                     extras = {
                         removeWatermark: true,
                         upscale: true,
-                        doubleImages: true
+                        doubleImages: true,
+                        removeBackground: true,
                     }
 
                     let runningCost = 0
@@ -3198,12 +3447,14 @@
                     activeExtras = {
                         removeWatermark: document.getElementById('removeWatermarkCheckbox').checked,
                         upscale: document.getElementById('upscaleCheckbox').checked,
-                        doubleImages: document.getElementById('doubleImagesCheckbox').checked
+                        doubleImages: document.getElementById('doubleImagesCheckbox').checked,
+                        removeBackground: document.getElementById('removeBackgroundCheckbox').checked,
                     }
                     activeBonus = {
                         remoteWatermark: false,
                         upscale: false,
-                        doubleImages: false
+                        doubleImages: false,
+                        removeBackground: false,
                     }
 
                     fastqueueCost = getFastqueuePrice(loraCount, model)
@@ -3221,6 +3472,10 @@
                     }
                     if (activeExtras.doubleImages) {
                         runningCost += extrasCosts.doubleImages
+                    }
+
+                    if (activeExtras.removeBackground) {
+                        runningCost += extrasCosts.removeBackground
                     }
 
                     // activate bonus for upscale and doubleImages IF they are both active:
@@ -3245,11 +3500,16 @@
                         runningCost += extrasCosts.doubleImagesBonus
                         extrasCosts.doubleImages += extrasCosts.doubleImagesBonus
                     }
+                    if (extrasCosts.removeBackgroundBonus > 0 && activeExtras.removeBackground && activeBonus.removeBackground) {
+                        runningCost += extrasCosts.removeBackgroundBonus
+                        extrasCosts.removeBackground += extrasCosts.removeBackgroundBonus
+                    }
 
                     
                     document.getElementById('removeWatermarkCreditsPrice').innerText = extrasCosts.removeWatermark
                     document.getElementById('upscaleCreditsPrice').innerText = extrasCosts.upscale
                     document.getElementById('doubleImagesCreditsPrice').innerText = extrasCosts.doubleImages
+                    document.getElementById('removeBackgroundCreditsPrice').innerText = extrasCosts.removeBackground
 
 
 
@@ -3287,6 +3547,9 @@
                     prepareData()
                 });
                 document.getElementById('doubleImagesCheckbox').addEventListener('change', function() {
+                    prepareData()
+                });
+                document.getElementById('removeBackgroundCheckbox').addEventListener('change', function() {
                     prepareData()
                 });
 
@@ -3708,7 +3971,7 @@
         }
 
         function checkRpCount(textarea) {
-            rpCount = (textarea.value.match(/<rp>/g) || []).length;
+            rpCount = (textarea.value.toLowerCase().match(/<rp>/g) || []).length;
 
             console.log(`RP Count: ${rpCount}`);
 
@@ -3776,8 +4039,17 @@
 
         
 
-        // event listener for the prompt textarea to check if the regionalpromptcheckbox is checked IF the prompt contains 2 <rp> tags:
-        
+        // // if the user scrolls to where they cant see a textbox, then deselect it (give some padding of 100px):
+        // document.addEventListener('scroll', function() {
+        //     if (document.getElementById('prompt').getBoundingClientRect().top < -400) {
+                
+        //         document.getElementById('prompt').blur();
+        //     }
+        //     if (document.getElementById('negativeprompt').getBoundingClientRect().top < -400) {
+        //         document.getElementById('negativeprompt').blur();
+        //     }
+        // });
+
 
     </script>
     

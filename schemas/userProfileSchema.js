@@ -33,6 +33,16 @@ const badgesSchema = new Schema({
     contributor: { type: Boolean, default: false },
 })
 
+const settingsSchema = new Schema({
+    notification_booruVote: { type: Boolean, default: true },
+    notification_booruComment: { type: Boolean, default: true },
+    notification_booruRating: { type: Boolean, default: true },
+    notification_suggestionPromoted: { type: Boolean, default: true },
+    notification_generatorSpentCredits: { type: Boolean, default: true },
+    misc_generationReadyBeep: { type: Boolean, default: true },
+    user_bio: { type: String, default: "" },
+})
+
 const userProfileSchema = new Schema({
     badges: badgesSchema,
     supporter: { type: Boolean, default: false },
@@ -47,6 +57,7 @@ const userProfileSchema = new Schema({
     profileImg: { type: String, default: "http://www.jscammie.com/noimagefound.png" },
     booruPostBanned: { type: Boolean, default: false },
     booruPostBanReason: { type: String, default: "Breaking Rules" },
+    settings: settingsSchema,
 })
 
 const name = 'userAccount'

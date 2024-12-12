@@ -12,6 +12,9 @@ const bodyParser = require('body-parser')
 
 const mongolib = require('./mongolib.js')
 
+const { promisify } = require('util');
+
+
 // connect to the database:
 mongolib.connectToDatabase()
 
@@ -292,7 +295,7 @@ app.post('/promote-suggestion', async (req, res) => {
 	}
 
 	// check if the user has more than 300 credits:
-	let result = await mongolib.modifyUserCredits(accountId, 2500, '-', `Promoted Suggestion Titled: "${suggestion.title}"`, true)
+	let result = await mongolib.modifyUserCredits(accountId, 1500, '-', `Promoted Suggestion Titled: "${suggestion.title}"`, true)
 
 	if (result.status === 'error') {
 		res.send({
@@ -309,9 +312,15 @@ app.post('/promote-suggestion', async (req, res) => {
 		promoted: true
 	})
 
-	await mongolib.modifyUserCredits(accountId, 2500, '-', `Promoted Suggestion Titled: "${suggestion.title}"`)
-	await mongolib.createUserNotification(req.session.accountId, `You promoted a suggestion titled: "${suggestion.title}"`, 'suggestion')
+	let suggestionUserProfile = await userProfileSchema.findOne({
+		accountId: suggestion.accountId
+	})
 
+	await mongolib.modifyUserCredits(accountId, 1500, '-', `Promoted Suggestion Titled: "${suggestion.title}"`)
+	// if the notification setting doesnt exist or is true, then send the notification, if its false then dont:
+	if (suggestionUserProfile.settings?.notification_suggestionPromoted === true || suggestionUserProfile.settings?.notification_suggestionPromoted === undefined) {
+		await mongolib.createUserNotification(req.session.accountId, `You promoted a suggestion titled: "${suggestion.title}"`, 'suggestion')
+	}
 	res.send({
 		status: 'success',
 		message: 'Suggestion promoted (refresh to see changes)'
@@ -592,7 +601,6 @@ app.post('/remove-suggestion', async (req, res) => {
 	await userSuggestionSchema.findOneAndDelete({
 		suggestionId: suggestionId
 	})
-
 	await mongolib.createUserNotification(req.session.accountId, `Your suggestion titled: "${suggestion.title}" was removed.`, 'moderation')
 
 	res.send({
@@ -644,9 +652,8 @@ app.post('/update-suggestion-status', async (req, res) => {
 		status: newStatus
 	})
 
-	// send notification to the author of the suggestion:
 	await mongolib.createUserNotification(suggestion.accountId, `Your suggestion titled: "${suggestion.title}" has been updated to status: ${newStatus}`, 'suggestion')
-
+	
 	res.send({
 		status: 'success',
 		message: 'Suggestion status updated'
@@ -671,38 +678,111 @@ app.get('/suggestion/:suggestionId', async (req, res) => {
 	})
 })
 
+
 app.get('/image-history', async (req, res) => {
-	let userProfile = await userProfileSchema.findOne({
-		accountId: req.session.accountId
-	})
 
-	if (userProfile == null) {
-		res.send('User not found')
-		return
-	}
+	try {
 
-	if (req.session.accountId == "1039574722163249233") {
-		// make sure its sorted by _id getTimestamp:
-		userHistory = await userHistorySchema.find({
-			account_id: "1039574722163249233"
-		}).sort({
-			_id: -1
-		})
-		// userHistory = await userHistorySchema.find().sort({ _id: -1 }).limit(10000)
-	} else {
-		userHistory = await userHistorySchema.find({
+		let userProfile = await userProfileSchema.findOne({
+			accountId: req.session.accountId,
+		});
+
+		if (!userProfile) {
+			res.send('User not found');
+			return;
+		}
+
+		// Redirect to default page if necessary
+		if (!req.url.includes('?page=') && !req.url.includes('?search=')) {
+			res.redirect('/image-history?page=1&search=&model=all');
+			return;
+		}
+
+		// Parse query parameters
+		let page = parseInt(req.query.page) || 1;
+		let search = req.query.search || '';
+		let model = req.query.model || 'all';
+		const totalPerPage = 24;
+		let skip = (page - 1) * totalPerPage;
+
+		if (isNaN(skip)) skip = 0;
+
+		// Build the query for model filter
+		let modelQuery = model === 'all' ? {} : { model };
+
+		// Build the query for search filter
+		let searchTerms = search
+			.split(',')
+			.map(term => term.trim())
+			.filter(term => term.length > 0);
+
+		let searchQuery = {};
+		if (searchTerms.length > 0) {
+			searchQuery = {
+				$and: searchTerms.map(term => ({
+					prompt: { $regex: term, $options: 'i' }, // Case-insensitive match for each term
+				})),
+			};
+		}
+
+		// Perform the aggregation with pagination and total count
+		let results = await userHistorySchema.aggregate([
+			{
+				$match: {
+					account_id: req.session.accountId,
+					...modelQuery,
+					...searchQuery,
+				},
+			},
+			{
+				$sort: { timestamp: -1, _id: -1 }, // Sort by timestamp (and _id as tiebreaker)
+			},
+			{
+				$facet: {
+					paginatedResults: [
+						{ $skip: skip },
+						{ $limit: totalPerPage },
+					],
+					totalCount: [
+						{ $count: "count" },
+					],
+				},
+			},
+		]);
+
+		// Extract the results and total count
+		let userHistory = results[0].paginatedResults;
+		let totalImages = results[0].totalCount.length > 0 ? results[0].totalCount[0].count : 0;
+		let totalPages = Math.ceil(totalImages / totalPerPage);
+
+		// Redirect to last page if the current page exceeds total pages
+		if (page > totalPages && totalPages > 0) {
+			res.redirect(`/image-history?page=${totalPages}&search=${encodeURIComponent(search)}&model=${model}`);
+			return;
+		}
+
+		let totalUserImages = await userHistorySchema.countDocuments({
 			account_id: req.session.accountId
-		}).sort({
-			_id: -1
 		})
+
+		// Render the template
+		res.render('image-history-beta', {
+			userHistory,
+			session: req.session,
+			page,
+			search,
+			model,
+			totalPages,
+			totalUserImages,
+		});
+
+	} catch (error) {
+		console.log(`Error loading tags: ${error}`);
 	}
 
-	res.render('image-history', {
-		userHistory: userHistory,
-		session: req.session
-	})
+});
 
-})
+
 
 app.post('/image-history/delete-image', async (req, res) => {
 	let image_id = req.body.image_id
@@ -732,11 +812,60 @@ app.post('/image-history/delete-image', async (req, res) => {
 		image_id: image_id
 	})
 
+	// remove the image from the disk:
+	let imageFilePath = path.join(__dirname, `${req.session.accountId}/${image_id}.png`)
+	let potentialThumbFilePath = path.join(__dirname, `${req.session.accountId}/${image_id}-thumb.png`)
+
+	if (fs.existsSync(imageFilePath)) {
+		fs.unlinkSync(imageFilePath)
+	}
+
+	if (fs.existsSync(potentialThumbFilePath)) {
+		fs.unlinkSync(potentialThumbFilePath)
+	}
+
 	res.send({
 		status: 'success',
 		message: 'Image removed'
 	})
 })
+
+
+app.post('/image-history/delete-all-images', async (req, res) => {
+
+	let accountId = req.session.accountId
+
+	// check the user exists:
+	let user = await userProfileSchema.findOne({
+		accountId: accountId
+	})
+
+	if (user === null) {
+		res.send({
+			status: 'error',
+			message: 'User not found'
+		})
+		return
+	}
+
+	let folderPath = path.join(__dirname, `imagesHistory/${accountId}`)
+
+	if (fs.existsSync(folderPath)) {
+		fs.rmdirSync(folderPath, {
+			recursive: true
+		})
+	}
+
+	await userHistorySchema.deleteMany({
+		account_id: accountId
+	})
+
+	res.send({
+		status: 'success',
+		message: 'All images removed'
+	})
+})
+
 
 app.get('/metadata', (req, res) => {
 	res.render('metadata', {
@@ -891,7 +1020,7 @@ async function updateYAMLCache() {
 
 		let data = await response
 
-		console.log('YAML data fetched');
+		// console.log('YAML data fetched');
 		Object.keys(data).forEach(category => {
 			try {
 				data[category] = sortObjectByKey(data[category]);
@@ -907,7 +1036,7 @@ async function updateYAMLCache() {
 	}
 
 	if (cachedYAMLData !== null) {
-		console.log('YAML data updated and cached');
+		// console.log('YAML data updated and cached');
 		loraImagesCache()
 	}
 
@@ -998,7 +1127,7 @@ async function loraImagesCache() {
 			cachedYAMLData[category][loraId] = loraData
 		}
 
-		console.log('Cached YAML data updated with images, usesCount, and lastUsed')
+		// console.log('Cached YAML data updated with images, usesCount, and lastUsed')
 	} catch (error) {
 		console.log(`Error updating cachedYAMLData with usesCount and lastUsed: ${error}`)
 	}
@@ -1165,7 +1294,8 @@ app.post('/dailies', async (req, res) => {
 	}
 
 	result = await mongolib.modifyUserCredits(req.session.accountId, creditsEarned, '+', `Dailies claimed: ${dailyType}`)
-	await mongolib.createUserNotification(req.session.accountId, `You claimed your ${dailyType} dailies and earned ${creditsEarned} credits`, 'dailies')
+	
+	// await mongolib.createUserNotification(req.session.accountId, `You claimed your ${dailyType} dailies and earned ${creditsEarned} credits`, 'dailies')
 
 	if (result.status == 'error') {
 		res.send({
@@ -1319,12 +1449,15 @@ app.post('/generate', async function(req, res) {
 
 		request.prompt = cleanedPrompt; // Update the prompt in the request object to be sent
 
+		// make any <rp> lowercase:
+		request.prompt = request.prompt.replace(/<RP>/g, "<rp>")
+
 		if (request.model.startsWith('flux')) {
 			request.quantity = 2
 		}
 
 		let filteredLastRequest = {
-			prompt: cleanedPrompt,
+			prompt: request.prompt,
 			negativeprompt: request.negativeprompt,
 			model: request.model,
 			loras: request.lora,
@@ -1338,9 +1471,7 @@ app.post('/generate', async function(req, res) {
 		};
 		req.session.lastRequestSD = filteredLastRequest;
 
-
-
-		if (request.fastqueue == true || request.extras?.removeWatermark == true || request.extras?.upscale == true || request.extras?.doubleImages == true) {
+		if (request.fastqueue == true || request.extras?.removeWatermark == true || request.extras?.upscale == true || request.extras?.doubleImages == true || request.extras?.removeBackground == true) {
 
 			let userProfile = await mongolib.getSchemaDocumentOnce("userProfile", {
 				accountId: req.session.accountId
@@ -1398,9 +1529,6 @@ app.post('/generate', async function(req, res) {
 
 		}
 
-
-
-
 		// Send the modified request object
 		const postResponse = await fetch(`${AI_API_URL}/generate`, {
 			method: 'POST',
@@ -1410,8 +1538,12 @@ app.post('/generate', async function(req, res) {
 			},
 		});
 
+		
+
 		if (!postResponse.ok) {
-			throw new Error(`HTTP error! status: ${response.status}`);
+			console.log('Response:', postResponse);
+			console.log('Request:', JSON.stringify(request));
+			throw new Error(`HTTP error! status: ${postResponse.status}`);
 		}
 
 		const jsonResponse = await postResponse.json();
@@ -1569,9 +1701,6 @@ app.get('/result/:request_id', async function(req, res) {
 							image_url: `http://www.jscammie.com/imagesHistory/${json.historyData.account_id}/${nextImageId}.png`
 						};
 
-						// Insert the new image history document into the database
-						await userHistorySchema.create(newImageHistory);
-
 						// change the newImageHistory image_id to a string:
 						newImageHistory.image_id = newImageHistory.image_id.toString()
 
@@ -1583,6 +1712,30 @@ app.get('/result/:request_id', async function(req, res) {
 				} catch (err) {
 					console.log('Error saving image or updating database:', err);
 				}
+			}
+
+			// // Insert the new image history documents into the database
+			try {
+
+				// get the count of all the images in the userHistory collection:
+				let count = await userHistorySchema.countDocuments({
+					account_id: json.historyData.account_id
+				})
+
+					if (count < 15000) {
+						
+						if (allImageHistory.length > 0) {
+							for (const image of allImageHistory) {
+								let result = await mongolib.createSchemaDocument("userHistory", image)
+							}
+						}
+					} else {
+					
+						let result = await mongolib.createUserNotification(json.historyData.account_id, `You have reached the maximum amount of images in your history, please delete some images to make room for more, future images will not be saved! To see the limit, go to the <a href='/image-history'>Image History</a> page!`, 'generator')
+					
+					}
+			} catch (err) {
+				console.log('Error saving image or updating database:', err);
 			}
 
 		}
@@ -1618,12 +1771,17 @@ app.get('/result/:request_id', async function(req, res) {
 
 			// creditsFinal = creditsCurrent - creditsRequired
 			result = await mongolib.modifyUserCredits(req.session.accountId, creditsRequired, '-', creditsMessage)
-			await mongolib.createUserNotification(req.session.accountId, `You spent ${creditsRequired} credits on generating images using ${json.historyData.model}`, 'generator')
 
+			if (userProfile.settings?.notification_generatorSpentCredits == true || userProfile.settings?.notification_generatorSpentCredits == undefined) {
+				await mongolib.createUserNotification(req.session.accountId, `You spent ${creditsRequired} credits on generating images using ${json.historyData.model}`, 'generator')
+			}
 			json.credits = result.newCredits
 		}
 
 		historyData = json.historyData
+
+		// add misc_generationReadyBeep from the userProfile to the json object, set it to true if it doesnt exist, or if its true, set it to false only if its false:
+		json.misc_generationReadyBeep = userProfile?.settings?.misc_generationReadyBeep ?? true
 
 		res.send(json);
 	} catch (error) {
@@ -1901,343 +2059,588 @@ app.get('/booru/', async function(req, res) {
 	safety = req.param('safety') || ["sfw"]
 	sort = req.param('sort') || "trending"
 
-	totalPerPage = 48
+	try {
 
-	// make it a day ago:
-	let trendingAgo = Date.now() - (3 * 24 * 60 * 60 * 1000)
+		totalPerPage = 48
 
-	// add the params to the url if they are not already there:
-	if (!req.url.includes('?')) {
-		res.redirect(`/booru/?search=${search}&page=${page}&safety=${safety}`)
-		return
-	}
+		// make trending ago 2 days:
+		let trendingAgo = Date.now() - (3 * 24 * 60 * 60 * 1000)
 
-	// if the rating is not an array, make it an array:
-	// example output of safety: na,sfw,suggestive,nsfw
-	if (!Array.isArray(safety)) {
-		safety = safety.split(',')
-	}
-
-	skip = (page - 1) * totalPerPage
-
-	if (typeof(skip) !== 'number') {
-		skip = 0
-	}
-
-	let booruImages = []
-
-	console.log(`search: "${search}", safety: "${safety}", sort: "${sort}"`)
-
-	if (search == "") {
-		if (sort == "recent") {
-			booruImages = await userBooruSchema.find({
-				safety: {
-					$in: safety
-				}
-			}).sort({
-				timestamp: -1
-			}).skip(skip).limit(totalPerPage)
-		} else if (sort == "votes") {
-			booruImages = await userBooruSchema.aggregate([{
-					$match: {
-						safety: {
-							$in: safety
-						}
-					}
-				},
-				{
-					$addFields: {
-						votes: {
-							$subtract: [{
-								$size: "$upvotes"
-							}, {
-								$size: "$downvotes"
-							}]
-						}
-					}
-				},
-				{
-					$sort: {
-						votes: -1,
-						_id: 1
-					}
-				},
-				{
-					$skip: skip
-				},
-				{
-					$limit: totalPerPage
-				}
-			])
-		} else if (sort == "trending") {
-
-			booruImages = await userBooruSchema.aggregate([{
-					$match: {
-						safety: {
-							$in: safety
-						}
-					}
-				}, // Only filter by safety
-				{
-					$addFields: {
-						recentVoteCount: {
-							$add: [{
-									$size: {
-										$filter: {
-											input: "$upvotes",
-											as: "vote",
-											cond: {
-												$gt: ["$$vote.timestamp", trendingAgo]
-											}
-										}
-									}
-								},
-								{
-									$size: {
-										$filter: {
-											input: "$downvotes",
-											as: "vote",
-											cond: {
-												$gt: ["$$vote.timestamp", trendingAgo]
-											}
-										}
-									}
-								}
-							]
-						},
-						votes: {
-							$subtract: [{
-								$size: "$upvotes"
-							}, {
-								$size: "$downvotes"
-							}]
-						}
-					}
-				},
-				{
-					$sort: {
-						recentVoteCount: -1,
-						votes: -1,
-						_id: 1
-					}
-				}, // Sort by recent votes, then total votes
-				{
-					$skip: skip
-				},
-				{
-					$limit: totalPerPage
-				}
-			])
-
+		// add the params to the url if they are not already there:
+		if (!req.url.includes('?')) {
+			res.redirect(`/booru/?search=${search}&page=${page}&safety=${safety}`)
+			return
 		}
 
+		// if the rating is not an array, make it an array:
+		// example output of safety: na,sfw,suggestive,nsfw
+		if (!Array.isArray(safety)) {
+			safety = safety.split(',')
+		}
 
+		skip = (page - 1) * totalPerPage
 
-		totalImages = await userBooruSchema.aggregate([{
-				$match: {
+		if (typeof(skip) !== 'number') {
+			skip = 0
+		}
+
+		let booruImages = []
+
+		console.log(`search: "${search}", safety: "${safety}", sort: "${sort}"`)
+
+		if (search.includes(' ')) {
+			search = search.split(' ')
+		} else if (search.includes(',')) {
+			search = search.split(',')
+		} else {
+			search = [search]
+		}
+
+		if (search == ",") {
+			search = ""
+		}
+
+		if (search == "") {
+			if (sort == "recent") {
+				booruImages = await userBooruSchema.find({
 					safety: {
 						$in: safety
 					}
-				}
-			},
-			{
-				$count: 'count'
+				}).sort({
+					timestamp: -1
+				}).skip(skip).limit(totalPerPage)
+			} else if (sort == "votes") {
+				booruImages = await userBooruSchema.aggregate([{
+						$match: {
+							safety: {
+								$in: safety
+							}
+						}
+					},
+					{
+						$addFields: {
+							votes: {
+								$subtract: [{
+									$size: "$upvotes"
+								}, {
+									$size: "$downvotes"
+								}]
+							}
+						}
+					},
+					{
+						$sort: {
+							votes: -1,
+							_id: 1
+						}
+					},
+					{
+						$skip: skip
+					},
+					{
+						$limit: totalPerPage
+					}
+				])
+			} else if (sort == "trending") {
+
+				booruImages = await userBooruSchema.aggregate([{
+						$match: {
+							safety: {
+								$in: safety
+							}
+						}
+					}, // Only filter by safety
+					{
+						$addFields: {
+							recentVoteCount: {
+								$subtract: [
+									{
+										$size: {
+											$filter: {
+												input: "$upvotes",
+												as: "vote",
+												cond: {
+													$gt: ["$$vote.timestamp", trendingAgo]
+												}
+											}
+										}
+									},
+									{
+										$size: {
+											$filter: {
+												input: "$downvotes",
+												as: "vote",
+												cond: {
+													$gt: ["$$vote.timestamp", trendingAgo]
+												}
+											}
+										}
+									}
+								]
+							},
+							votes: {
+								$subtract: [
+									{
+										$size: {
+											$filter: {
+												input: "$upvotes",
+												as: "vote",
+												cond: {
+													$gt: ["$$vote.timestamp", trendingAgo]
+												}
+											}
+										}
+									},
+									{
+										$size: {
+											$filter: {
+												input: "$downvotes",
+												as: "vote",
+												cond: {
+													$gt: ["$$vote.timestamp", trendingAgo]
+												}
+											}
+										}
+									}
+								]
+							}
+						}
+					},
+					{
+						$sort: {
+							recentVoteCount: -1,
+							votes: -1,
+							_id: 1
+						}
+					}, // Sort by recent votes, then total votes
+					{
+						$skip: skip
+					},
+					{
+						$limit: totalPerPage
+					}
+				])
+
 			}
-		]);
 
 
-		if (totalImages.length == 0) {
-			totalImages = 0
+
+			totalImages = await userBooruSchema.aggregate([{
+					$match: {
+						safety: {
+							$in: safety
+						}
+					}
+				},
+				{
+					$count: 'count'
+				}
+			]);
+
+
+			if (totalImages.length == 0) {
+				totalImages = 0
+			} else {
+				totalImages = totalImages[0].count
+			}
 		} else {
-			totalImages = totalImages[0].count
-		}
-	} else {
 
-		searchTags = search.split(' ')
-		searchTags = splitTags(searchTags)
+			searchTags = splitTags(search);
 
-		let regex = searchTags.map(tag => `(?=.*${tag})`).join('')
-		// remove any back slashes:
-		regex = regex.replace(/\\/g, '')
+			// Build the regex for positive tags
+			let regex = searchTags.map(tag => `(?=.*${tag})`).join('');
+			// Remove any backslashes
+			regex = regex.replace(/\\/g, '');
 
-		let allFoundBooruIds = [];
+			let positiveTags = searchTags.filter(tag => !tag.startsWith('-')); // Positive tags (without '-')
 
-		const promises = searchTags.map(async (tag) => {
-			let foundTag = await userBooruTagsSchema.findOne({
-				tag: tag
+			let allFoundBooruIds = [];
+
+			// Retrieve booru_ids for positive tags (if there are any positive tags)
+			const promises = positiveTags.map(async (tag) => {
+				let foundTag = await userBooruTagsSchema.findOne({
+					tag: tag
+				});
+				if (foundTag !== null) {
+					return foundTag.booru_ids; // return booru_ids for the found tag
+				}
+				return [];
 			});
-			if (foundTag !== null) {
-				return foundTag.booru_ids; // return the booru_ids array
+
+			const allFoundBooruIdsArrays = await Promise.all(promises);
+
+			// Filter to get only booru_ids that appear in all arrays (if there are any positive tags)
+			let allBooruIds = allFoundBooruIdsArrays.length > 0 ? allFoundBooruIdsArrays.reduce((acc, val) => {
+				if (!acc.length || !val.length) return [];
+				return acc.filter(x => val.includes(x)); // Keep only common booru_ids
+			}, allFoundBooruIdsArrays[0]) : []; // If no positive tags, start with an empty array
+
+			// Now handle minus tags (even if no positive tags)
+			let minusBooruIds = [];
+
+			// If there are minus tags (e.g., '-cat')
+			if (searchTags.some(tag => tag.startsWith('-'))) {
+				// Extract the tags without the leading '-'
+				let minusTags = searchTags.filter(tag => tag.startsWith('-')).map(tag => tag.slice(1));
+				minusTags = splitTags(minusTags); // Process split tags if necessary
+
+				if (minusTags.length > 0) {
+					const minusPromises = minusTags.map(async (tag) => {
+						let foundTag = await userBooruTagsSchema.findOne({ tag: tag });
+						return foundTag ? foundTag.booru_ids : []; // Return booru_ids for minus tags
+					});
+
+					const minusFoundBooruIdsArrays = await Promise.all(minusPromises);
+
+					// Flatten the array of arrays and eliminate duplicates
+					minusBooruIds = Array.from(new Set(minusFoundBooruIdsArrays.flat())); // Ensure unique booru_ids
+				}
 			}
-			return [];
-		});
 
-		const allFoundBooruIdsArrays = await Promise.all(promises);
-
-		// Filter to get only booru_ids that appear in all arrays
-		let allBooruIds = allFoundBooruIdsArrays.reduce((acc, val) => acc.filter(x => val.includes(x)), allFoundBooruIdsArrays[0] || []);
-
-		// now get the booruImages that have the booru_ids in allBooruIds:
-		if (sort == "recent") {
-			booruImages = await userBooruSchema.find({
-				booru_id: {
-					$in: allBooruIds
-				},
-				safety: {
-					$in: safety
-				}
-			}).sort({
-				timestamp: -1
-			}).skip(skip).limit(totalPerPage)
-		} else if (sort == "votes") {
-			booruImages = await userBooruSchema.aggregate([{
-					$match: {
-						booru_id: {
-							$in: allBooruIds
-						},
-						safety: {
-							$in: safety
-						}
-					}
-				},
-				{
-					$addFields: {
-						votes: {
-							$subtract: [{
-								$size: "$upvotes"
-							}, {
-								$size: "$downvotes"
-							}]
-						}
-					}
-				},
-				{
-					$sort: {
-						votes: -1,
-						_id: 1
-					}
-				},
-				{
-					$skip: skip
-				},
-				{
-					$limit: totalPerPage
-				}
-			])
-		} else if (sort == "trending") {
-			booruImages = await userBooruSchema.aggregate([{
-					$match: {
-						booru_id: {
-							$in: allBooruIds
-						},
-						safety: {
-							$in: safety
-						}
-					}
-				}, // Only filter by safety
-				{
-					$addFields: {
-						recentVoteCount: {
-							$add: [{
-									$size: {
-										$filter: {
-											input: "$upvotes",
-											as: "vote",
-											cond: {
-												$gt: ["$$vote.timestamp", trendingAgo]
-											}
-										}
-									}
+			// Now decide how to query the database based on whether there are positive or negative tags
+			if (sort == "recent") {
+				// If there are positive tags, find booru_ids that match the positive tags and exclude the ones with negative tags
+				if (allBooruIds.length > 0) {
+					booruImages = await mongolib.aggregateSchemaDocuments("userBooru", [
+						{
+							$match: {
+								booru_id: {
+									$in: allBooruIds, // Include images with positive tags
+									$nin: minusBooruIds // Exclude images with negative tags
 								},
-								{
-									$size: {
-										$filter: {
-											input: "$downvotes",
-											as: "vote",
-											cond: {
-												$gt: ["$$vote.timestamp", trendingAgo]
+								safety: {
+									$in: safety // Include safety filters
+								}
+							}
+						},
+						{
+							$sort: {
+								timestamp: -1 // Sort by timestamp, most recent first
+							}
+						},
+						{
+							$skip: skip // Pagination: skip the first `skip` number of results
+						},
+						{
+							$limit: totalPerPage // Pagination: limit to `totalPerPage` results
+						}
+					]);
+				} else {
+					// If there are no positive tags, only use the negative tags to filter out posts
+					booruImages = await mongolib.aggregateSchemaDocuments("userBooru", [
+						{
+							$match: {
+								booru_id: {
+									// Include all images, but exclude the ones with negative tags
+									$nin: minusBooruIds
+								},
+								safety: {
+									$in: safety // Include safety filters
+								}
+							}
+						},
+						{
+							$sort: {
+								timestamp: -1 // Sort by timestamp, most recent first
+							}
+						},
+						{
+							$skip: skip // Pagination: skip the first `skip` number of results
+						},
+						{
+							$limit: totalPerPage // Pagination: limit to `totalPerPage` results
+						}
+					]);
+				}
+			} else if (sort == "votes") {
+				if (allBooruIds.length > 0) {
+					booruImages = await userBooruSchema.aggregate([{
+						$match: {
+							booru_id: {
+								$in: allBooruIds,
+								$nin: minusBooruIds
+							},
+							safety: {
+								$in: safety
+							}
+						}
+					}, {
+						$addFields: {
+							votes: {
+								$subtract: [{
+									$size: "$upvotes"
+								}, {
+									$size: "$downvotes"
+								}]
+							}
+						}
+					}, {
+						$sort: {
+							votes: -1,
+							timestamp: 1
+						}
+					}, {
+						$skip: skip
+					}, {
+						$limit: totalPerPage
+					}])
+				} else {
+					booruImages = await userBooruSchema.aggregate([{
+						$match: {
+							booru_id: {
+								$nin: minusBooruIds
+							},
+							safety: {
+								$in: safety
+							}
+						}
+					}, {
+						$addFields: {
+							votes: {
+								$subtract: [{
+									$size: "$upvotes"
+								}, {
+									$size: "$downvotes"
+								}]
+							}
+						}
+					}, {
+						$sort: {
+							votes: -1,
+							timestamp: 1
+						}
+					}, {
+						$skip: skip
+					}, {
+						$limit: totalPerPage
+					}])
+				}
+			} else if (sort == "trending") {
+				if (allBooruIds.length > 0) {
+
+					booruImages = await mongolib.aggregateSchemaDocuments("userBooru", [
+						{
+							$match: {
+								booru_id: {
+									$in: allBooruIds,
+									$nin: minusBooruIds
+								},
+								safety: {
+									$in: safety
+								}
+							}
+						}, // Only filter by safety
+						{
+							$addFields: {
+								recentVoteCount: {
+									$subtract: [
+										{
+											$size: {
+												$filter: {
+													input: "$upvotes",
+													as: "vote",
+													cond: {
+														$gt: ["$$vote.timestamp", trendingAgo]
+													}
+												}
+											}
+										},
+										{
+											$size: {
+												$filter: {
+													input: "$downvotes",
+													as: "vote",
+													cond: {
+														$gt: ["$$vote.timestamp", trendingAgo]
+													}
+												}
 											}
 										}
-									}
+									]
+								},
+								votes: {
+									$subtract: [
+										{
+											$size: {
+												$filter: {
+													input: "$upvotes",
+													as: "vote",
+													cond: {
+														$gt: ["$$vote.timestamp", trendingAgo]
+													}
+												}
+											}
+										},
+										{
+											$size: {
+												$filter: {
+													input: "$downvotes",
+													as: "vote",
+													cond: {
+														$gt: ["$$vote.timestamp", trendingAgo]
+													}
+												}
+											}
+										}
+									]
 								}
-							]
+							}
 						},
-						votes: {
-							$subtract: [{
-								$size: "$upvotes"
-							}, {
-								$size: "$downvotes"
-							}]
+						{
+							$sort: {
+								recentVoteCount: -1,
+								votes: -1,
+								_id: 1
+							}
+						}, // Sort by recent votes, then total votes
+						{
+							$skip: skip
+						},
+						{
+							$limit: totalPerPage
+						}
+					])
+				} else {
+					booruImages = await mongolib.aggregateSchemaDocuments("userBooru", [
+						{
+							$match: {
+								booru_id: {
+									$nin: minusBooruIds
+								},
+								safety: {
+									$in: safety
+								}
+							}
+						}, // Only filter by safety
+						{
+							$addFields: {
+								recentVoteCount: {
+									$subtract: [
+										{
+											$size: {
+												$filter: {
+													input: "$upvotes",
+													as: "vote",
+													cond: {
+														$gt: ["$$vote.timestamp", trendingAgo]
+													}
+												}
+											}
+										},
+										{
+											$size: {
+												$filter: {
+													input: "$downvotes",
+													as: "vote",
+													cond: {
+														$gt: ["$$vote.timestamp", trendingAgo]
+													}
+												}
+											}
+										}
+									]
+								},
+								votes: {
+									$subtract: [
+										{
+											$size: {
+												$filter: {
+													input: "$upvotes",
+													as: "vote",
+													cond: {
+														$gt: ["$$vote.timestamp", trendingAgo]
+													}
+												}
+											}
+										},
+										{
+											$size: {
+												$filter: {
+													input: "$downvotes",
+													as: "vote",
+													cond: {
+														$gt: ["$$vote.timestamp", trendingAgo]
+													}
+												}
+											}
+										}
+									]
+								}
+							}
+						},
+						{
+							$sort: {
+								recentVoteCount: -1,
+								votes: -1,
+								_id: 1
+							}
+						}, // Sort by recent votes, then total votes
+						{
+							$skip: skip
+						},
+						{
+							$limit: totalPerPage
+						}
+					])
+				}
+			}
+
+
+			totalImages = await userBooruSchema.aggregate([{
+					$match: {
+						booru_id: {
+							$in: allBooruIds
+						},
+						safety: {
+							$in: safety
 						}
 					}
 				},
 				{
-					$sort: {
-						recentVoteCount: -1,
-						votes: -1,
-						_id: 1
-					}
-				}, // Sort by recent votes, then total votes
-				{
-					$skip: skip
-				},
-				{
-					$limit: totalPerPage
+					$count: 'count'
 				}
-			])
-		}
+			]);
 
+			if (totalImages.length == 0) {
+				totalImages = 0
+			} else {
+				totalImages = totalImages[0].count
+			}
+
+		}
 
 		// get the total count of the pages:
-		totalImages = await userBooruSchema.aggregate([{
-				$match: {
-					prompt: {
-						$regex: regex,
-						$options: 'i'
-					},
-					safety: {
-						$in: safety
-					}
-				}
-			},
-			{
-				$count: 'count'
-			}
-		]);
+		totalPages = Math.ceil(totalImages / totalPerPage)
 
-		if (totalImages.length == 0) {
-			totalImages = 0
+		let userProfile = await userProfileSchema.findOne({
+			accountId: req.session.accountId
+		})
+
+		if (req.session.loggedIn) {
+			res.render('booru/home', {
+				session: req.session,
+				booruImages: booruImages,
+				userProfile: userProfile,
+				booruSearchScript: booruSearchScript,
+				totalPages: totalPages
+			});
+			return
 		} else {
-			totalImages = totalImages[0].count
+			res.render('booru/home', {
+				session: req.session,
+				booruImages: booruImages,
+				userProfile: userProfile,
+				booruSearchScript: booruSearchScript,
+				totalPages: totalPages
+			});
 		}
 
+	} catch (error) {
+		console.log(`Error loading tags data: ${error}`);
+		res.status(500).send('Error loading booru tags data');
 	}
 
-	// get the total count of the pages:
-	totalPages = Math.ceil(totalImages / totalPerPage)
-
-	let userProfile = await userProfileSchema.findOne({
-		accountId: req.session.accountId
-	})
-
-	if (req.session.loggedIn) {
-		res.render('booru/home', {
-			session: req.session,
-			booruImages: booruImages,
-			userProfile: userProfile,
-			booruSearchScript: booruSearchScript,
-			totalPages: totalPages
-		});
-		return
-	} else {
-		res.render('booru/home', {
-			session: req.session,
-			booruImages: booruImages,
-			userProfile: userProfile,
-			booruSearchScript: booruSearchScript,
-			totalPages: totalPages
-		});
-	}
+	
 
 })
 
@@ -2264,9 +2667,18 @@ app.get('/recounttags', async function(req, res) {
 app.post('/tags-autocomplete', async function(req, res) {
 	try {
 
+		let isMinus = false
+
+		// if there is a minus at the start then remove it
+
 		// let tags = await userBooruTagsSchema.find().sort({count: -1})
 		// count is a string so use aggregate to convert it to a number, then sort by count, also limit to 10:
 		let lastWord = req.body.lastWord
+
+		if (lastWord.startsWith('-')) {
+			isMinus = true
+			lastWord = lastWord.slice(1)
+		}
 
 		let tags = await userBooruTagsSchema.aggregate([{
 				$match: {
@@ -2292,6 +2704,13 @@ app.post('/tags-autocomplete', async function(req, res) {
 				$limit: 10
 			}
 		]);
+
+		
+		if (isMinus) {
+			for (const tag of tags) {
+				tag.tag = `-${tag.tag}`
+			}
+		}
 
 
 		res.send({
@@ -2331,6 +2750,31 @@ app.post('/create-booru-image', async function(req, res) {
 			return
 		}
 
+
+		// if the user has posted more than 10 images in the last 24 hours, dont allow them to post:
+		let twentyFourHoursAgo = Date.now() - (24 * 60 * 60 * 1000)
+
+		let twentyFourHourImageCount = await userBooruSchema.countDocuments({
+			account_id: req.session.accountId,
+			timestamp: {
+				$gt: twentyFourHoursAgo
+			}
+		})
+
+		if (twentyFourHourImageCount == null || twentyFourHourImageCount == undefined || twentyFourHourImageCount == NaN) {
+			twentyFourHourImageCount = 0
+		}
+
+		if (twentyFourHourImageCount >= 10) {
+
+			res.send({
+				status: "error",
+				message: "User has posted more than 14 images in the last 24 hours"
+			})
+			return
+		}
+
+
 		// check if the folder for the user exists:
 		if (!fs.existsSync(`${booruFolder}/${req.session.accountId}/`)) {
 			fs.mkdirSync(`${booruFolder}/${req.session.accountId}/`, {
@@ -2360,6 +2804,30 @@ app.post('/create-booru-image', async function(req, res) {
 		tags = tags.split(',').map(tag => tag.trim())
 
 		tags = splitTags(tags)
+
+		// remove any tag with "username" in it:
+		tags = tags.filter(tag => !tag.includes("username"))
+
+		// tags.push(`${userProfile.username}-username`)
+
+		// get all accounts that have that username, then sort them by timestamp, the oldest one gets username-username, the rest get username-username-1, username-username-2, etc:
+
+		// timestamp is a string like this: "1729524416544", its the same as Date.now() but as a string, make sure it sorts correctly with the oldest having the lowest timestamp:
+
+		let accountsWithUsername = await mongolib.aggregateSchemaDocuments("userProfile", [{ $match: { username: userProfile.username } }, { $sort: { timestamp: 1 } }])
+		let usernameCount = 0
+		for (const account of accountsWithUsername) {
+			if (account.accountId == req.session.accountId) {
+				break
+			}
+			usernameCount++
+		}
+
+		if (usernameCount > 0) {
+			tags.push(`${userProfile.username}-username-${usernameCount}`)
+		} else {
+			tags.push(`${userProfile.username}-username`)
+		}
 
 		for (const tag of tags) {
 			// check if the tag exists in the userBooruTagsSchema:
@@ -2435,6 +2903,68 @@ app.post('/create-booru-image', async function(req, res) {
 	}
 })
 
+// app.get('/booru/addusernametagtoall', async function(req, res) {
+
+// 	try {
+
+// 		let booruImages = await userBooruSchema.find()
+
+// 		accountPostsArray = []
+
+// 		for (const image of booruImages) {
+// 			// create a tag inside of userBooruTagsSchema for the username-username:
+// 			// find the account id of the image:
+// 			let userProfile = await userProfileSchema.findOne({
+// 				accountId: image.account_id
+// 			})
+
+// 			// check if the tag exists in the userBooruTagsSchema:
+// 			let foundTag = await userBooruTagsSchema.findOne({
+// 				tag: `${userProfile.username}-username`
+// 			})
+
+// 			if (foundTag == null) {
+// 				newCount = BigInt(1)
+// 				newCount = newCount.toString()
+// 			} else {
+// 				newCount = BigInt(foundTag.count) + BigInt(1)
+// 				newCount = newCount.toString()
+// 			}
+
+// 			// accountPostsArray[image.account_id].push(image.booru_id) doesnt work 
+
+// 			if (accountPostsArray[image.account_id] == undefined) {
+// 				accountPostsArray[image.account_id] = []
+// 			}
+		
+
+// 			await userBooruTagsSchema.findOneAndUpdate({
+// 				tag: `${userProfile.username}-username`
+// 			}, { // count is a string, make sure to convert it to a BigInt before incrementing, then back:
+// 				tag: `${userProfile.username}-username`,
+// 				count: newCount,
+// 				$push: {
+// 					booru_ids: image.booru_id
+// 				},
+// 			}, {
+// 				upsert: true
+// 			})
+// 		}
+
+// 		res.send({
+// 			status: "success"
+// 		})
+		
+// 	} catch (error) {
+// 		console.log(`Error adding username tag to all: ${error}`);
+// 	}
+
+	
+
+// })
+
+			
+
 app.get('/booru/setRating/:booru_id/:rating', async function(req, res) {
 	booru_id = req.param('booru_id')
 	rating = req.param('rating')
@@ -2476,7 +3006,9 @@ app.get('/booru/setRating/:booru_id/:rating', async function(req, res) {
 
 	if (foundBooruImage.safety == "na") {
 		await mongolib.modifyUserCredits(creatorProfile.accountId, 50, '+', `Your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a> was rated ${rating.toUpperCase()}`)
-		await mongolib.createUserNotification(creatorProfile.accountId, `Your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a> was rated ${rating.toUpperCase()}`, 'booru')
+		if (creatorProfile.settings?.notification_booruRating == true || creatorProfile.settings?.notification_booruRating == undefined) {
+			await mongolib.createUserNotification(creatorProfile.accountId, `Your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a> was rated ${rating.toUpperCase()}`, 'booru')
+		}
 	}
 
 	await userBooruSchema.findOneAndUpdate({
@@ -2540,6 +3072,7 @@ app.get('/booru/delete/:booru_id', async function(req, res) {
 		booru_id: booru_id
 	})
 
+	
 	await mongolib.createUserNotification(foundBooruImage.account_id, `Your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a> was deleted`, 'moderation')
 
 	// delete the image from the userBooruTagsSchema:
@@ -2711,7 +3244,10 @@ app.post('/booru/vote', async function(req, res) {
 					await mongolib.modifyUserCredits(account_id, creditsToGain, '+', `You Upvoted a <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a>`)
 					if (creatorProfile != null) {
 						await mongolib.modifyUserCredits(creatorProfile.accountId, creditsToGain, '+', `Someone upvoted your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a>`)
-						await mongolib.createUserNotification(creatorProfile.accountId, `Someone upvoted your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a>`, 'booru')
+
+						if (creatorProfile.settings?.notification_booruVote == true || creatorProfile.settings?.notification_booruVote == undefined) {
+							await mongolib.createUserNotification(creatorProfile.accountId, `Someone upvoted your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a>`, 'booru')
+						}
 					}
 
 				}
@@ -2819,7 +3355,13 @@ app.post('/booru/comment/post/:booru_id', async function(req, res) {
 		timestamp: Date.now()
 	})
 
-	await mongolib.createUserNotification(foundBooruImage.account_id, `Someone commented on your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a>`, 'booru')
+	let creatorProfile = await userProfileSchema.findOne({
+		accountId: foundBooruImage.account_id
+	})
+
+	if (creatorProfile.settings?.notification_booruComment == true || creatorProfile.settings?.notification_booruComment == undefined) {
+		await mongolib.createUserNotification(foundBooruImage.account_id, `${foundAccount.username} commented on your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a>`, 'booru')
+	}
 
 	res.send({
 		status: "success",
@@ -3146,6 +3688,16 @@ app.post('/get-notifications', async function(req, res) {
 
 	let receivedNotifications = new Set(data.notificationsReceived);
 
+	// set req.session.notificationsChecked to the current time:
+	if (data.popupOpened) {
+		req.session.notificationsChecked = Date.now()
+	}
+
+	// if the req.session.notificationsChecked is not set, set it to the current time:
+	if (!req.session.notificationsChecked) {
+		req.session.notificationsChecked = Date.now()
+	}
+	
 	let notifications = await mongolib.aggregateSchemaDocuments("userNotification", [
 		{
 			$match: {
@@ -3156,11 +3708,14 @@ app.post('/get-notifications', async function(req, res) {
 		{
 			$sort: { timestamp: -1 }
 		},
-		{ $limit: 20 }
+		{ $limit: 30 }
 	]);
 
+		// if the notification is older than 7 days, dont send it:
+		notifications = notifications.filter(notification => notification.timestamp > req.session.notificationsChecked - 604800000)
 
-		res.send({ status: 'success', notifications: notifications })
+
+		res.send({ status: 'success', notifications: notifications, notificationsChecked: req.session.notificationsChecked })
 	})
 
 app.get('/settings', async function(req, res) {
@@ -3313,6 +3868,99 @@ app.post('/settings/avatar', async (req, res) => {
 	}
 });
 
+app.post('/settings/update', async function(req, res) {
+
+	try {
+
+		let data = req.body
+
+		console.log(data)
+
+		let settingWanted = data.setting
+		let settingValue = data.value
+
+		let userProfile = await mongolib.getSchemaDocumentOnce("userProfile", {
+			accountId: req.session.accountId
+		})
+
+		if (userProfile.status == 'error') {
+			res.send({
+				status: "error",
+				message: "User not found"
+			})
+			return
+		}
+
+		if (settingWanted == 'user_bio') {
+			await mongolib.updateSchemaDocumentOnce("userProfile", {
+				accountId: req.session.accountId
+			}, {
+				$set: {
+					'settings.user_bio': settingValue
+				}
+			})
+
+		} else if (settingWanted.startsWith('toggle_')) {
+
+			let toggleValue = settingValue
+
+			settingWanted = settingWanted.replace('toggle_', '')
+
+			let updateQuery = {};
+
+			console.log(settingWanted)
+
+			// new settings:
+			let newSettings = userProfile.settings
+
+			// check if the setting exists:
+			if (newSettings[settingWanted] == undefined) {
+
+				res.send({	
+					status: "error",
+					message: "Setting not found"
+				})
+				return
+			}
+
+			// update the setting:
+			newSettings[settingWanted] = toggleValue
+
+			// update the settings in the database:
+			await mongolib.updateSchemaDocumentOnce("userProfile", {
+				accountId: req.session.accountId
+			}, {
+				$set: {
+					settings: newSettings
+				}
+			})
+
+
+			console.log(result)
+
+		} else {
+			res.send({
+				status: "error",
+				message: "Setting not found"
+			})
+		}
+
+		res.send({
+			status: "success",
+			message: "Settings updated"
+		})
+
+	
+	} catch(error) {
+		console.log(`Error updating settings: ${error}`);
+		res.send({
+			status: "error",
+			message: "Error updating settings"
+		})
+	}
+	
+})
+
 
 
 app.post('/modify-user-credits', async function(req, res) {
@@ -3370,6 +4018,365 @@ app.get('/modify-user-credits', async function(req, res) {
 })
 
 
+app.get('/paypal-shop', async function(req, res) {
+
+	let userProfile = await mongolib.getSchemaDocumentOnce("userProfile", {
+		accountId: req.session.accountId
+	})
+
+	if (userProfile.status == 'error') {
+		res.send({
+			status: 'error',
+			message: 'User not found'
+		})
+		return
+	}
+
+	res.render('paypal-shop', {
+		session: req.session,
+		userProfile: userProfile
+	});
+
+})
+
+
+// Load sensitive data from environment variables
+const PAYPAL_CLIENT = process.env.PAYPAL_CLIENT;
+const PAYPAL_SECRET = process.env.PAYPAL_SECRET;
+const PAYPAL_API = process.env.PAYPAL_API || 'https://api-m.paypal.com'; // Use live API URL
+
+const creditOptions = [
+    { credits: 15000, price: 5 },
+	{ credits: 37500, price: 10 },
+	{ credits: 95000, price: 20 }
+];
+
+// Payment Verification Route (Manually Triggered after capture)
+app.post('/payment/verify', async (req, res) => {
+    const { orderId, accountId, credits, amount } = req.body;
+
+    try {
+        const selectedOption = creditOptions.find(option => option.credits === credits && option.price === amount);
+        if (!selectedOption) {
+            return res.status(400).send('Invalid credits or amount provided.');
+        }
+
+        // Verify the order with PayPal
+        const auth = Buffer.from(`${PAYPAL_CLIENT}:${PAYPAL_SECRET}`).toString('base64');
+        const response = await fetch(`${PAYPAL_API}/v2/checkout/orders/${orderId}`, {
+            headers: {
+                'Authorization': `Basic ${auth}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const order = await response.json();
+        if (
+            order.status === 'COMPLETED' &&
+            order.purchase_units[0].amount.value === selectedOption.price.toFixed(2)
+        ) {
+            // Add credits to the user's account
+            await mongolib.modifyUserCredits(accountId, selectedOption.credits, '+', `Purchased ${selectedOption.credits} credits for $${selectedOption.price.toFixed(2)}`);
+            await mongolib.createUserNotification(accountId, `You have purchased ${selectedOption.credits} credits for $${selectedOption.price.toFixed(2)}`, 'payment');
+            res.status(200).send('Payment verified and credits added.');
+        } else {
+            res.status(400).send('Payment verification failed.');
+        }
+    } catch (error) {
+        console.error('Error verifying PayPal payment:', error);
+        res.status(500).send('Internal server error.');
+    }
+});
+
+// Webhook Listener for PayPal Events
+app.post('/payment/webhook', async (req, res) => {
+    const event = req.body;
+
+    // Log the webhook event for debugging
+    console.log('Webhook Event:', event);
+
+    try {
+        if (event.event_type === 'PAYMENT.SALE.COMPLETED') {
+            const { resource } = event;
+            const orderId = resource.id;
+            const accountId = resource.custom_id;
+            const credits = parseInt(resource.custom_id.split('-')[1]); // Extract credits from custom_id
+
+            // Add credits to the user's account
+            await mongolib.modifyUserCredits(accountId, credits, '+', `Purchased ${credits} credits via PayPal`);
+            await mongolib.createUserNotification(accountId, `You have successfully purchased ${credits} credits.`, 'payment');
+
+            res.status(200).send('Webhook processed.');
+        } else {
+            res.status(400).send('Unhandled event type.');
+        }
+    } catch (error) {
+        console.error('Error processing PayPal webhook:', error);
+        res.status(500).send('Internal server error.');
+    }
+});
+
+
+app.get('/redeem-code', async function(req, res) {
+
+	try {
+
+		let userProfile = await mongolib.getSchemaDocumentOnce("userProfile", {
+			accountId: req.session.accountId
+		})
+
+		if (userProfile.status == 'error') {
+			res.send({
+				status: 'error',
+				message: 'User not found'
+			})
+			return
+		}
+
+		res.render('redeem-code', {
+			session: req.session,
+			userProfile: userProfile
+		});
+
+
+	} catch(error) {
+	
+		console.log(`Error redeeming code: ${error}`);
+		res.status(500).send('Error redeeming code');
+
+	}
+
+})
+
+app.post('/redeem-code', async function(req, res) {
+
+	try {
+
+		let data = req.body
+
+		let userProfile = await mongolib.getSchemaDocumentOnce("userProfile", {
+			accountId: req.session.accountId
+		})
+
+		if (userProfile.status == 'error') {
+			res.send({
+				status: 'error',
+				message: 'User not found'
+			})
+			return
+		}
+
+		let code = data.code
+
+		let foundCode = await mongolib.getSchemaDocumentOnce("userRedeem", {
+			code: code
+		})
+
+		if (foundCode.status == 'error') {
+			res.send({
+				status: 'error',
+				message: 'Code not found'
+			})
+			return
+		}
+
+		if (foundCode.oneTimeUse == true && foundCode.usersRedeemed.includes(req.session.accountId)) {
+			res.send({
+				status: 'error',
+				message: 'Code is one time use only'
+			})
+			return	
+		}
+
+		if (foundCode.expires < Date.now()) {
+			res.send({
+				status: 'error',
+				message: 'Code expired'
+			})
+			return
+		}
+
+		if (foundCode.redeemCount >= foundCode.maxRedeems) {
+			res.send({
+				status: 'error',
+				message: 'Code max redeems reached'
+			})
+			return
+		}	
+
+		// add the user to the usersRedeemed array:
+		await mongolib.updateSchemaDocumentOnce("userRedeem", {
+			code: code
+		}, {
+			$push: {
+				usersRedeemed: req.session.accountId
+			}
+		})
+
+		let nextRedeemCount = foundCode.redeemCount + 1
+
+		await mongolib.updateSchemaDocumentOnce("userRedeem", {
+			code: code
+		}, {
+			redeemCount: nextRedeemCount
+		})
+
+		if (foundCode.type == "credits") {
+			await mongolib.modifyUserCredits(req.session.accountId, Number(foundCode.variable), '+', `Redeemed code: ${code}`)
+		} else if (foundCode.type == "badge") {
+			await mongolib.updateSchemaDocumentOnce("userProfile", {
+				accountId: req.session.accountId
+			}, {
+				$set: {
+					[`badges.${foundCode.variable}`]: true
+				}
+			})
+		}
+
+		res.send({
+			status: 'success',
+			message: 'Code redeemed'
+		})
+
+	} catch(error) {
+
+		console.log(`Error redeeming code: ${error}`);
+		res.status(500).send('Error redeeming code');
+
+	}
+
+})
+
+
+app.get('/create-redeem-code', async function(req, res) {
+	try {
+		
+		let userProfile = await mongolib.getSchemaDocumentOnce("userProfile", {
+			accountId: req.session.accountId
+		})
+
+		if (userProfile.status == 'error') {
+			res.send({
+				status: 'error',
+				message: 'User not found'
+			})
+			return
+		}
+
+		if (userProfile.accountId !== "1039574722163249233") {
+			res.send({
+				status: 'error',
+				message: 'User not allowed to create redeem codes'
+			})
+			return
+		}
+
+		res.render('create-redeem-code', {
+			session: req.session,
+			userProfile: userProfile
+		});
+	} catch(error) {
+		console.log(`Error creating redeem code: ${error}`);
+		res.status(500).send('Error creating redeem code');
+	}
+})
+
+
+app.post('/create-redeem-code', async function(req, res) {
+	try {
+		let data = req.body
+
+		let userProfile = await mongolib.getSchemaDocumentOnce("userProfile", {
+			accountId: req.session.accountId
+		})
+
+		if (userProfile.status == 'error') {
+			res.send({
+				status: 'error',
+				message: 'User not found'
+			})
+			return
+		}
+
+		if (userProfile.accountId !== "1039574722163249233") {
+			res.send({
+				status: 'error',
+				message: 'User not allowed to create redeem codes'
+			})
+			return
+		}
+
+		let code = data.code
+		let type = data.type
+		let variable = data.variable
+		let maxRedeems = data.maxRedeems
+		let expires = data.expires
+
+		let foundCode = await mongolib.getSchemaDocumentOnce("userRedeem", {
+			code: code
+		})
+
+		if (foundCode.length > 0) {
+			res.send({
+				status: 'error',
+				message: 'Code already exists'
+			})
+			return
+		}
+
+		// ensure expires is a timestamp in unix format:
+		if (expires) {
+			expires = new Date(expires).getTime()
+		}
+
+		let codeObject = {
+			code: code,
+			type: type,
+			variable: variable,
+			maxRedeems: maxRedeems,
+			redeemCount: 0,
+			expires: expires,
+			timestamp: String(Date.now())
+		}
+
+		let result = await mongolib.createSchemaDocument("userRedeem", {
+			...codeObject
+		})
+
+		if (result.status == 'error') {
+			res.send({
+				status: 'error',
+				message: 'Error creating redeem code'
+			})
+			return
+		} else {
+			res.send({
+				status: 'success',
+				message: 'Code created'
+			})
+		}
+
+	} catch(error) {
+		console.log(`Error creating redeem code: ${error}`);
+		res.send({
+			status: 'error',
+			message: 'Error creating redeem code: ' + error
+		})
+	}
+})
+
+
+
+app.get('/download', async function(req, res) {
+	res.render('download', {
+		session: req.session
+	});
+})
+
+	
+
+
+
 
 
 const http = require('http')
@@ -3400,6 +4407,6 @@ if (process.env.DEVELOPMENT !== 'true') {
 
 const httpServer = http.createServer(app)
 
-httpServer.listen(port, () => {
-	console.log(`JSCammie listening at http://localhost:${port}`)
+httpServer.listen(80, () => {
+	console.log(`JSCammie listening at http://localhost:80`)
 })

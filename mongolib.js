@@ -13,6 +13,7 @@ const userCreditsHistorySchema = require('./schemas/userCreditsHistorySchema.js'
 const generationLoraSchema = require('./schemas/generationLoraSchema.js');
 const userBooruCommentsSchema = require('./schemas/userBooruCommentsSchema.js');
 const userNotificationSchema = require('./schemas/userNotificationSchema.js');
+const userRedeemSchema = require('./schemas/userRedeemSchema.js');
 
 async function connectToDatabase() {
 	try {
@@ -117,6 +118,12 @@ async function getSchemaDocumentOnce(schema, query) {
 			case 'userBooruComments':
 				document = await userBooruCommentsSchema.findOne(query)
 				break;
+			case 'userNotification':
+				document = await userNotificationSchema.findOne(query)
+				break;
+			case 'userRedeem':
+				document = await userRedeemSchema.findOne(query)
+				break;
 			default:
 				document = null
 		}
@@ -196,6 +203,20 @@ async function getSchemaDocuments(schema, query) {
 					document = await userBooruCommentsSchema.find(query)
 				}
 				break;
+			case 'userNotification':
+				if (query == {}) {
+					document = await userNotificationSchema.find({})
+				} else {
+					document = await userNotificationSchema.find(query)
+				}
+				break;
+			case 'userRedeem':
+				if (query == {}) {
+					document = await userRedeemSchema.find({})
+				} else {
+					document = await userRedeemSchema.find(query)
+				}
+				break;
 			default:
 				document = null
 		}
@@ -246,6 +267,9 @@ async function aggregateSchemaDocuments(schema, query) {
 			case 'userNotification':
 				documents = await userNotificationSchema.aggregate(query)
 				break;
+			case 'userRedeem':
+				documents = await userRedeemSchema.aggregate(query)
+				break;
 			default:
 				documents = null
 		}
@@ -289,6 +313,12 @@ async function updateSchemaDocumentOnce(schema, query, update) {
 			case 'userBooruComments':
 				await userBooruCommentsSchema.findOneAndUpdate(query, update)
 				break;
+			case 'userNotification':
+				await userNotificationSchema.findOneAndUpdate(query, update)
+				break;
+			case 'userRedeem':	
+				await userRedeemSchema.findOneAndUpdate(query, update)
+				break;
 			default:
 				return {status: 'error', message: 'Invalid schema'}
 		}
@@ -330,6 +360,12 @@ async function createSchemaDocument(schema, document) {
 				break;
 			case 'userBooruComments':
 				await userBooruCommentsSchema.create(document)
+				break;
+			case 'userNotification':
+				await userNotificationSchema.create(document)
+				break;
+			case 'userRedeem':
+				await userRedeemSchema.create(document)
 				break;
 			default:
 				return {status: 'error', message: 'Invalid schema'}
@@ -373,6 +409,12 @@ async function deleteSchemaDocument(schema, query) {
 			case 'userBooruComments':	
 				await userBooruCommentsSchema.findOneAndDelete(query)
 				break;
+			case 'userNotification':
+				await userNotificationSchema.findOneAndDelete(query)
+				break;
+			case 'userRedeem':
+				await userRedeemSchema.findOneAndDelete(query)
+				break;
 			default:
 				return {status: 'error', message: 'Invalid schema'}
 		}
@@ -387,9 +429,6 @@ async function deleteSchemaDocument(schema, query) {
 	}
 
 }
-
-
-
 
 // export all functions
 module.exports = {

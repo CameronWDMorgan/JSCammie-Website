@@ -1,16 +1,16 @@
 function getFastqueuePrice(loraCount, model) {
 
 	let dynamicCreditsPrice = 0
-	const baseCreditsPrice = 35
+	const baseCreditsPrice = 25
 
 	dynamicCreditsPrice = baseCreditsPrice
 
 	// is it a model with value starting sdxl?
 	if (model.startsWith('sdxl')) {
-		dynamicCreditsPrice = dynamicCreditsPrice * 2
+		dynamicCreditsPrice = dynamicCreditsPrice * 1.75
 		loraModifier = 3.5
 	} else if (model.startsWith('flux')) {
-		dynamicCreditsPrice = dynamicCreditsPrice * 2.75
+		dynamicCreditsPrice = dynamicCreditsPrice * 2.5
 		loraModifier = 5
 	} else {
 		loraModifier = 1.25
@@ -36,12 +36,13 @@ function getExtrasPrice(extras, model='') {
 		doubleImages: 0,
 		removeWatermarkBonus: 0,
 		upscaleBonus: 0,
-		doubleImagesBonus: 0
+		doubleImagesBonus: 0,
+		removeBackground: 0,
 	}
 
 	// if { removeWatermark: true } is passed, add 150 credits
 	if (extras.removeWatermark) {
-		extrasPrice.removeWatermark += 400
+		extrasPrice.removeWatermark += 300
 	}
 
 	if (extras.upscale) {
@@ -66,6 +67,10 @@ function getExtrasPrice(extras, model='') {
 	if (extras.upscale && extras.doubleImages) {
 		extrasPrice.upscaleBonus = Math.round(extrasPrice.upscale * 0.5)
 		extrasPrice.doubleImagesBonus = Math.round(extrasPrice.doubleImages * 1.5)
+	}
+
+	if (extras.removeBackground) {
+		extrasPrice.removeBackground += 75
 	}
 
 	return extrasPrice

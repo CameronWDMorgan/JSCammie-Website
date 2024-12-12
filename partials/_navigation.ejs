@@ -3,7 +3,6 @@
 <script id="aclib" type="text/javascript" src="//acscdn.com/script/aclib.js"></script>
 
 <div id="navigationOverlay" class="navigationOverlay frosted"></div>
-
 <style>
 
     .navigationOverlay {
@@ -45,7 +44,7 @@
 .navLink {
     color: #fff;
     text-decoration: none;
-    padding: 10px 15px;
+    padding: 7px 10px;
     margin: 0 5px;
     border-radius: 5px;
     transition: background-color 0.3s, color 0.3s;
@@ -158,17 +157,19 @@
     <div class="navContainer">
         <!-- Desktop Navigation Links -->
         <div class="navLinksWrapper">
-            <a class="navlink" href="/home">🏠 Home</a>
-            <a class="navlink" href="/">🖥️ AI Generator</a>
-            <a class="navlink" href="/booru">🖼️ Booru</a>
-            <a class="navlink" href="https://ko-fi.com/jscammie">🥺 Donate</a>
+            <a class="navlink" href="/home">Home</a>
+            <a class="navlink" href="/">AI Generator</a>
+            <a class="navlink" href="/booru">Booru</a>
+            <a class="navlink" href="https://discord.gg/AvbQuRmh7t">Discord</a>
+            <a class="navlink" href="/download">Download</a>
+            <a class="navlink" href="/redeem-code">Redeem</a>
             <% if (session.loggedIn) { %>
-                <a class="navlink" href="/logout">❌ Logout</a>
-                <a class="navlink" href="/profile/<%=session.accountId%>">⭐ My Profile</a>
+                <a class="navlink" href="/logout">Logout</a>
+                <a class="navlink" href="/profile/<%=session.accountId%>">My Profile</a>
+                <a class="navlink" href="/paypal-shop">Buy Credits</a>
             <% } else { %>
                 <a class="navlink" href="/login">Login</a>
             <% } %>
-            <a class="navlink" href="https://discord.gg/AvbQuRmh7t">💬 Discord</a>
             
         </div>
 
@@ -177,17 +178,19 @@
 
         <!-- Mobile Dropdown Menu -->
         <div class="mobileMenu frosted" id="mobileMenu">
-            <a href="/home">🏠 Home</a>
-            <a href="/">🖥️ AI Generator</a>
-            <a href="/booru">🖼️ Booru</a>
-            <a href="https://ko-fi.com/jscammie">🥺 Donate</a>
+            <a href="/home">Home</a>
+            <a href="/">AI Generator</a>
+            <a href="/booru">Booru</a>
+            <a href="https://discord.gg/AvbQuRmh7t">Discord</a>
+            <a href="/download">Download</a>
+            <a href="/redeem-code">Redeem</a>
             <% if (session.loggedIn) { %>
-                <a href="/logout">❌ Logout</a>
-                <a href="/profile/<%=session.accountId%>">⭐ My Profile</a>
+                <a href="/logout">Logout</a>
+                <a href="/profile/<%=session.accountId%>">My Profile</a>
+                <a href="/paypal-shop">Buy Credits</a>
             <% } else { %>
                 <a href="/login">Login</a>
             <% } %>
-            <a href="https://discord.gg/AvbQuRmh7t">💬 Discord</a>
         </div>
         <div id="creditsButtonDiv">
             <button id="creditsNav">Credits: <span id="creditsDisplay">0</span></button>
@@ -286,8 +289,7 @@
 
 <script>
     let topSiteTextArray = [
-        "Consider answering the Survey by clicking/tapping <a href='https://forms.gle/dbRsyWEA5RSZL3qb6'>'Here'</a> to help make the site better!",
-        "Consider donating by clicking/tapping <a href='https://ko-fi.com/jscammie'>'Here'</a> to help keep the site running! 🥺",
+        "Low on credits? Check out the <a href='https://www.jscammie.com/paypal-shop'>'Credits Shop'</a> to buy more!",
         "Check out the <a href='https://www.jscammie.com/booru'>'Booru'</a> for some cool user-created images!",
         "Check out the <a href='https://www.discord.gg/AvbQuRmh7t'>'Discord'</a> to compete in contests for credits and more!",
     ]
@@ -308,7 +310,7 @@
 </script>
 
 <div id="notificationsPopup" style="display: none;">
-    <p>Notifications:</p>
+    <h2> - Notifications:</h2>
     <div class="notificationList" id="notificationsList">
         <p>No notifications</p>
     </div>
@@ -330,8 +332,8 @@
         border: 2px solid rgb(255, 143, 246);
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
         z-index: 1000;
-        max-width: 400px;
-        width: 90%;
+        max-width: 600px;
+        width: 75%;
     }
 
     .notification {
@@ -345,7 +347,7 @@
 
     .notificationType {
         font-size: 18px;
-        color: #ff9dfc;
+        color: #ffffff;
     }
 
     .notificationMessage {
@@ -355,8 +357,66 @@
     .notificationList {
         display: flex;
         flex-direction: column;
-        height: 30vh;
+        height: 40vh;
         overflow-y: scroll;
+    }
+
+    #notificationsNav {
+        transition: all 0.5s ease;
+    }
+
+
+
+
+    .notification-credits {
+        background-color: rgba(0, 38, 255, 0.2) !important;
+    }
+
+    .notification-credits:hover {
+        background-color: rgba(0, 38, 255, 0.4) !important;
+    }
+
+
+
+
+    .notification-moderation {
+        background-color: rgba(255, 0, 0, 0.2) !important;
+    }
+
+    .notification-moderation:hover {
+        background-color: rgba(255, 0, 0, 0.4) !important;
+    }
+
+
+
+    .notification-booru {
+        background-color: rgba(0, 255, 38, 0.2) !important;
+    }
+
+    .notification-booru:hover {
+        background-color: rgba(0, 255, 38, 0.4) !important;
+    }
+
+
+
+
+    .notification-generator {
+        background-color: rgba(119, 0, 255, 0.2) !important;
+    }
+
+    .notification-generator:hover {
+        background-color: rgba(119, 0, 255, 0.4) !important;
+    }
+
+
+
+
+    .notification-dailies {
+        background-color: rgba(255, 255, 0, 0.2) !important;
+    }
+
+    .notification-dailies:hover {
+        background-color: rgba(255, 255, 0, 0.4) !important;
     }
 
 </style>
@@ -370,6 +430,65 @@
     // send a post request to get-notifications to get the notifications:
     notificationsReceived = []
 
+    let notificationsArray = []
+    let notificationsChecked = '<%=session.notificationsChecked%>'
+
+    let notificationCount = 0
+
+    function buildNotificationsFromArray(newNotificationsChecked) {
+
+        // ensure all notifications are in the correct order by their timestamp:
+        notificationsArray.sort((a, b) => {
+            return b.timestamp - a.timestamp;
+        });
+
+        // notificationsChecked is the timestamp of the last time the user checked their notifications:
+        
+        Number(notificationsChecked)
+
+        notificationsChecked = newNotificationsChecked ?? notificationsChecked
+
+        if (notificationsArray.length == 0) {
+            notificationsList.innerHTML = "<p>No notifications</p>";
+        }
+
+        // have the notificationsButton pulse background color if there are new notifications:
+        if (notificationsArray.length > 0) {
+            if (notificationsArray[0].timestamp > notificationsChecked) {
+                // have a timeout to make the background color pulse, but make sure the background color is reset after the timeout:
+                notificationsNav = document.getElementById('notificationsNav');
+                notificationsNav.style.backgroundColor = 'rgba(255, 0, 0, 0.7)';
+                setTimeout(() => {
+                    notificationsNav.style.backgroundColor = 'rgba(0, 0, 0, 0.2)';
+                }, 750);
+            }
+        }
+
+
+        // if the notifications havent changed, then don't update the notificationsList
+
+        if (notificationCount == notificationsArray.length) {
+            return;
+        } else {
+            notificationsList.innerHTML = "";
+        }
+
+        if (notificationsArray.length > 0) {
+            notificationCount = notificationsArray.length
+        }
+
+        notificationsArray.forEach(notification => {
+            notificationHTML = `
+                <div class="notification notification-${notification.type}">
+                    <div class="notificationType"> ${notification.type} | ${new Date(Number(notification.timestamp)).toLocaleString()} </div>
+                    <div class="notificationMessage"> ${notification.message} </div>
+                </div>
+            `
+
+            notificationsList.innerHTML += notificationHTML;
+        });
+    }
+
     function getNotifications() {
         fetch('/get-notifications', {
             method: 'POST',
@@ -377,26 +496,22 @@
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                notificationsReceived: notificationsReceived
+                notificationsReceived: notificationsReceived,
+                popupOpened: document.getElementById('notificationsPopup').classList.contains('activeNotificationsPopup')
             })
         }).then(response => response.json())
             .then(data => {
-                console.log(notificationsReceived)
+                // console.log(notificationsReceived)
                 if (notificationsList.textContent.trim() == "No notifications") {
                     notificationsList.innerHTML = "";
                 }
                 data.notifications.forEach(notification => {
                     notificationsReceived.push(notification.notificationId)
-                    notification = `
-                        <div class="notification">
-                            <div class="notificationType"> ${notification.type} | ${new Date(Number(notification.timestamp)).toLocaleString()} </div>
-                            <div class="notificationMessage"> ${notification.message} </div>
-                        </div>
-                    `
-
-                    notificationsList.innerHTML += notification;
-
+                    notificationsArray.push(notification)
                 });
+
+                buildNotificationsFromArray(data.notificationsChecked);
+
             });
     }
 
@@ -404,7 +519,6 @@
     document.getElementById('notificationsNav').addEventListener('click', () => {
         if (!notificationsPopup.classList.contains('activeNotificationsPopup')) {
             notificationsPopup.classList.add('activeNotificationsPopup');
-            getNotifications();
         } else {
             notificationsPopup.classList.remove('activeNotificationsPopup');
         }
@@ -422,7 +536,11 @@
         getNotifications();
     });
 
+    getNotifications();
 
+    setInterval(() => {
+        getNotifications();
+    }, 10000);
 
 </script>
 
@@ -449,7 +567,12 @@
     <div class="dailiesDivSideBySide">
         <p class="topTextCreditsButton">Credits History</p>
         <!-- <a href="/credits-history" target="_blank" class="creditsButton">View</a> -->
-        <button class="creditsButton" onclick="window.open('/credits-history', '_blank')">View</button>
+        <button class="creditsButton" onclick="window.open('/credits-history', '_blank')">View Credits History</button>
+    </div>
+
+     <div class="dailiesDivSideBySide">
+        <p class="topTextCreditsButton">Buy Credits!</p>
+        <button class="creditsButton" onclick="window.open('/paypal-shop', '_blank')">Buy Credits</button>
     </div>
 
     <div class="howToGainCredits">
@@ -473,9 +596,11 @@
                 <br>
                 <li>Voting on posts on the <a href="https://www.jscammie.com/booru">Booru</a> can also earn you credits!</li>
                 <br>
-                <li>Getting 1st, 2nd, or 3rd place in the discord contests can earn you credits!</li>
+                <li>Competing in the discord contests can earn you credits!</li>
                 <br>
                 <li>Logging in gives you 500 credits as a starting bonus!</li>
+                <br>
+                <li>You can pay for credits by clicking the "Buy" button above!</li>
             </ul>
 
         </details>
@@ -577,27 +702,11 @@
         }
     });
 
-    // document.getElementById('creditsText').addEventListener('click', () => {
-    //     if (document.getElementById('creditsDailyPopup').style.display == 'none') {
-    //         // make it side by side the divs inside it:
-    //         document.getElementById('creditsDailyPopup').style.display = 'inline-block';
-    //     } else {
-    //         document.getElementById('creditsDailyPopup').style.display = 'none';
-    //     }
-    // });
-
-    // when the user clicks outside of the creditsDailyPopup, hide it:
-    document.addEventListener('click', function (event) {
-        var isClickInside = document.getElementById('creditsDailyPopup').contains(event.target);
-        var isClickOnButton = document.getElementById('creditsNav').contains(event.target);
-        if (!isClickInside && !isClickOnButton) {
-            document.getElementById('creditsDailyPopup').style.display = 'none';
-        }
-    });
-
-    // when the user presses the escape key, hide the creditsDailyPopup:
-    document.addEventListener('keydown', function (event) {
-        if (event.key === "Escape") {
+    document.getElementById('creditsText').addEventListener('click', () => {
+        if (document.getElementById('creditsDailyPopup').style.display == 'none') {
+            // make it side by side the divs inside it:
+            document.getElementById('creditsDailyPopup').style.display = 'inline-block';
+        } else {
             document.getElementById('creditsDailyPopup').style.display = 'none';
         }
     });
@@ -773,7 +882,7 @@
 
         // if none of the buttons are claimable, then change the creditsText to "No rewards available":
         if (document.getElementById('3hrCreditsButton').disabled == true && document.getElementById('12hrCreditsButton').disabled == true && document.getElementById('24hrCreditsButton').disabled == true && document.getElementById('168hrCreditsButton').disabled == true) {
-            console.log("NO REWARDS AVAILABLE")
+            // console.log("NO REWARDS AVAILABLE")
             document.getElementsByClassName('creditsText')[0].textContent = "No rewards available";
         }
     }
@@ -882,6 +991,8 @@
     // add an event listener to the navigationOverlay to hide it when clicked:
     document.getElementById('navigationOverlay').addEventListener('click', () => {
         showHideNavigationOverlay('hide');
+        document.getElementById('creditsDailyPopup').style.display = 'none';
+        document.getElementById('notificationsPopup').classList.remove('activeNotificationsPopup');
     });
 
     // event listeners for the creditsNav button to show the navigationOverlay and the notificationsPopup:
@@ -962,3 +1073,119 @@
         }
     }
 </script>
+
+
+<style>
+
+    /* have the alert be centered and ontop of everything: */
+    .globalAlert {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: rgba(0, 0, 0, 0.5);
+        color: white;
+        padding: 8px;
+        border-radius: 12px;
+        z-index: 90000;
+        max-width: 600px;
+        width: 75%;
+        text-align: center;
+        font-size: 24px;
+    }
+
+    .globalAlertButtons {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .globalAlertButton {
+        background-color: rgba(0, 0, 0, 0.2);
+        color: white;
+        padding: 8px;
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 16px;
+        transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+
+</style>
+
+<div id="globalAlert" class="globalAlert" style="display: none;">
+    <p id="globalAlertText"></p>
+</div>
+
+<script>
+    async function globalAlert(options) {
+        let message = options.message || 'No message provided';
+        let question = options.question || false;
+        let optionFunctions = options.options || { yes: () => { }, no: () => { } };
+
+        console.log("globalAlert function called with message: " + message);
+
+        // Show the navigation overlay (assuming this function exists)
+        showHideNavigationOverlay('show');
+
+        // Return a Promise so you can await it
+        return new Promise((resolve, reject) => {
+            // If there is a question, show a custom confirm dialog:
+            if (question) {
+                // Show the globalAlert div:
+                document.getElementById('globalAlert').style.display = 'block';
+                document.getElementById('globalAlertText').textContent = message;
+
+                // Create the buttons:
+                let buttons = document.createElement('div');
+                buttons.classList.add('globalAlertButtons');
+                
+                Object.keys(optionFunctions).forEach(key => {
+                    let button = document.createElement('button');
+                    // Capitalize the first letter of the key:
+                    button.textContent = key.charAt(0).toUpperCase() + key.slice(1);
+                    button.classList.add('globalAlertButton');
+                    button.addEventListener('click', () => {
+                        // Hide the globalAlert div and call the corresponding function:
+                        document.getElementById('globalAlert').style.display = 'none';
+                        // Hide the navigationOverlay:
+                        showHideNavigationOverlay('hide');
+                        optionFunctions[key]();
+                        // Resolve the promise when a button is clicked
+                        if (document.getElementsByClassName('globalAlertButtons').length > 0) {
+                            document.getElementsByClassName('globalAlertButtons')[0].remove();
+                        }
+                        resolve(key);  // Resolve with the clicked option (yes/no)
+                    });
+                    buttons.appendChild(button);
+                });
+
+                // Append the buttons div to the globalAlert div:
+                document.getElementById('globalAlert').appendChild(buttons);
+
+            } else {
+                // If there's no question, just show the alert and auto-hide after 5 seconds:
+                document.getElementById('globalAlert').style.display = 'block';
+                document.getElementById('globalAlertText').textContent = message;
+
+                // Hide the globalAlert div after 5 seconds:
+                setTimeout(() => {
+                    document.getElementById('globalAlert').style.display = 'none';
+                    // Hide the navigationOverlay:
+                    showHideNavigationOverlay('hide');
+                    // Resolve the promise immediately (no question)
+                    resolve('no');  // Could resolve as 'no' since no button is clicked
+                    // remove the buttons if they exist:
+                    if (document.getElementsByClassName('globalAlertButtons').length > 0) {
+                        document.getElementsByClassName('globalAlertButtons')[0].remove();
+                    }
+                }, 5000);
+            }
+        });
+    }
+
+</script>
+
+
+<script src="https://www.paypal.com/sdk/js?client-id=AfyjfgbZdN8UH9dTHx2Fn47vKkEt4kJRFo_86DT4Bk_J3uSfXOJtIFamEyRE06V_U0DFRRrPcAgR5mDD"></script>

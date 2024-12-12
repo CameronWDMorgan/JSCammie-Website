@@ -1,0 +1,105 @@
+<html>
+<head>
+    <title>Download | JSCammie.com</title>
+    <link rel="stylesheet" href="/style.css"/>
+
+    <%- include('../partials/_headerAll') %>
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-K3KJJKS1R4"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-K3KJJKS1R4');
+    </script>
+</head>
+<body>
+
+    <!-- get partials/_navigation: -->
+    <%- include('../partials/_navigation') %>
+
+    <div class="center-fully-no-flex" style="margin-bottom: 1rem;">
+        <%- include('../partials/_bannerAdvert') %>
+    </div>
+
+    <style>
+    
+        .download-buttons {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .download-button {
+            text-align: center;
+        }
+
+        .platform-icon {
+            width: 30px;
+            height: 30px;
+            margin-right: 10px;
+        }
+
+        .button {
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+
+        .button:hover {
+            background-color: #45a049;
+        }
+
+        p {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+    
+    </style>
+
+    <div class="round-frosted page-content mw50-dynamic" style="padding: 40px; justify-content: center;">
+        <h1>Download JSCammie</h1>
+        <p>Select your platform to download the app.</p>
+
+        <div class="download-buttons">
+            <!-- For Windows -->
+            <div class="download-button">
+                <a href="/download/jscammie-win32-x64.zip" download>
+                    <button class="button">
+                        <img src="/download/windows.png" alt="Windows" class="platform-icon"/>
+                        Download for Windows
+                    </button>
+                </a>
+                <p>Windows 64-bit</p>
+            </div>
+
+            <!-- For Linux -->
+            <div class="download-button">
+                <a href="/download/jscammie-linux-x64.zip" download>
+                    <button class="button">
+                        <img src="/download/linux.png" alt="Linux" class="platform-icon"/>
+                        Download for Linux
+                    </button>
+                </a>
+                <p>Linux 64-bit</p>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- get partials/_footer: -->
+    <%- include('../partials/_footer') %>
+
+</body>
+</html>

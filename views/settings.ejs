@@ -69,54 +69,253 @@
                 </div>
                 <p id="avatarStatusMessage"></p>
             </details>
+
+            <script>
+                document.getElementById('avatarUploadButton').addEventListener('click', function () {
+                    const fileInput = document.getElementById('avatar');
+                    const file = fileInput.files[0];
+
+                    if (!file) {
+                        document.getElementById('avatarStatusMessage').textContent = 'Please select a file to upload.';
+                        return;
+                    }
+
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('POST', '/settings/avatar', true);
+                    xhr.setRequestHeader('Content-Type', file.type);
+
+                    // Update progress bar
+                    xhr.upload.addEventListener('progress', function (e) {
+                        if (e.lengthComputable) {
+                            const percentComplete = (e.loaded / e.total) * 100;
+                            document.getElementById('avatarProgressBar').style.width = percentComplete + '%';
+                        }
+                    });
+
+                    // Handle the response
+                    xhr.onload = function () {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            const response = JSON.parse(xhr.responseText);
+                            document.getElementById('avatarStatusMessage').textContent = 'Avatar uploaded successfully!';
+                            // Optionally, update the user's avatar on the page
+                            // document.getElementById('userAvatar').src = response.avatarUrl;
+                        } else {
+                            document.getElementById('avatarStatusMessage').textContent = 'Error uploading avatar: ' + xhr.responseText;
+                        }
+                        // Reset the progress bar
+                        document.getElementById('avatarProgressBar').style.width = '0%';
+                        fileInput.value = ''; // Clear the file input
+                    };
+
+                    xhr.onerror = function () {
+                        document.getElementById('avatarStatusMessage').textContent = 'Error uploading avatar.';
+                    };
+
+                    xhr.send(file);
+                });
+            </script>
+
+
+
+            <details>
+                <summary>Change Bio</summary>
+                <h2>Change Bio</h2>
+                <form action="/settings/update" method="post" id="bio_form">
+                    <input type="hidden" name="setting" value="user_bio">
+                    <textarea name="value" rows="4" style="width: 100%; margin-top: 10px;" required><%= userProfile.settings?.user_bio %></textarea>
+                    <button type="submit">Update</button>
+                    <p id="bioStatusMessage"></p>
+                </form>
+            </details>
+
+            <script>
+            
+                document.getElementById('bio_form').addEventListener('submit', function (e) {
+                    e.preventDefault();
+
+                    let formData = new FormData(document.getElementById('bio_form'));
+
+                    let data = {
+                        setting: formData.get('setting'),
+                        value: formData.get('value')
+                    }
+
+                    console.log(data);
+
+                    fetch('/settings/update', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    }).then(response => {
+                        if (response.ok) {
+                            document.getElementById('bioStatusMessage').textContent = 'Bio updated successfully!';
+                        } else {
+                            document.getElementById('bioStatusMessage').textContent = 'Error updating bio: ' + response.statusText;
+                        }
+                    }).catch(error => {
+                        document.getElementById('bioStatusMessage').textContent = 'Error updating bio.';
+                    });
+                });
+
+            </script>
+
+
+            <style>
+            
+
+                .notificationSetting1, .notificationSetting2 {
+                    align-items: right;
+                    width: 100%
+                }
+
+                .notificationSetting1 label, .notificationSetting2 label {
+                    margin-right: 10px;
+                }
+
+                .notificationSetting1 {
+                    background-color: rgba(0, 0, 0, 0.3);
+                    padding: 10px;
+                }
+
+                .notificationSetting2 {
+                    background-color: rgba(0, 0, 0, 0.1);
+                    padding: 10px;
+                }
+            
+            </style>
+
+            <details>
+                <summary>Manage Notifications</summary>
+                <h2>Manage Notifications</h2>
+                <div class="notificationSettingsDiv">
+                    <div class="notificationSetting1">
+                        <label>Notify Booru Votes</label>
+                        <input type="checkbox" id="toggle_notification_booruVote" name="toggle_notification_booruVote" <% if (userProfile.settings?.notification_booruVote) { %>checked<% } %> />
+                        <span class="tooltip" onclick="showTooltip(this)">❓</span>
+                        <div class="tooltipText">Receive a notification when someone votes on your booru post.</div>
+                    </div>
+                    <div class="notificationSetting2">
+                        <label>Notify Booru Comments</label>
+                        <input type="checkbox" id="toggle_notification_booruComment" name="toggle_notification_booruComment" <% if (userProfile.settings?.notification_booruComment) { %>checked<% } %> />
+                        <span class="tooltip" onclick="showTooltip(this)">❓</span>
+                        <div class="tooltipText">Receive a notification when someone comments on your booru post.</div>
+                    </div>
+                    <div class="notificationSetting1">
+                        <label>Notify Booru Ratings</label>
+                        <input type="checkbox" id="toggle_notification_booruRating" name="toggle_notification_booruRating" <% if (userProfile.settings?.notification_booruRating) { %>checked<% } %> />
+                        <span class="tooltip" onclick="showTooltip(this)">❓</span>
+                        <div class="tooltipText">Receive a notification when a moderator/jscammie rates your booru post.</div>
+                    </div>
+
+                    <div class="notificationSetting2">
+                        <label>Notify Suggestion Promotions</label>
+                        <input type="checkbox" id="toggle_notification_suggestionPromoted" name="toggle_notification_suggestionPromoted" <% if (userProfile.settings?.notification_suggestionPromoted) { %>checked<% } %> />
+                        <span class="tooltip" onclick="showTooltip(this)">❓</span>
+                        <div class="tooltipText">Receive a notification when a suggestion you made is promoted to a booru post.</div>
+                    </div>
+
+                    <div class="notificationSetting1">
+                        <label>Notify Generator Credit Spends</label>
+                        <input type="checkbox" id="toggle_notification_generatorSpentCredits" name="toggle_notification_generatorSpentCredits" <% if (userProfile.settings?.notification_generatorSpentCredits) { %>checked<% } %> />
+                        <span class="tooltip" onclick="showTooltip(this)">❓</span>
+                        <div class="tooltipText">Receive a notification when you spend credits on the generator.</div>
+                    </div>
+
+                    <div id="notification_StatusMessage"></div>
+                </div>
+                
+            </details>
+
+            <script>
+            
+                document.querySelector('.notificationSettingsDiv').addEventListener('change', function (e) {
+                    let target = e.target;
+                    let setting = target.id;
+                    let value = target.checked;
+
+                    let data = {
+                        setting: setting,
+                        value: value
+                    }
+
+                    fetch('/settings/update', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    }).then(response => {
+                        if (response.ok) {
+                            document.getElementById("notification_StatusMessage").textContent = 'Setting updated successfully!';
+                        } else {
+                            document.getElementById("notification_StatusMessage").textContent = 'Error updating setting: ' + response.statusText;
+                        }
+                    }).catch(error => {
+                        document.getElementById("notification_StatusMessage").textContent = 'Error updating setting.';
+                    });
+                });
+
+            </script>
+
+
+            <details>
+            
+                <!-- toggle the generation ready beep: -->
+                <summary>Manage Miscellaneous Settings</summary>
+
+                <h2>Manage Miscellaneous Settings</h2>
+
+                <div class="miscellaneousSettingsDiv">
+                    <div class="miscellaneousSetting1">
+                        <label>Enable Generation Ready Beep</label>
+                        <input type="checkbox" id="toggle_misc_generationReadyBeep" name="toggle_misc_generationReadyBeep" <% if (userProfile.settings?.misc_generationReadyBeep) { %>checked<% } %> />
+                        <span class="tooltip" onclick="showTooltip(this)">❓</span>
+                        <div class="tooltipText">Enable a beep sound when the generator is ready to generate a new suggestion.</div>
+                </div>
+
+                <div id="misc_StatusMessage"></div>
+            
+            </details>
+
+            <script>
+            
+                document.querySelector('.miscellaneousSettingsDiv').addEventListener('change', function (e) {
+                    let target = e.target;
+                    let setting = target.id;
+                    let value = target.checked;
+
+                    let data = {
+                        setting: setting,
+                        value: value
+                    }
+
+                    fetch('/settings/update', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    }).then(response => {
+                        if (response.ok) {
+                            document.getElementById("misc_StatusMessage").textContent = 'Setting updated successfully!';
+                        } else {
+                            document.getElementById("misc_StatusMessage").textContent = 'Error updating setting: ' + response.statusText;
+                        }
+                    }).catch(error => {
+                        document.getElementById("misc_StatusMessage").textContent = 'Error updating setting.';
+                    });
+                });
+            
+            </script>
+
+            
+
         </div>
     </div>
 
-    <script>
-        document.getElementById('avatarUploadButton').addEventListener('click', function () {
-        const fileInput = document.getElementById('avatar');
-        const file = fileInput.files[0];
-
-        if (!file) {
-            document.getElementById('avatarStatusMessage').textContent = 'Please select a file to upload.';
-            return;
-        }
-
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', '/settings/avatar', true);
-        xhr.setRequestHeader('Content-Type', file.type);
-
-        // Update progress bar
-        xhr.upload.addEventListener('progress', function (e) {
-            if (e.lengthComputable) {
-                const percentComplete = (e.loaded / e.total) * 100;
-                document.getElementById('avatarProgressBar').style.width = percentComplete + '%';
-            }
-        });
-
-        // Handle the response
-        xhr.onload = function () {
-            if (xhr.status >= 200 && xhr.status < 300) {
-                const response = JSON.parse(xhr.responseText);
-                document.getElementById('avatarStatusMessage').textContent = 'Avatar uploaded successfully!';
-                // Optionally, update the user's avatar on the page
-                // document.getElementById('userAvatar').src = response.avatarUrl;
-            } else {
-                document.getElementById('avatarStatusMessage').textContent = 'Error uploading avatar: ' + xhr.responseText;
-            }
-            // Reset the progress bar
-            document.getElementById('avatarProgressBar').style.width = '0%';
-            fileInput.value = ''; // Clear the file input
-        };
-
-        xhr.onerror = function () {
-            document.getElementById('avatarStatusMessage').textContent = 'Error uploading avatar.';
-        };
-
-        xhr.send(file);
-    });
-    </script>
-
+    
 
 
     <!-- get partials/_footer: -->

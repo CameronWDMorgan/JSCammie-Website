@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paypal Shop | JSCammie.com</title>
+    <link rel='stylesheet' href='/style.css'/>
+    <%- include('../partials/_headerAll') %>
+
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-K3KJJKS1R4"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'G-K3KJJKS1R4');
+    </script>
+</head>
+<body>
+    <%- include('../partials/_navigation') %>
+
+    <div class="center-fully-no-flex" style="margin-bottom: 1rem;">
+        <%- include('../partials/_bannerAdvert') %>
+    </div>
+
+    <div class="round-frosted page-content mw50-dynamic" style="padding: 40px; justify-content: center;">
+        <h1>Credits Shop:</h1>
+        <p>Buy credits to use on the AI Image Generator!</p>
+
+        <style>
+            #paypal-buttons-container {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+                gap: 20px;
+            }
+
+            #paypal-buttons-container * {
+                color: rgb(0, 0, 0) !important;
+            }
+
+            #paypal-buttons-container > div {
+                padding: 20px;
+                border: 4px solid #ccc;
+                border-radius: 5px;
+                background-color: rgba(169, 208, 220, 0.704);
+                mix-blend-mode:screen;
+            }
+        </style>
+
+        <% if (session.accountId) { %>
+            <p>Logged in as: <%= userProfile.username %></p>
+            <div id="paypal-buttons-container"></div>
+        <% } else { %>
+            <p>Not logged in. You need to be logged in to buy credits</p>
+        <% } %>
+
+        <script>
+            const creditOptions = [
+                { credits: 15000, price: 5 },
+                { credits: 37500, price: 10 },
+                { credits: 95000, price: 20 }
+            ];
+
+            creditOptions.forEach(option => {
+                const buttonContainer = document.createElement('div');
+                buttonContainer.id = `paypal-button-${option.credits}`;
+                buttonContainer.style.marginBottom = "20px";
+                buttonContainer.innerHTML = `
+                    <h3>${option.credits.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")} Credits</h3>
+                    <p>Price: $${option.price.toFixed(2)}</p>
+                `;
+
+                document.getElementById('paypal-buttons-container').appendChild(buttonContainer);
+
+                paypal.Buttons({
+                    createOrder: function (data, actions) {
+                        return actions.order.create({
+                            purchase_units: [{
+                                amount: { value: option.price.toFixed(2) },
+                                custom_id: '<%= session.accountId %>' // Pass the accountId from your server
+                            }]
+                        });
+                    },
+                    onApprove: function (data, actions) {
+                        return actions.order.capture().then(function (details) {
+                            fetch('/payment/verify', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    orderId: details.id,
+                                    accountId: '<%= session.accountId %>',
+                                    credits: option.credits,
+                                    amount: option.price
+                                })
+                            }).then(response => {
+                                if (response.ok) {
+                                    alert(`Successfully added ${option.credits} credits!`);
+                                } else {
+                                    alert('Payment verification failed. Please contact JSCammie either on discord or email.');
+                                }
+                            });
+                        });
+                    },
+                    onError: function (err) {
+                        console.error(`PayPal error for ${option.credits} credits:`, err);
+                        alert('Payment could not be completed. Please contact JSCammie either on discord or email.');
+                    },
+                    style: {
+                        shape: 'pill',
+                        color: 'blue',
+                        layout: 'vertical',
+                        label: 'pay',
+                        height: 40,
+                    }
+                }).render(`#paypal-button-${option.credits}`);
+            });
+        </script>
+    </div>
+
+    <%- include('../partials/_footer') %>
+</body>
+</html>
