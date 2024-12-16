@@ -557,8 +557,10 @@ document.getElementById('generateButton').addEventListener('click', async functi
                                             <li>ALL SETTINGS used to create an image are visible, if your content shows a word like "loli", even if it's sfw, it will be removed!</li>
                                             <br>
                                             <li>DO NOT SPAM THE BOORU WITH 1240987 IMAGES OF THE SAME OC IN SAME POSE / LOCATION</li>
+                                            <br>
+                                            <li>Realistic Feral are not allowed, only 2d/stylized 3d feral content are allowed</li>
                                         </ul>
-                                        <p>If you agree to these rules/terms, then feel free to click below</p>
+                                        <p>If you agree to these rules/terms, then feel free to click below to upload to the booru, failure to comply with these rules will make you unable to post on the booru.</p>
                                         <button id="confirmUploadButton" onclick="uploadToBooru()">Upload to Booru</button>
                                     `;
 
