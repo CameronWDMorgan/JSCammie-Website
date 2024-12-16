@@ -2765,11 +2765,11 @@ app.post('/create-booru-image', async function(req, res) {
 			twentyFourHourImageCount = 0
 		}
 
-		if (twentyFourHourImageCount >= 10) {
+		if (twentyFourHourImageCount >= 25) {
 
 			res.send({
 				status: "error",
-				message: "User has posted more than 14 images in the last 24 hours"
+				message: "You have posted more than 25 images in the last 24 hours"
 			})
 			return
 		}
