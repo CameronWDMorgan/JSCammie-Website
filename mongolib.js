@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
 
+const fs = require('fs')
+
 require('dotenv').config();
-
-
 
 const userBooruSchema = require('./schemas/userBooruSchema.js');
 const userBooruTagsSchema = require('./schemas/userBooruTagsSchema.js');
@@ -86,6 +86,48 @@ async function modifyUserCredits(accountId, amount, operation, message, testMode
 	}
 
 	return {status: 'success', newCredits: userCreditsAfter}
+}
+
+async function modifyUserExp(accountId, amount, operation) {
+
+	let levelsJson = fs.readFileSync('c:\\Users\\anime\\Documents\\Coding\\JSCBot-Node\\levelsArray.json')
+
+	let levelsArray = JSON.parse(levelsJson)
+	// [{"level":1,"exp":0},{"level":2,"exp":138},{"level":3,"exp":345},{"level":4,"exp":621},{"level":5,"exp":966},
+
+	let UserProfile = await getSchemaDocumentOnce('userProfile', {accountId: accountId})
+	if (UserProfile.status === 'error') {
+		return {status: 'error', message: 'User not found'}
+	}
+
+	userProfile = UserProfile.data
+
+	userExpAfter = BigInt(UserProfile.exp)
+
+	if (operation == '+') {
+		userExpAfter += BigInt(amount)
+	} else if (operation == '-') {
+		userExpAfter -= BigInt(amount)
+	} else if (operation == '=') {
+		userExpAfter = BigInt(amount)
+	} else {
+		return {status: 'error', message: 'Invalid operation'}
+	}
+
+	// calculate their level:
+	let userLevel = 1
+	
+	for (let i = 0; i < levelsArray.length; i++) {
+		if (userExpAfter >= BigInt(levelsArray[i].exp)) {
+			userLevel = levelsArray[i].level
+		}
+	}
+
+	userExpAfter = userExpAfter.toString()
+
+	await updateSchemaDocumentOnce('userProfile', {accountId: accountId}, {exp: userExpAfter, level: userLevel})
+
+	return {status: 'success', newExp: userExpAfter}
 }
 
 async function getSchemaDocumentOnce(schema, query) {
@@ -434,6 +476,7 @@ async function deleteSchemaDocument(schema, query) {
 module.exports = {
 	createUserNotification,
 	modifyUserCredits,
+	modifyUserExp,
 	getSchemaDocumentOnce,
 	getSchemaDocuments,
 	aggregateSchemaDocuments,

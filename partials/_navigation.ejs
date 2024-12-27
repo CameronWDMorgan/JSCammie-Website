@@ -1036,11 +1036,29 @@
         cursor: pointer;
         border-radius: 50%;
         border: 1px solid rgb(255, 255, 255);
-        width: 20px;
-        height: 20px;
+        width: 24px;
+        height: 24px;
         display: inline-block;
         text-align: center;
-        line-height: 20px;
+        line-height: 24px;
+    }
+
+    .tooltip:hover {
+        /* animate it wiggling and scaling up and down: */
+        animation: wiggle 0.3s ease infinite;
+        transition: transform 0.2s ease;
+    }
+
+    @keyframes wiggle {
+        0% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(1.1);
+        }
+        100% {
+            transform: scale(1);
+        }
     }
 
 </style>

@@ -815,10 +815,10 @@
                                 question: true,
                                 options: {
                                     yes: function() {
-                                        console.log('yes clicked')
+                                        // console.log('yes clicked')
                                     },
                                     no: function() {
-                                        console.log('no clicked')
+                                        // console.log('no clicked')
                                     }
                                 }
                             }
@@ -880,10 +880,10 @@
                                 question: true,
                                 options: {
                                     yes: function() {
-                                        console.log('yes clicked')
+                                        // console.log('yes clicked')
                                     },
                                     no: function() {
-                                        console.log('no clicked')
+                                        // console.log('no clicked')
                                     }
                                 }
                             }
@@ -950,10 +950,10 @@
                                 question: true,
                                 options: {
                                     yes: function() {
-                                        console.log('yes clicked')
+                                        // console.log('yes clicked')
                                     },
                                     no: function() {
-                                        console.log('no clicked')
+                                        // console.log('no clicked')
                                     }
                                 }
                             }
@@ -1018,7 +1018,7 @@
                             // convert the loras string into an array:
                             saveSlotLorasArray = saveSlotLoras.split(',');
 
-                            console.log(`saveSlotLorasArray:\n${saveSlotLorasArray}\n\nsaveSlotLoraStrengths:\n${saveSlotLoraStrengths}`)
+                            // console.log(`saveSlotLorasArray:\n${saveSlotLorasArray}\n\nsaveSlotLoraStrengths:\n${saveSlotLoraStrengths}`)
 
                             document.querySelectorAll('.loraGridContainer input[type="checkbox"]:checked').forEach(checkbox => {
                                 checkbox.checked = false;
@@ -1037,7 +1037,7 @@
                                     let loraId = saveSlotLorasArray[i];
                                     let loraStrength = saveSlotLoraStrengths[i];
 
-                                    console.log(`loraId: ${loraId}\nloraStrength: ${loraStrength}`)
+                                    // console.log(`loraId: ${loraId}\nloraStrength: ${loraStrength}`)
 
                                     masterLoraData[loraId].selected = true;
                                     masterLoraData[loraId].strength = Number(loraStrength);
@@ -1080,10 +1080,10 @@
                                 question: true,
                                 options: {
                                     yes: function() {
-                                        console.log('yes clicked')
+                                        // console.log('yes clicked')
                                     },
                                     no: function() {
-                                        console.log('no clicked')
+                                        // console.log('no clicked')
                                     }
                                 }
                             }
@@ -1179,10 +1179,10 @@
                                 question: true,
                                 options: {
                                     yes: function() {
-                                        console.log('yes clicked')
+                                        // console.log('yes clicked')
                                     },
                                     no: function() {
-                                        console.log('no clicked')
+                                        // console.log('no clicked')
                                     }
                                 }
                             }
@@ -1294,7 +1294,7 @@
                                         continue;
                                     }
 
-                                    console.log(`loraId: ${loraId}\nloraStrength: ${loraStrength}`)
+                                    // console.log(`loraId: ${loraId}\nloraStrength: ${loraStrength}`)
 
                                     masterLoraData[loraId].selected = true;
                                     masterLoraData[loraId].strength = Number(loraStrength);
@@ -1394,9 +1394,9 @@
 
                 // copy the link to the clipboard:
                 navigator.clipboard.writeText(link).then(function() {
-                    console.log('Link copied to clipboard');
+                    // console.log('Link copied to clipboard');
                 }, function(err) {
-                    console.log('Could not copy text: ', err);
+                    // console.log('Could not copy text: ', err);
                 });
             }
             </script>
@@ -2255,7 +2255,7 @@
                                     //     urlParams.get('seed'),                                        
                                     // ]
 
-                                    console.log(data);
+                                    // console.log(data);
 
                                     importAiData(data)
 
@@ -2412,7 +2412,7 @@
                                 // Attempt to copy the words to the clipboard
                                 navigator.clipboard.writeText(words).then(
                                     function() {
-                                        console.log('Words copied to clipboard:', words);
+                                        // console.log('Words copied to clipboard:', words);
                                     },
                                     function(err) {
                                         console.error('Async: Could not copy text: ', err);
@@ -3881,8 +3881,11 @@
             const promptWordCountElement = document.getElementById('promptWordCount');
             const negativePromptWordCountElement = document.getElementById('negativePromptWordCount');
 
-            promptWordCountElement.innerText = `Tokens: ${promptWordCount}`;
-            negativePromptWordCountElement.innerText = `Tokens: ${negativePromptWordCount}`;
+            // promptWordCountElement.innerText = `Tokens: ${promptWordCount}`;
+            // negativePromptWordCountElement.innerText = `Tokens: ${negativePromptWordCount}`;
+
+            promptWordCountElement.innerText = ``;
+            negativePromptWordCountElement.innerText = ``;
 
             function removeAllClasses(element) {
                 element.classList.remove('wordCountGreen');
@@ -3973,7 +3976,7 @@
         function checkRpCount(textarea) {
             rpCount = (textarea.value.toLowerCase().match(/<rp>/g) || []).length;
 
-            console.log(`RP Count: ${rpCount}`);
+            // console.log(`RP Count: ${rpCount}`);
 
             if (rpCount >= 2) {
                 if (!document.getElementById('regionalPromptCheckbox').checked) {

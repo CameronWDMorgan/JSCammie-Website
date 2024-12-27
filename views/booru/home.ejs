@@ -297,6 +297,49 @@
                 }
             }
 
+            async function setRating(rating, booruId) {
+                    
+                body = {
+                    rating: rating,
+                    booru_id: booruId
+                }
+
+                let response = await fetch(`/booru/setRating`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(body)
+                })
+
+                let data = await response.json()
+
+                console.log(data)
+
+                if (data.status !== "success") {
+                    await globalAlert({
+                        message: "Failed to set rating. Please try again later.",
+                        question: false
+                    })
+                } else {
+                
+                    // remove the post from the grid:
+                    let postDiv = document.getElementById(`booruPostDiv-${booruId}`)
+
+                    postDiv.remove()
+
+                    // remove the post from the masterBooruData object:
+                    delete masterBooruData[booruId]
+
+                    // if the masterBooruData is empty, refresh the page:
+                    if (Object.keys(masterBooruData).length == 0) {
+                        window.location.reload()
+                    }
+                
+                }
+            
+            }
+
             function setupBooruPosts() {
                 let booruPosts = document.getElementById("booruPosts")
                 booruPosts.innerHTML = ""
@@ -322,10 +365,10 @@
                             <button class="dropdownButton" onclick="document.getElementById('dropdown${value.booru_id}')?.classList.toggle('show')">⋮</button>
                             <div class="dropdown" id="dropdown${value.booru_id}">
                                 <a href="/booru/delete/${value.booru_id}">Delete</a>
-                                <a href="/booru/setRating/${value.booru_id}/extreme">Set EXTREME</a>
-                                <a href="/booru/setRating/${value.booru_id}/nsfw">Set NSFW</a>
-                                <a href="/booru/setRating/${value.booru_id}/suggestive">Set Suggestive</a>
-                                <a href="/booru/setRating/${value.booru_id}/sfw">Set SFW</a>
+                                <button onclick="setRating('extreme', '${value.booru_id}')">Set EXTREME</button>
+                                <button onclick="setRating('nsfw', '${value.booru_id}')">Set NSFW</button>
+                                <button onclick="setRating('suggestive', '${value.booru_id}')">Set Suggestive</button>
+                                <button onclick="setRating('sfw', '${value.booru_id}')">Set SFW</button>
                                 <a href="#" onclick="showBanModal('${value.account_id}')">Ban User</a>
                             </div>
                         `;
@@ -349,7 +392,7 @@
                         return
                     } else {
                         postDiv = `
-                        <div class="booruPost">
+                        <div class="booruPost" id="booruPostDiv-${value.booru_id}">
                             <p>${value.safety.toUpperCase()}</p>
                             <div class="postButtons">
                                 ${dropdownHTML}

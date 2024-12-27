@@ -12,6 +12,9 @@ const bodyParser = require('body-parser')
 
 const mongolib = require('./mongolib.js')
 
+// axios
+const axios = require('axios');
+
 const { promisify } = require('util');
 
 
@@ -1294,6 +1297,7 @@ app.post('/dailies', async (req, res) => {
 	}
 
 	result = await mongolib.modifyUserCredits(req.session.accountId, creditsEarned, '+', `Dailies claimed: ${dailyType}`)
+	await mongolib.modifyUserExp(req.session.accountId, 5, '+')
 	
 	// await mongolib.createUserNotification(req.session.accountId, `You claimed your ${dailyType} dailies and earned ${creditsEarned} credits`, 'dailies')
 
@@ -2903,122 +2907,87 @@ app.post('/create-booru-image', async function(req, res) {
 	}
 })
 
-// app.get('/booru/addusernametagtoall', async function(req, res) {
+app.post('/booru/setRating/', async function(req, res) {
 
-// 	try {
+	try {
 
-// 		let booruImages = await userBooruSchema.find()
+		booru_id = req.body.booru_id
+		rating = req.body.rating
 
-// 		accountPostsArray = []
-
-// 		for (const image of booruImages) {
-// 			// create a tag inside of userBooruTagsSchema for the username-username:
-// 			// find the account id of the image:
-// 			let userProfile = await userProfileSchema.findOne({
-// 				accountId: image.account_id
-// 			})
-
-// 			// check if the tag exists in the userBooruTagsSchema:
-// 			let foundTag = await userBooruTagsSchema.findOne({
-// 				tag: `${userProfile.username}-username`
-// 			})
-
-// 			if (foundTag == null) {
-// 				newCount = BigInt(1)
-// 				newCount = newCount.toString()
-// 			} else {
-// 				newCount = BigInt(foundTag.count) + BigInt(1)
-// 				newCount = newCount.toString()
-// 			}
-
-// 			// accountPostsArray[image.account_id].push(image.booru_id) doesnt work 
-
-// 			if (accountPostsArray[image.account_id] == undefined) {
-// 				accountPostsArray[image.account_id] = []
-// 			}
-		
-
-// 			await userBooruTagsSchema.findOneAndUpdate({
-// 				tag: `${userProfile.username}-username`
-// 			}, { // count is a string, make sure to convert it to a BigInt before incrementing, then back:
-// 				tag: `${userProfile.username}-username`,
-// 				count: newCount,
-// 				$push: {
-// 					booru_ids: image.booru_id
-// 				},
-// 			}, {
-// 				upsert: true
-// 			})
-// 		}
-
-// 		res.send({
-// 			status: "success"
-// 		})
-		
-// 	} catch (error) {
-// 		console.log(`Error adding username tag to all: ${error}`);
-// 	}
-
-	
-
-// })
-
-			
-
-app.get('/booru/setRating/:booru_id/:rating', async function(req, res) {
-	booru_id = req.param('booru_id')
-	rating = req.param('rating')
-
-	let foundBooruImage = await userBooruSchema.findOne({
-		booru_id: booru_id
-	})
-
-	if (foundBooruImage == null) {
-		res.send({
-			status: "error",
-			message: "Booru image not found"
+		let foundBooruImage = await userBooruSchema.findOne({
+			booru_id: booru_id
 		})
-		return
-	}
 
-	let userProfile = await userProfileSchema.findOne({
-		accountId: req.session.accountId
-	})
-
-	let creatorProfile = await userProfileSchema.findOne({
-		accountId: foundBooruImage.account_id
-	})
-
-	// if the user is not logged in, send them back to the previous page:
-	if (!req.session.loggedIn) {
-		res.redirect('back')
-		return
-	}
-
-	// check if the user has badges.moderator:
-	if (userProfile.badges?.moderator !== true) {
-		res.send({
-			status: "error",
-			message: "User does not have permission to set the rating"
-		})
-		return
-	}
-
-	if (foundBooruImage.safety == "na") {
-		await mongolib.modifyUserCredits(creatorProfile.accountId, 50, '+', `Your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a> was rated ${rating.toUpperCase()}`)
-		if (creatorProfile.settings?.notification_booruRating == true || creatorProfile.settings?.notification_booruRating == undefined) {
-			await mongolib.createUserNotification(creatorProfile.accountId, `Your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a> was rated ${rating.toUpperCase()}`, 'booru')
+		if (foundBooruImage == null) {
+			res.send({
+				status: "error",
+				message: "Booru image not found"
+			})
+			return
 		}
+
+		let userProfile = await userProfileSchema.findOne({
+			accountId: req.session.accountId
+		})
+
+		let creatorProfile = await userProfileSchema.findOne({
+			accountId: foundBooruImage.account_id
+		})
+
+		// if the user is not logged in, send them back to the previous page:
+		if (!req.session.loggedIn) {
+			res.send({
+				status: "error",
+				message: "User is not logged in"
+			})
+			return
+		}
+
+		// check if the user has badges.moderator:
+		if (userProfile.badges?.moderator !== true) {
+			res.send({
+				status: "error",
+				message: "User does not have permission to set the rating"
+			})
+			return
+		}
+
+		if (foundBooruImage.safety == "na") {
+			await mongolib.modifyUserCredits(creatorProfile.accountId, 50, '+', `Your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a> was rated ${rating.toUpperCase()}`)
+			await mongolib.modifyUserExp(creatorProfile.accountId, 50, '+')
+			if (creatorProfile.settings?.notification_booruRating == true || creatorProfile.settings?.notification_booruRating == undefined) {
+				await mongolib.createUserNotification(creatorProfile.accountId, `Your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a> was rated ${rating.toUpperCase()}`, 'booru')
+			}
+			// fire a webhook to the discord.js bot running on localhost:
+			let webhookData = {
+				accountId: creatorProfile.accountId,
+				username: creatorProfile.username,
+				booru_id: booru_id,
+				rating: rating,
+				booruUrl: `https://www.jscammie.com/booru/post/${booru_id}`
+			}
+
+			// send the webhook to the bot:
+			await axios.post('http://127.0.0.1:3040/booruRating', webhookData)
+
+		}
+
+		await userBooruSchema.findOneAndUpdate({
+			booru_id: booru_id
+		}, {
+			safety: rating
+		})
+
+		res.send({
+			status: "success",
+			message: "Rating set"
+		})
+	
+	} catch(error) {
+		console.log(`Error setting rating: ${error}`);
+		res.status(500).send('Error setting rating');
 	}
 
-	await userBooruSchema.findOneAndUpdate({
-		booru_id: booru_id
-	}, {
-		safety: rating
-	})
-
-	// send them back to the previous page:
-	res.redirect('back')
 })
 
 // <a href="/booru/delete/${value.booru_id}">Delete</a>
@@ -3242,9 +3211,11 @@ app.post('/booru/vote', async function(req, res) {
 				} else {
 
 					await mongolib.modifyUserCredits(account_id, creditsToGain, '+', `You Upvoted a <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a>`)
+					await mongolib.modifyUserExp(account_id, 1, '+')
+
 					if (creatorProfile != null) {
 						await mongolib.modifyUserCredits(creatorProfile.accountId, creditsToGain, '+', `Someone upvoted your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a>`)
-
+						await mongolib.modifyUserExp(creatorProfile.accountId, 1, '+')
 						if (creatorProfile.settings?.notification_booruVote == true || creatorProfile.settings?.notification_booruVote == undefined) {
 							await mongolib.createUserNotification(creatorProfile.accountId, `Someone upvoted your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a>`, 'booru')
 						}
@@ -3739,13 +3710,23 @@ app.get('/settings', async function(req, res) {
 
 app.post('/settings/avatar', async (req, res) => {
 	try {
+		let responseSent = false;
+
+		// Helper function to send a response only once
+		const sendResponse = (status, json) => {
+			if (!responseSent) {
+				responseSent = true;
+				res.status(status).json(json);
+			}
+		};
+
 		// Check if user profile exists
 		let userProfile = await mongolib.getSchemaDocumentOnce("userProfile", {
 			accountId: req.session.accountId
 		});
 
 		if (userProfile.status === 'error') {
-			return res.status(404).json({
+			return sendResponse(404, {
 				status: 'error',
 				message: 'User not found'
 			});
@@ -3754,9 +3735,7 @@ app.post('/settings/avatar', async (req, res) => {
 		// Create the directory if it does not exist
 		const avatarDir = path.join(__dirname, 'userAvatars');
 		if (!fs.existsSync(avatarDir)) {
-			fs.mkdirSync(avatarDir, {
-				recursive: true
-			});
+			fs.mkdirSync(avatarDir, { recursive: true });
 		}
 
 		// Buffer to store the first few bytes of the file
@@ -3774,9 +3753,9 @@ app.post('/settings/avatar', async (req, res) => {
 		req.on('data', (chunk) => {
 			fileSize += chunk.length;
 			if (fileSize > maxSize) {
-				writeStream.end();
+				writeStream.destroy();
 				fs.unlink(tempFilePath, () => {});
-				res.status(413).json({
+				sendResponse(413, {
 					status: 'error',
 					message: 'File too large'
 				});
@@ -3794,11 +3773,12 @@ app.post('/settings/avatar', async (req, res) => {
 		});
 
 		req.on('end', async () => {
+			if (responseSent) return;
 			writeStream.end();
 
 			if (fileSize === 0) {
 				fs.unlink(tempFilePath, () => {});
-				return res.status(400).json({
+				return sendResponse(400, {
 					status: 'error',
 					message: 'No file uploaded'
 				});
@@ -3814,7 +3794,7 @@ app.post('/settings/avatar', async (req, res) => {
 				fileExtension = '.gif';
 			} else {
 				fs.unlink(tempFilePath, () => {});
-				return res.status(400).json({
+				return sendResponse(400, {
 					status: 'error',
 					message: 'Invalid file type',
 					fileHeader: fileHeaderBuffer.toString('hex')
@@ -3829,7 +3809,7 @@ app.post('/settings/avatar', async (req, res) => {
 			fs.rename(tempFilePath, finalFilePath, async (err) => {
 				if (err) {
 					console.log(`Error renaming avatar file: ${err}`);
-					return res.status(500).json({
+					return sendResponse(500, {
 						status: 'error',
 						message: 'Error saving avatar'
 					});
@@ -3843,7 +3823,7 @@ app.post('/settings/avatar', async (req, res) => {
 					profileImg: avatarUrl
 				});
 
-				res.json({
+				sendResponse(200, {
 					status: 'success',
 					message: 'Avatar uploaded successfully',
 					avatarUrl
@@ -3853,7 +3833,7 @@ app.post('/settings/avatar', async (req, res) => {
 
 		writeStream.on('error', (err) => {
 			console.log(`Error writing avatar file: ${err}`);
-			res.status(500).json({
+			sendResponse(500, {
 				status: 'error',
 				message: 'Error saving avatar'
 			});
@@ -3867,6 +3847,7 @@ app.post('/settings/avatar', async (req, res) => {
 		});
 	}
 });
+
 
 app.post('/settings/update', async function(req, res) {
 
@@ -4374,6 +4355,12 @@ app.get('/download', async function(req, res) {
 })
 
 	
+app.get('/.well-known/pki-validation/BD4ADEC68E8CA80AB663C847A5D5990E.txt', async function(req, res) {
+	// send the BD4ADEC68E8CA80AB663C847A5D5990E.txt file:
+	res.sendFile(path.join(__dirname, 'BD4ADEC68E8CA80AB663C847A5D5990E.txt'));
+})
+
+
 
 
 

@@ -699,10 +699,89 @@
         <!-- app.post('/image-history/delete-all-images -->
 
         <button class="deleteAllImagesButton" onclick="deleteAllImages()">Delete All Images</button>
+
+        <button class="deleteCurrentPageButton" onclick="deleteCurrentPage()">Delete Current Page</button>
     
     </div>
 
     <script>
+
+        async function deleteCurrentPage() {
+
+            // ask if they are sure they want to delete the current page:
+            let options = {
+                message: 'Are you sure you want to delete all images on this page?',
+                question: true,
+                options: {
+                    yes: function() {
+                        console.log("Yes clicked");
+                    },
+                    no: function() {
+                        console.log("No clicked");
+                    }
+                }
+            }
+
+            let alertResponse = await globalAlert(options);
+
+            if (alertResponse == 'no') {
+                return;
+            }
+
+            // use masterImageData to get all the image ids on the current page:
+            // <% userHistory.forEach(imageData => { %>
+            //     masterImageData["<%=imageData.image_id%><%=imageData.account_id%>"] = {
+            //         prompt: `<%=imageData.prompt%>`,
+            //         negative_prompt: `<%=imageData.negative_prompt%>`,
+            //         model: "<%=imageData.model%>",
+            //         aspect_ratio: "<%=imageData.aspect_ratio%>",
+            //         loras: "<%=imageData.loras%>",
+            //         lora_strengths: "<%=imageData.lora_strengths%>",
+            //         steps: "<%=imageData.steps%>",
+            //         cfg: "<%=imageData.cfg%>",
+            //         seed: "<%=imageData.seed%>",
+            //         image_url: "<%=imageData.image_url%>",
+            //         image_id: "<%=imageData.image_id%>",
+            //         uploadedToBooru: <%=imageData.uploadedToBooru%>,
+            //         thumbnailMade: <%=imageData.thumbnailMade%>,
+            //     };
+            // <% }); %>
+
+            // send several requests to the server to delete each image from the database:
+            
+            let promises = [];
+
+            // loop through all the images on the current page and delete them:
+            for (let image_id in masterImageData) {
+                let imageData = masterImageData[image_id];
+                let imageDiv = document.getElementById(image_id);
+                if (imageDiv) {
+                    // animate the image div disappearing:
+                    imageDiv.style.transition = 'opacity 0.5s';
+                    imageDiv.style.opacity = 0;
+                    setTimeout(() => {
+                        imageDiv.style.display = 'none';
+                    }, 500);
+                }
+                // add the promise to the promises array:
+                promises.push(fetch('/image-history/delete-image', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        image_id: imageData.image_id,
+                    })
+                }));
+            }
+            
+            // wait for all the promises to resolve and then refresh the page after 1 second:
+            Promise.all(promises)
+            .then(() => {
+                window.location.reload();
+            })
+
+        }
 
         async function deleteAllImages() {
     
