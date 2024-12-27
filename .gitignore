@@ -1,5 +1,6 @@
 /.env
 /ssl
+/marketing
 /node_modules
 /src
 /imagesHistory
