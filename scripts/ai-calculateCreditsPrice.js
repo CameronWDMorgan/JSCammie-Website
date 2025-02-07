@@ -1,28 +1,51 @@
 function getFastqueuePrice(loraCount, model) {
 
 	let dynamicCreditsPrice = 0
-	const baseCreditsPrice = 25
+	const baseCreditsPrice = 20
 
 	dynamicCreditsPrice = baseCreditsPrice
 
-	// is it a model with value starting sdxl?
-	if (model.startsWith('sdxl')) {
-		dynamicCreditsPrice = dynamicCreditsPrice * 1.75
-		loraModifier = 3.5
-	} else if (model.startsWith('flux')) {
-		dynamicCreditsPrice = dynamicCreditsPrice * 2.5
-		loraModifier = 5
-	} else {
-		loraModifier = 1.25
+	// split the model on the -, if there isnt a - then make it sd15:
+	model = model.split('-')[0] || 'sd15'
+
+	console.log(`Model: ${model}`)
+
+	switch(model) {
+		case 'sd15':
+			loraModifier = 1.3
+			break
+		case 'pdxl':
+			dynamicCreditsPrice = dynamicCreditsPrice * 2.5
+			loraModifier = 4
+			break
+		case 'flux':
+			dynamicCreditsPrice = dynamicCreditsPrice * 3
+			loraModifier = 5
+			break
+		case 'illustrious':
+			dynamicCreditsPrice = dynamicCreditsPrice * 2.5
+			loraModifier = 4
+			break
+		default:
+			loraModifier = 1.25
 	}
+
+	// console.log(`Lora Modifier: ${loraModifier}`)
+	// console.log(`Lora Count: ${loraCount}`)
+	// console.log(`Base Credits Price: ${baseCreditsPrice}`)
 
 	// credits price before loras
 	priceBeforeLoras = dynamicCreditsPrice
 
-	loraModifier = (loraModifier + (loraCount / 2))
-	loraModifier = loraModifier * (priceBeforeLoras / 12)
+	loraModifier = loraModifier * (priceBeforeLoras / 14)
 
-	dynamicCreditsPrice = Math.round(dynamicCreditsPrice + (loraCount * loraModifier))
+	if (loraCount > 0) {
+		dynamicCreditsPrice = Math.round(dynamicCreditsPrice + (loraCount * loraModifier))
+	}
+
+	// console.log(`Price Before Loras: ${priceBeforeLoras}`)
+	// console.log(`Price After Loras: ${dynamicCreditsPrice}`)
+
 
 	return dynamicCreditsPrice
 
@@ -48,10 +71,10 @@ function getExtrasPrice(extras, model='') {
 	if (extras.upscale) {
 		extrasPrice.upscale += 150
 		if (model.startsWith('sdxl')) {
-			extrasPrice.upscale += 200
+			extrasPrice.upscale += 400
 		}
-		if (model.startsWith('flux')) {
-			extrasPrice.upscale += 300
+		if (model.startsWith('illustrious')) {
+			extrasPrice.upscale += 400
 		}
 	}
 

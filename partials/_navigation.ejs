@@ -1,6 +1,6 @@
 <link rel='stylesheet' href='/style.css' />
 
-<script id="aclib" type="text/javascript" src="//acscdn.com/script/aclib.js"></script>
+<!-- <script id="aclib" type="text/javascript" src="//acscdn.com/script/aclib.js"></script> -->
 
 <div id="navigationOverlay" class="navigationOverlay frosted"></div>
 <style>
@@ -14,10 +14,131 @@
         height: 100%;
         background-color: rgba(0, 0, 0, 0.5);
         transition: all 0.75s;
-        z-index: 1000;
+        z-index: 992;
     }
 
 </style>
+
+<script>
+
+    function throttle(func, limit) {
+        let inThrottle;
+        return function(...args) {
+            if (!inThrottle) {
+                func.apply(this, args);
+                inThrottle = true;
+                setTimeout(() => inThrottle = false, limit);
+            }
+        }
+    }
+
+    const updateUserProfile = throttle(async () => {
+        let userProfileRaw = await fetch('/userProfile', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+
+        // console.log(userProfileRaw)
+
+        // res.send({ userProfile: userProfile}) is what the server uses to send it back to the client:
+        let userProfile = await userProfileRaw.json();
+        userProfile = userProfile?.userProfile;
+
+        if (userProfile == null || userProfile == undefined) {
+            document.getElementById('loggedIn').textContent = 'false';
+            // set the creditsDisplay to 0 if the userProfile is null AND the CreditsButtons to be "Log in to claim", hide the topTextCreditsButton:
+            document.getElementById('creditsDisplay').textContent = 0;
+            document.getElementById('3hrCreditsButton').textContent = 'Log in to claim';
+            document.getElementById('12hrCreditsButton').textContent = 'Log in to claim';
+            document.getElementById('24hrCreditsButton').textContent = 'Log in to claim';
+            document.getElementById('168hrCreditsButton').textContent = 'Log in to claim';
+            return;
+        } else {
+            document.getElementById('loggedIn').textContent = 'true';
+        }
+        
+        document.getElementById('creditsDisplay').textContent = userProfile?.credits ?? 0;
+
+        // update the time left on the buttons using current time and the dailies timestamps, convert it from ms to hours mins seconds left, if it's over 3 hours then show it as claimable:
+
+        timestamp3hr = userProfile?.dailies?.timestamp3hr ?? "0";
+        timestamp3hr = Number(timestamp3hr)
+        timestamp3hrDifferenceRequired = 10800000
+
+        timestamp12hr = userProfile?.dailies?.timestamp12hr ?? "0";
+        timestamp12hr = Number(timestamp12hr)
+        timestamp12hrDifferenceRequired = 43200000
+
+        timestamp24hr = userProfile?.dailies?.timestamp24hr ?? "0";
+        timestamp24hr = Number(timestamp24hr)
+        timestamp24hrDifferenceRequired = 86400000
+
+        timestamp168hr = userProfile?.dailies?.timestamp168hr ?? "0";
+        timestamp168hr = Number(timestamp168hr)
+        timestamp168hrDifferenceRequired = 604800000
+
+        currentTime = new Date().getTime();
+
+        if (timestamp3hr + timestamp3hrDifferenceRequired < currentTime || timestamp3hr == 0) {
+            document.getElementById('3hrCreditsButton').disabled = false;
+            document.getElementById('3hrCreditsButtonTimeLeft').textContent = 'Claimable';
+        } else {
+            document.getElementById('3hrCreditsButton').disabled = true;
+            timeLeft = timestamp3hr + timestamp3hrDifferenceRequired - currentTime;
+            timeLeftHours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            timeLeftMinutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+            timeLeftSeconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+            document.getElementById('3hrCreditsButtonTimeLeft').textContent = timeLeftHours + 'h ' + timeLeftMinutes + 'm ' + timeLeftSeconds + 's';
+        }
+
+        if (timestamp12hr + timestamp12hrDifferenceRequired < currentTime || timestamp12hr == 0) {
+            document.getElementById('12hrCreditsButton').disabled = false;
+            document.getElementById('12hrCreditsButtonTimeLeft').textContent = 'Claimable';
+        } else {
+            document.getElementById('12hrCreditsButton').disabled = true;
+            timeLeft = timestamp12hr + timestamp12hrDifferenceRequired - currentTime;
+            timeLeftHours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            timeLeftMinutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+            timeLeftSeconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+            document.getElementById('12hrCreditsButtonTimeLeft').textContent = timeLeftHours + 'h ' + timeLeftMinutes + 'm ' + timeLeftSeconds + 's';
+        }
+
+        if (timestamp24hr + timestamp24hrDifferenceRequired < currentTime || timestamp24hr == 0) {
+            document.getElementById('24hrCreditsButton').disabled = false;
+            document.getElementById('24hrCreditsButtonTimeLeft').textContent = 'Claimable';
+        } else {
+            document.getElementById('24hrCreditsButton').disabled = true;
+            timeLeft = timestamp24hr + timestamp24hrDifferenceRequired - currentTime;
+            timeLeftHours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            timeLeftMinutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+            timeLeftSeconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+            document.getElementById('24hrCreditsButtonTimeLeft').textContent = timeLeftHours + 'h ' + timeLeftMinutes + 'm ' + timeLeftSeconds + 's';
+        }
+
+        if (timestamp168hr + timestamp168hrDifferenceRequired < currentTime || timestamp168hr == 0) {
+            document.getElementById('168hrCreditsButton').disabled = false;
+            document.getElementById('168hrCreditsButtonTimeLeft').textContent = 'Claimable';
+        } else {
+            // show it as D H M S left:
+            document.getElementById('168hrCreditsButton').disabled = true;
+            timeLeft = timestamp168hr + timestamp168hrDifferenceRequired - currentTime;
+            timeLeftDays = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+            timeLeftHours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            timeLeftMinutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+            timeLeftSeconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+            document.getElementById('168hrCreditsButtonTimeLeft').textContent = timeLeftDays + 'd ' + timeLeftHours + 'h ' + timeLeftMinutes + 'm ' + timeLeftSeconds + 's';
+        }
+
+        // if none of the buttons are claimable, then change the creditsText to "No rewards available":
+        if (document.getElementById('3hrCreditsButton').disabled == true && document.getElementById('12hrCreditsButton').disabled == true && document.getElementById('24hrCreditsButton').disabled == true && document.getElementById('168hrCreditsButton').disabled == true) {
+            // console.log("NO REWARDS AVAILABLE")
+            document.getElementsByClassName('creditsText')[0].textContent = "No rewards available";
+        }
+    }, 1000);
+
+</script>
 
 <style>
 /* Navigation Bar */
@@ -31,29 +152,35 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    max-width: 1200px;
+    max-width: 1500px;
     margin: 0 auto;
 }
 
 /* Links Wrapper */
-.navLinksWrapper {
+.navigationLinksWrapper {
     display: flex;
     align-items: center;
 }
 
-.navLink {
+.navigationLink {
     color: #fff;
     text-decoration: none;
     padding: 7px 10px;
-    margin: 0 5px;
+    margin: 0 2px;
     border-radius: 5px;
     transition: background-color 0.3s, color 0.3s;
-    border: 2px solid rgba(255, 255, 255, 0.2)
+    border: 2px solid rgba(0, 140, 255, 0.2)
 }
 
-.navLink:hover,
-.navLink:focus {
+.navigationLink:hover,
+.navigationLink:focus {
     background-color: var(--highlight-colour);
+    border: 2px solid rgb(146, 206, 255);
+}
+
+.navigationLinkActive {
+    background-color: var(--highlight-colour);
+    border: 2px solid rgb(146, 206, 255);
 }
 
 /* Button Styling */
@@ -104,7 +231,6 @@
     flex-direction: column;
     background-color: rgba(0, 0, 0, 0.7) !important;
     border: 2px solid #fff;
-    border-radius: 5px;
     padding: 10px;
     position: absolute;
     top: 60px; /* Adjust according to your header height */
@@ -129,16 +255,56 @@
 /* Mobile Menu Button */
 #mobileMenuButton {
     display: none;
-    font-size: 1.5em;
+    font-size: 2em;
     background: none;
     border: none;
     color: #fff;
     cursor: pointer;
+    transition: transform 0.3s;
+}
+
+/* animation for the mobile navigation button wobbling */
+
+/* keyframes: */
+
+@keyframes wobble {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    15% {
+        transform: rotate(-5deg);
+    }
+
+    30% {
+        transform: rotate(3deg);
+    }
+
+    45% {
+        transform: rotate(-3deg);
+    }
+
+    60% {
+        transform: rotate(2deg);
+    }
+
+    75% {
+        transform: rotate(-1deg);
+    }
+
+    100% {
+        transform: rotate(0deg);
+    }
+}
+
+/* apply the keyframes to the mobileMenuButton: */
+#mobileMenuButton {
+    animation: wobble 1s infinite;
 }
 
 /* Responsive Styles */
-@media (max-width: 768px) {
-    .navLinksWrapper {
+@media (max-width: 1300px) {
+    .navigationLinksWrapper {
         display: none;
     }
 
@@ -156,19 +322,21 @@
 <nav class="topNavBar">
     <div class="navContainer">
         <!-- Desktop Navigation Links -->
-        <div class="navLinksWrapper">
-            <a class="navlink" href="/home">Home</a>
-            <a class="navlink" href="/">AI Generator</a>
-            <a class="navlink" href="/booru">Booru</a>
-            <a class="navlink" href="https://discord.gg/AvbQuRmh7t">Discord</a>
-            <a class="navlink" href="/download">Download</a>
-            <a class="navlink" href="/redeem-code">Redeem</a>
+        <div class="navigationLinksWrapper">
+            <a id="navigationLink-generator" class="navigationLink" href="/">AI Generator</a>
+            <a id="navigationLink-booru" class="navigationLink" href="/booru">Booru</a>
+            <a id="navigationLink-download" class="navigationLink" href="/download">Download</a>
+            <a id="navigationLink-paypalshop" class="navigationLink" href="/paypal-shop">Buy Credits</a>
+            <a id="navigationLink-metadata" class="navigationLink" href="/metadata">Metadata</a> 
+            <a class="navigationLink" href="https://discord.gg/AvbQuRmh7t">Discord</a>
+            <a id="navigationLink-suggestions" class="navigationLink" href="/suggestions">Suggestions</a>
+            <a id="navigationLink-redeem" class="navigationLink" href="/redeem-code">Redeem</a>
             <% if (session.loggedIn) { %>
-                <a class="navlink" href="/logout">Logout</a>
-                <a class="navlink" href="/profile/<%=session.accountId%>">My Profile</a>
-                <a class="navlink" href="/paypal-shop">Buy Credits</a>
+                <a id="navigationLink-history" class="navigationLink" href="/image-history">History</a>
+                <a class="navigationLink" href="/logout">Logout</a>
+                <a id="navigationLink-profile" class="navigationLink" href="/profile/<%=session.accountId%>">My Profile</a>
             <% } else { %>
-                <a class="navlink" href="/login">Login</a>
+                <a class="navigationLink" href="/login">Login</a>
             <% } %>
             
         </div>
@@ -178,16 +346,18 @@
 
         <!-- Mobile Dropdown Menu -->
         <div class="mobileMenu frosted" id="mobileMenu">
-            <a href="/home">Home</a>
             <a href="/">AI Generator</a>
+            <a href="/projects">Projects</a>
             <a href="/booru">Booru</a>
             <a href="https://discord.gg/AvbQuRmh7t">Discord</a>
             <a href="/download">Download</a>
+            <a href="/suggestions">Suggestions</a>
             <a href="/redeem-code">Redeem</a>
+            <a href="/paypal-shop">Buy Credits</a>
             <% if (session.loggedIn) { %>
+                <a href="/image-history">History</a>
                 <a href="/logout">Logout</a>
                 <a href="/profile/<%=session.accountId%>">My Profile</a>
-                <a href="/paypal-shop">Buy Credits</a>
             <% } else { %>
                 <a href="/login">Login</a>
             <% } %>
@@ -221,7 +391,7 @@
         padding: 5px;
         border-radius: 5px;
         transition: background-color 0.3s ease, transform 0.2s ease;
-        z-index: 200;
+        z-index: 1000;
     }
 
     .creditsHowToSummary {
@@ -238,9 +408,60 @@
         background-color: rgba(0,0,0,0);
         border: 2px solid #ffffff;
     }
-
-
 </style>
+
+<script>
+
+    // if the current page is one of the navigation links, then highlight it by setting it to :focus :
+    let currentPath = window.location.pathname;
+
+    if (currentPath.includes('booru')) {
+        currentPath = currentPath.split('/')
+        currentPath = `/${currentPath[1]}`
+    }
+
+    let accountId = '<%=session.accountId%>'
+
+    switch(currentPath) {
+    
+        case '/metadata':
+            document.getElementById('navigationLink-metadata').classList.add('navigationLinkActive');
+            break;
+        
+        case '/':
+            document.getElementById('navigationLink-generator').classList.add('navigationLinkActive');
+            break;
+
+        case '/booru':
+            document.getElementById('navigationLink-booru').classList.add('navigationLinkActive');
+            break;
+
+        case '/download/':
+            document.getElementById('navigationLink-download').classList.add('navigationLinkActive');
+            break;
+
+        case '/suggestions':
+            document.getElementById('navigationLink-suggestions').classList.add('navigationLinkActive');
+            break;
+
+        case '/redeem-code':
+            document.getElementById('navigationLink-redeem').classList.add('navigationLinkActive');
+            break;
+
+        case '/paypal-shop':
+            document.getElementById('navigationLink-paypalshop').classList.add('navigationLinkActive');
+            break;
+
+        case '/image-history':
+            document.getElementById('navigationLink-history').classList.add('navigationLinkActive');
+            break;
+
+        case `/profile/${accountId}`:
+            document.getElementById('navigationLink-profile').classList.add('navigationLinkActive');
+            break;
+    }
+
+</script>
 
 <script>
     creditsButtonDiv = document.getElementById('creditsButtonDiv');
@@ -248,15 +469,38 @@
     creditsButtonDiv.innerHTML += '<p class="creditsText">Click to claim credits!</p>';
 
     // center the credits text every few seconds:
-    function centerCreditsText() {
-        document.getElementsByClassName('creditsText')[0].style.left = (document.getElementById('creditsNav').offsetLeft + document.getElementById('creditsNav').offsetWidth / 2 - document.getElementsByClassName('creditsText')[0].offsetWidth / 2) + 'px';
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
     }
 
-    centerCreditsText();
+    const centerCreditsText = debounce(() => {
+        document.getElementsByClassName('creditsText')[0].style.left = 
+            (document.getElementById('creditsNav').offsetLeft + 
+            document.getElementById('creditsNav').offsetWidth / 2 - 
+            document.getElementsByClassName('creditsText')[0].offsetWidth / 2) + 'px';
+    }, 250);
 
-    setInterval(() => {
-        centerCreditsText();
-    }, 100);
+    // setInterval(() => {
+    //     centerCreditsText();
+    // }, 100);
+
+    // use requestAnimationFrame to center the credits text:
+    function animateCreditsText() {
+        requestAnimationFrame(() => {
+            centerCreditsText();
+            animateCreditsText();
+        });
+    }
+
+    animateCreditsText();
 
     // event listener for the credits text to trigger the button click:
     document.getElementsByClassName('creditsText')[0].addEventListener('click', () => {
@@ -289,9 +533,9 @@
 
 <script>
     let topSiteTextArray = [
-        "Low on credits? Check out the <a href='https://www.jscammie.com/paypal-shop'>'Credits Shop'</a> to buy more!",
-        "Check out the <a href='https://www.jscammie.com/booru'>'Booru'</a> for some cool user-created images!",
-        "Check out the <a href='https://www.discord.gg/AvbQuRmh7t'>'Discord'</a> to compete in contests for credits and more!",
+        // "Low on credits? Check out the <a href='https://www.jscammie.com/paypal-shop'>'Credits Shop'</a> to buy more!",
+        "Check out the <a href='https://www.jscammie.com/booru'>'Booru'</a> for some cool user-created images & to earn credits!",
+        // "Check out the <a href='https://www.discord.gg/AvbQuRmh7t'>'Discord'</a> to compete in contests for credits and more!",
     ]
 
     let topSiteText = document.getElementById('topSiteText');
@@ -428,7 +672,7 @@
     let loadNotificationsButton = document.getElementById('loadNotificationsButton');
 
     // send a post request to get-notifications to get the notifications:
-    notificationsReceived = []
+    let notificationsReceived = []
 
     let notificationsArray = []
     let notificationsChecked = '<%=session.notificationsChecked%>'
@@ -436,13 +680,6 @@
     let notificationCount = 0
 
     function buildNotificationsFromArray(newNotificationsChecked) {
-
-        // ensure all notifications are in the correct order by their timestamp:
-        notificationsArray.sort((a, b) => {
-            return b.timestamp - a.timestamp;
-        });
-
-        // notificationsChecked is the timestamp of the last time the user checked their notifications:
         
         Number(notificationsChecked)
 
@@ -489,30 +726,37 @@
         });
     }
 
+    const MAX_NOTIFICATIONS = 50;
+
     function getNotifications() {
         fetch('/get-notifications', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                notificationsReceived: notificationsReceived,
+                notificationsReceived,
                 popupOpened: document.getElementById('notificationsPopup').classList.contains('activeNotificationsPopup')
             })
-        }).then(response => response.json())
-            .then(data => {
-                // console.log(notificationsReceived)
-                if (notificationsList.textContent.trim() == "No notifications") {
-                    notificationsList.innerHTML = "";
+        })
+        .then(response => response.json())
+        .then(data => {
+            data.notifications.forEach(notification => {
+                if (!notificationsReceived.includes(notification.notificationId)) {
+                    notificationsReceived.push(notification.notificationId);
+                    notificationsArray.push(notification);
                 }
-                data.notifications.forEach(notification => {
-                    notificationsReceived.push(notification.notificationId)
-                    notificationsArray.push(notification)
-                });
-
-                buildNotificationsFromArray(data.notificationsChecked);
-
             });
+
+            notificationsArray.sort((a, b) => {
+                return b.timestamp - a.timestamp;
+            });
+
+            // Trim notifications to prevent memory buildup
+            if (notificationsArray.length > MAX_NOTIFICATIONS) {
+                notificationsArray = notificationsArray.slice(0, MAX_NOTIFICATIONS);
+            }
+
+            buildNotificationsFromArray(data.notificationsChecked);
+        });
     }
 
     // add an event listener to the notifications button:
@@ -761,7 +1005,6 @@
             .then(data => {
                 // console.log(data);
             });
-        updateUserProfile()
     }
 
     document.getElementById('3hrCreditsButton').addEventListener('click', () => {
@@ -780,124 +1023,9 @@
         sendDailiesRequest('168hr');
     });
 
-
-    async function updateUserProfile() {
-        let userProfileRaw = await fetch('/userProfile', {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        })
-
-        // console.log(userProfileRaw)
-
-        // res.send({ userProfile: userProfile}) is what the server uses to send it back to the client:
-        let userProfile = await userProfileRaw.json();
-        userProfile = userProfile?.userProfile;
-
-        if (userProfile == null || userProfile == undefined) {
-            document.getElementById('loggedIn').textContent = 'false';
-            // set the creditsDisplay to 0 if the userProfile is null AND the CreditsButtons to be "Log in to claim", hide the topTextCreditsButton:
-            document.getElementById('creditsDisplay').textContent = 0;
-            document.getElementById('3hrCreditsButton').textContent = 'Log in to claim';
-            document.getElementById('12hrCreditsButton').textContent = 'Log in to claim';
-            document.getElementById('24hrCreditsButton').textContent = 'Log in to claim';
-            document.getElementById('168hrCreditsButton').textContent = 'Log in to claim';
-            return;
-        } else {
-            document.getElementById('loggedIn').textContent = 'true';
-        }
-        
-        document.getElementById('creditsDisplay').textContent = userProfile?.credits ?? 0;
-
-        // update the time left on the buttons using current time and the dailies timestamps, convert it from ms to hours mins seconds left, if it's over 3 hours then show it as claimable:
-
-        timestamp3hr = userProfile?.dailies?.timestamp3hr ?? "0";
-        timestamp3hr = Number(timestamp3hr)
-        timestamp3hrDifferenceRequired = 10800000
-
-        timestamp12hr = userProfile?.dailies?.timestamp12hr ?? "0";
-        timestamp12hr = Number(timestamp12hr)
-        timestamp12hrDifferenceRequired = 43200000
-
-        timestamp24hr = userProfile?.dailies?.timestamp24hr ?? "0";
-        timestamp24hr = Number(timestamp24hr)
-        timestamp24hrDifferenceRequired = 86400000
-
-        timestamp168hr = userProfile?.dailies?.timestamp168hr ?? "0";
-        timestamp168hr = Number(timestamp168hr)
-        timestamp168hrDifferenceRequired = 604800000
-
-        currentTime = new Date().getTime();
-
-        if (timestamp3hr + timestamp3hrDifferenceRequired < currentTime || timestamp3hr == 0) {
-            document.getElementById('3hrCreditsButton').disabled = false;
-            document.getElementById('3hrCreditsButtonTimeLeft').textContent = 'Claimable';
-        } else {
-            document.getElementById('3hrCreditsButton').disabled = true;
-            timeLeft = timestamp3hr + timestamp3hrDifferenceRequired - currentTime;
-            timeLeftHours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            timeLeftMinutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-            timeLeftSeconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-            document.getElementById('3hrCreditsButtonTimeLeft').textContent = timeLeftHours + 'h ' + timeLeftMinutes + 'm ' + timeLeftSeconds + 's';
-        }
-
-        if (timestamp12hr + timestamp12hrDifferenceRequired < currentTime || timestamp12hr == 0) {
-            document.getElementById('12hrCreditsButton').disabled = false;
-            document.getElementById('12hrCreditsButtonTimeLeft').textContent = 'Claimable';
-        } else {
-            document.getElementById('12hrCreditsButton').disabled = true;
-            timeLeft = timestamp12hr + timestamp12hrDifferenceRequired - currentTime;
-            timeLeftHours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            timeLeftMinutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-            timeLeftSeconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-            document.getElementById('12hrCreditsButtonTimeLeft').textContent = timeLeftHours + 'h ' + timeLeftMinutes + 'm ' + timeLeftSeconds + 's';
-        }
-
-        if (timestamp24hr + timestamp24hrDifferenceRequired < currentTime || timestamp24hr == 0) {
-            document.getElementById('24hrCreditsButton').disabled = false;
-            document.getElementById('24hrCreditsButtonTimeLeft').textContent = 'Claimable';
-        } else {
-            document.getElementById('24hrCreditsButton').disabled = true;
-            timeLeft = timestamp24hr + timestamp24hrDifferenceRequired - currentTime;
-            timeLeftHours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            timeLeftMinutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-            timeLeftSeconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-            document.getElementById('24hrCreditsButtonTimeLeft').textContent = timeLeftHours + 'h ' + timeLeftMinutes + 'm ' + timeLeftSeconds + 's';
-        }
-
-        if (timestamp168hr + timestamp168hrDifferenceRequired < currentTime || timestamp168hr == 0) {
-            document.getElementById('168hrCreditsButton').disabled = false;
-            document.getElementById('168hrCreditsButtonTimeLeft').textContent = 'Claimable';
-        } else {
-            // show it as D H M S left:
-            document.getElementById('168hrCreditsButton').disabled = true;
-            timeLeft = timestamp168hr + timestamp168hrDifferenceRequired - currentTime;
-            timeLeftDays = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
-            timeLeftHours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            timeLeftMinutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-            timeLeftSeconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-            document.getElementById('168hrCreditsButtonTimeLeft').textContent = timeLeftDays + 'd ' + timeLeftHours + 'h ' + timeLeftMinutes + 'm ' + timeLeftSeconds + 's';
-        }
-
-        // if none of the buttons are claimable, then change the creditsText to "No rewards available":
-        if (document.getElementById('3hrCreditsButton').disabled == true && document.getElementById('12hrCreditsButton').disabled == true && document.getElementById('24hrCreditsButton').disabled == true && document.getElementById('168hrCreditsButton').disabled == true) {
-            // console.log("NO REWARDS AVAILABLE")
-            document.getElementsByClassName('creditsText')[0].textContent = "No rewards available";
-        }
-    }
-
     updateUserProfile()
-    setInterval(() => {
-        updateUserProfile()
-    }, 750);
+
 </script>
-
-<!-- <div class="center-fully-no-flex round-frosted" style="padding: 4px; border: none !important; border-radius: 0px !important;">
-    <p>Donate</p> 
-</div> -->
-
-<!-- create a shadow only going down: -->
 
 <style>
 
@@ -1202,6 +1330,19 @@
             }
         });
     }
+
+    let intervalIds = [];
+    let notificationsInterval = setInterval(getNotifications, 2000);
+    let profileUpdateInterval = setInterval(updateUserProfile, 1000);
+
+    intervalIds.push(notificationsInterval, profileUpdateInterval);
+
+    // Add cleanup function to be called when page unloads
+    function cleanupIntervals() {
+        intervalIds.forEach(clearInterval);
+    }
+
+    window.addEventListener('beforeunload', cleanupIntervals);
 
 </script>
 

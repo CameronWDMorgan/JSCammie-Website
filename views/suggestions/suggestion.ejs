@@ -1,0 +1,310 @@
+<!-- setup basic html template with metadata etc: -->
+<html>
+<head>
+    <title>Suggestion <%=suggestion.suggestionId%> | JSCammie.com</title>
+    <link rel='stylesheet' href='/style.css'/>
+    
+    <%- include('../../partials/_headerAll') %>
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-K3KJJKS1R4"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-K3KJJKS1R4');
+    </script>
+    
+</head>
+<body>
+
+    <!-- get partials/_navigation: -->
+    <%- include('../../partials/_navigation') %>
+
+    <div class="center-fully-no-flex" style="margin-bottom: 1rem;">
+        <%- include('../../partials/_bannerAdvert') %>
+    </div>
+
+    <div class="round-frosted page-content mw50-dynamic" style="padding: 40px; justify-content: center;">
+
+        <style>
+            .suggestionTopBar {
+                display: inline;
+                justify-content: space-between;
+                font-size: 24px;
+            }
+
+            .votingButton {
+                /* remove border, background colour */
+                background-color: rgba(0, 0, 0, 0) !important;
+                /* make the cursor a pointer */
+                cursor: pointer;
+            }
+
+            .suggestionDiv {
+                border: 3px solid rgb(255, 150, 253);
+                padding: 10px;
+                margin: 10px;
+                border-radius: 10px;
+            }
+
+            .pendingSuggestion p {
+                color: yellow;
+            }
+            .pendingSuggestion div {
+                background-color: rgba(255, 255, 0, 0.5) !important;
+            }
+
+            .addedSuggestion p {
+                color: rgb(119, 200, 255);
+            }
+            .addedSuggestion div {
+                background-color: rgba(119, 200, 255, 0.5) !important;
+            }
+
+            .rejectedSuggestion p {
+                color: red;
+            }
+            .rejectedSuggestion div {
+                background-color: rgba(255, 0, 0, 0.5) !important;
+            }
+
+            /* .promotedSuggestion have a glowing border to the div: */
+
+        </style>
+
+        <script>
+        
+            var userProfile = {
+                accountId: '<%=userProfile.accountId? userProfile.accountId : ''%>',
+                badges: {
+                    owner: <%=userProfile.badges?.owner? userProfile.badges.owner : false%>
+                }
+            }
+        
+        </script>
+            
+        <h1>Suggestion: <%=suggestion.suggestionId%></h1>
+
+        <div class="suggestionDiv">
+            <p id="suggestionId" style="display: none;"><%= suggestion.suggestionId %></p>
+            <p>
+                <%= suggestion.safety === 'nsfw' ? 'NSFW' : 'SFW' %>
+                <%= suggestion.promoted ? '<a style="color: gold;" class="dont-linkify">⭐Promoted</a>' : '' %>
+            </p>
+            <a class="suggestionTopBar">
+                <%= suggestion.type === 'lora' 
+                    ? '💜Lora' 
+                    : suggestion.type === 'feature' 
+                    ? '💚Feature' 
+                    : suggestion.type === 'bug' 
+                    ? '❤️Bug' 
+                    : '🧡Model' %>
+                | <%= suggestion.title %> |
+            </a>
+            <a class="suggestionTopBar">
+                <button class="votingButton" id="upvote" <%= !userProfile ? 'disabled' : '' %>>Upvotes: <%= suggestion.upvotes.length %></button>
+                <button class="votingButton" id="downvote" <%= !userProfile ? 'disabled' : '' %>>Downvotes: <%= suggestion.downvotes.length %></button>
+            </a>
+            <br>
+            <a><%= suggestion.text %></a>
+            <br>
+            <a>
+                <% if (userProfile && (userProfile.accountId === suggestion.accountId || userProfile.badges?.owner)) { %>
+                    <button id="removeSuggestion">Remove</button>
+                <% } %>
+                <% if (userProfile?.badges?.owner) { %>
+                    <button id="addSuggestion">Add</button>
+                    <button id="rejectSuggestion">Reject</button>
+                <% } %>
+                <% if (userProfile && (userProfile.accountId === suggestion.accountId || userProfile.badges?.owner)) { %>
+                    <button id="toggleSuggestionSafety">NSFW/SFW</button>
+                <% } %>
+                <% if (userProfile && suggestion.status.toLowerCase() === 'pending' && !suggestion.promoted) { %>
+                    <button id="promoteSuggestion">Promote (Costs 1500 Credits)</button>
+                <% } %>
+            </a>
+        </div>
+
+
+        <script>
+            // make any links in the text clickable:
+            document.querySelectorAll('a').forEach(a => {
+                if (a.classList.contains('navlink') || a.classList.contains('dont-linkify')) {
+                    return;
+                }
+                a.innerHTML = a.innerHTML.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
+            });
+        </script>
+
+        <script>
+
+                // apply the voting logic to the new suggestions:
+                document.querySelectorAll('.votingButton').forEach(button => {
+                    button.addEventListener('click', async (e) => {
+                        const suggestionId = e.target.parentElement.parentElement.querySelector('#suggestionId').innerText;
+                        const vote = e.target.id;
+
+                        // set request body:
+                        let requestBody = {
+                            suggestionId: suggestionId,
+                            vote: vote
+                        };
+
+                        const response = await fetch(`/vote-suggestion`, {
+                            method: 'POST',
+                            body: JSON.stringify(requestBody),
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                        const data = await response.json();
+                        console.log(data);
+
+                        // reload page:
+                        window.location.reload();
+                    });
+                });
+
+                // apply the remove suggestion logic to the new suggestions:
+                document.querySelectorAll('#removeSuggestion').forEach(button => {
+                    button.addEventListener('click', async (e) => {
+                        const suggestionId = e.target.parentElement.parentElement.querySelector('#suggestionId').innerText;
+
+                        // set request body:
+                        let requestBody = {
+                            suggestionId: suggestionId
+                        };
+
+                        // send the remove request to the server:
+                        const response = await fetch(`/remove-suggestion`, {
+                            method: 'POST',
+                            body: JSON.stringify(requestBody),
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                        const data = await response.json();
+                        // console.log(data);
+
+                        // reload page:
+                        window.location.reload();
+                    });
+                });
+
+                // apply the add suggestion logic to the new suggestions:
+                document.querySelectorAll('#addSuggestion').forEach(button => {
+                    button.addEventListener('click', async (e) => {
+                        const suggestionId = e.target.parentElement.parentElement.querySelector('#suggestionId').innerText;
+
+                        // set request body:
+                        let requestBody = {
+                            suggestionId: suggestionId,
+                            status: 'added'
+                        };
+
+                        // send the update request to the server:
+                        const response = await fetch(`/update-suggestion-status`, {
+                            method: 'POST',
+                            body: JSON.stringify(requestBody),
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                        const data = await response.json();
+                        // console.log(data);
+
+                        // reload page:
+                        window.location.reload();
+                    });
+                });
+
+                // promoteSuggestion logic:
+                document.querySelectorAll('#promoteSuggestion').forEach(button => {
+                    button.addEventListener('click', async (e) => {
+                        const suggestionId = e.target.parentElement.parentElement.querySelector('#suggestionId').innerText;
+
+                        // set request body:
+                        let requestBody = {
+                            suggestionId: suggestionId,
+                            accountId: userProfile.accountId
+                        };
+
+                        // send the promote request to the server:
+                        const response = await fetch(`/promote-suggestion`, {
+                            method: 'POST',
+                            body: JSON.stringify(requestBody),
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                        const data = await response.json();
+                        // console.log(data);
+
+                        // reload page:
+                        window.location.reload();
+                    });
+                });
+
+                document.querySelectorAll('#toggleSuggestionSafety').forEach(button => {
+                    button.addEventListener('click', async (e) => {
+                        const suggestionId = e.target.parentElement.parentElement.querySelector('#suggestionId').innerText;
+
+                        // set request body:
+                        let requestBody = {
+                            suggestionId: suggestionId,
+                            accountId: userProfile.accountId
+                        };
+
+                        // send the update request to the server:
+                        const response = await fetch(`/toggle-suggestion-safety`, {
+                            method: 'POST',
+                            body: JSON.stringify(requestBody),
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                        const data = await response.json();
+                        // console.log(data);
+                        // reload page:
+                        window.location.reload();
+                    });
+                });
+
+                // apply the reject suggestion logic to the new suggestions:
+                document.querySelectorAll('#rejectSuggestion').forEach(button => {
+                    button.addEventListener('click', async (e) => {
+                        const suggestionId = e.target.parentElement.parentElement.querySelector('#suggestionId').innerText;
+
+                        // set request body:
+                        let requestBody = {
+                            suggestionId: suggestionId,
+                            status: 'rejected'
+                        };
+
+                        // send the update request to the server:
+                        const response = await fetch(`/update-suggestion-status`, {
+                            method: 'POST',
+                            body: JSON.stringify(requestBody),
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                        const data = await response.json();
+                        // console.log(data);
+
+                        // reload page:
+                        window.location.reload();
+                    });
+                });
+            
+        </script>
+
+    </div>
+
+    <!-- get partials/_footer: -->
+    <%- include('../../partials/_footer') %>
+    
+</body>
+</html>

@@ -1,735 +1,615 @@
-function getDefaultHeaders() {
-    return {
-        'Content-Type': 'application/json',
-    };
-}
+// Utility functions
+const getDefaultHeaders = () => ({
+    'Content-Type': 'application/json',
+});
 
-// document.getElementById('generatorForm').addEventListener('submit', async function(event) {
-// make it only work with the button of ID generateButton
-document.getElementById('generateButton').addEventListener('click', async function(event) {
-    event.preventDefault();
-
-    console.log("test")
-
-    // Disable the button and change its text
-    const generateButton = document.getElementById('generateButton');
-    generateButton.disabled = true;
-    generateButton.textContent = 'Generating Image';
-    generateButton.classList.add('generating'); // Add the 'generating' class when the process starts
-    
-    const API_BASE = ''; // Set the base URL to the specified IP address
-
-    let accountId = document.getElementById('user-session').value
-    
-    let targetSteps = document.getElementById('steps').value
-    let targetModel = document.getElementById('model').value
-
-    let targetWidth = 512
-    let targetHeight = 512
-
-    aspect_ratio = document.getElementById('aspectRatio').value
-
-
-    let targetQuantity = 4
-
-    targetSteps = Number(targetSteps)
-
-    // get the loras from the masterLoraData object, filter by .selected:
-    let selectedLoras = Object.keys(masterLoraData).filter(lora => masterLoraData[lora].selected)
-
-
-
-    let savedloras = {
-        style: Object.keys(selectedLoras.filter(lora => lora.includes('style-'))),
-        effect: Object.keys(selectedLoras.filter(lora => lora.includes('effect-'))),
-        concept: Object.keys(selectedLoras.filter(lora => lora.includes('concept-'))),
-        clothing: Object.keys(selectedLoras.filter(lora => lora.includes('clothing-'))),
-        character: Object.keys(selectedLoras.filter(lora => lora.includes('character-'))),
-        pose: Object.keys(selectedLoras.filter(lora => lora.includes('pose-'))),
-        background: Object.keys(selectedLoras.filter(lora => lora.includes('background-')))
-    };
-
-    let targetGuidance = document.getElementById('cfguidance').value
-
-
-    let imageBase64
-
-
-    console.log(`H${targetHeight} W${targetWidth} S${targetSteps} Q${targetQuantity} M${targetModel}`)
-
-
-    let image = document.getElementById('uploadedImage').files[0] 
-
-    let combinedLora = []
-
-    let advancedCheckbox = "on"
-
-    let inpainting_toggle = document.getElementById('inpaintingCheckbox').checked
-
-    let inpaintingCheckbox = false
-
-    let maskUrl = null
-
-    let originalImage = null
-
-    if(inpainting_toggle == true) {
-        inpaintingCheckbox = true;
-        
-        // Get the mask with a black background
-        const maskDataUrl = getMaskWithBlackBackground();
-    
-        // Append the mask image to maskUrl:
-        maskUrl = maskDataUrl;
-        
-
-        // Get the original image from the file input:
-        originalImage = document.getElementById('inpaintingImage').files[0];
-
-        strength = document.getElementById('inpaintingStrength').value
-    } else {
-        strength = document.getElementById('img2imgStrength').value
-    }    
-        
-    console.log(`LORAS: ${selectedLoras}`);
-
-    // lora strengths (.strength) are stored in the masterLoraData object:
-    let lora_strengths = []
-    selectedLoras.forEach(lora => {
-        lora_strengths.push(Number(masterLoraData[lora].strength))
+const getBase64 = (file) => 
+    new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
     });
 
-    function getBase64(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = error => reject(error);
-            reader.readAsDataURL(file);
-        });
-    }
+// DOM helper functions
+const funcElementById = (id) => document.getElementById(id);
+const getValue = (id) => funcElementById(id)?.value;
+const getCheckboxState = (id) => funcElementById(id)?.checked ?? false;
+const API_BASE = ''
+let requestId = null
+let cancelledGeneration = false
+let uploadsToBooru = 0
 
-    if(document.getElementById('img2imgCheckbox').checked) {
-        let file = document.getElementById('uploadedImage').files[0];
-        imageBase64 = await getBase64(file)
-    }
-    if(document.getElementById('inpaintingCheckbox').checked) {
-        let file = originalImage
-        imageBase64 = await getBase64(file)
-    }
+// State management
+const UIState = {
+    generateButton: funcElementById('generateButton'),
+    response: funcElementById('response'),
+    queuePosition: funcElementById('queuePosition'),
+    positionNumber: funcElementById('positionNumber'),
+    cancelButton: funcElementById('cancelButton'),
+    imagesContainer: funcElementById('imagesContainer'),
 
-    let request_type = "txt2img"
-
-    if(document.getElementById('img2imgCheckbox').checked) {
-        request_type = "img2img"
-    } 
-    if(document.getElementById('inpaintingCheckbox').checked) {
-        request_type = "inpainting"
-    }
-
-    function getFavoritedLoraIds() {
-        return Object.keys(favorites).filter(key => favorites[key]);
-    }
-
-    let favouritedLoras = getFavoritedLoraIds()
-
-    console.log(favouritedLoras)
-
-    let schedulerValue = document.getElementById('scheduler').value
-
-    promptValue = document.getElementById('prompt').value
-
-    // make it one string:
-
-    promptValue = promptValue.replace(/\n/g, ' ')
-
-    fastqueueClasses = document.getElementById('fastqueueButton').classList
-    if (fastqueueClasses.contains('active')) {
-        fastqueue = true
-    } else {
-        fastqueue = false
-    }
-
-    creditsRequired = document.getElementById('currentCreditsPrice').innerText
-
-    extras = {
-        removeWatermark: document.getElementById('removeWatermarkCheckbox').checked ?? false,
-        upscale: document.getElementById('upscaleCheckbox').checked ?? false,
-        doubleImages: document.getElementById('doubleImagesCheckbox').checked ?? false,
-        removeBackground: document.getElementById('removeBackgroundCheckbox').checked ?? false,
-    }
-
-    if (document.getElementById('regionalPromptCheckbox').checked) {
-        regionalPromptSettings = {
-            status: "true",
-            regionalPromptSplitPosition: document.getElementById('regionalPromptSplitPosition').value,
-            regionalPromptAStrength: document.getElementById('regionalPromptAStrength').value,
-            regionalPromptBStrength: document.getElementById('regionalPromptBStrength').value,
+    setGenerating(isGenerating) {
+        this.generateButton.disabled = isGenerating;
+        this.generateButton.textContent = isGenerating ? 'Generating Image' : 'Generate Image';
+        this.generateButton.classList[isGenerating ? 'add' : 'remove']('generating');
+        // if its set to false, hide the your position in queue message:
+        if (!isGenerating) {
+            this.hideQueuePosition();
         }
-    } else {
-        regionalPromptSettings = {status: "false"}
+    },
+
+    setError(message) {
+        this.response.innerText = `An error occurred: ${message}`;
+        this.setGenerating(false);
+        this.cancelButton.style.display = 'none';
+    },
+
+    updateQueuePosition(position, queueLength) {
+        this.queuePosition.style.display = 'block';
+        this.positionNumber.innerText = `${position}/${queueLength}`;
+    },
+
+    hideQueuePosition() {
+        this.queuePosition.style.display = 'none';
+    },
+
+    setQueueStatus(message) {
+        this.response.innerText = message;
     }
-            
+};
 
+// Request data builder
+const buildRequestData = async () => {
+    const requestType = getCheckboxState('inpaintingCheckbox') ? 'inpainting' : 
+                       getCheckboxState('img2imgCheckbox') ? 'img2img' : 'txt2img';
 
+    let imageBase64 = null;
+    let strength = getValue(requestType === 'inpainting' ? 'inpaintingStrength' : 'img2imgStrength');
 
+    if (requestType !== 'txt2img') {
+        const imageFile = funcElementById(requestType === 'inpainting' ? 'inpaintingImage' : 'uploadedImage').files[0];
+        imageBase64 = await getBase64(imageFile);
+    }
 
-    let data = {
-        prompt: promptValue,
-        negativeprompt: document.getElementById('negativeprompt').value,
-        aspect_ratio: aspect_ratio,
-        steps: targetSteps,
-        seed: document.getElementById('seed').value,
-        model: targetModel,
-        quantity: targetQuantity,
+    const selectedLoras = Object.keys(masterLoraData).filter(lora => masterLoraData[lora].selected);
+    const loraStrengths = selectedLoras.map(lora => Number(masterLoraData[lora].strength));
+
+    const regionalPromptSettings = getCheckboxState('regionalPromptCheckbox') ? {
+        status: 'true',
+        regionalPromptSplitPosition: getValue('regionalPromptSplitPosition'),
+        regionalPromptAStrength: getValue('regionalPromptAStrength'),
+        regionalPromptBStrength: getValue('regionalPromptBStrength'),
+    } : { status: 'false' };
+
+    return {
+        prompt: getValue('prompt').replace(/\n/g, ' '),
+        negativeprompt: getValue('negativeprompt'),
+        aspect_ratio: getValue('aspectRatio'),
+        steps: Number(getValue('steps')),
+        seed: getValue('seed'),
+        model: getValue('model'),
+        quantity: 4,
         lora: selectedLoras,
-        lora_strengths: lora_strengths,
-        favoriteLoras: favouritedLoras, 
+        lora_strengths: loraStrengths,
+        favoriteLoras: Object.keys(favorites).filter(key => favorites[key]),
         image: imageBase64,
-        strength: strength,
-        guidance: targetGuidance,
-        savedloras: savedloras,
-        request_type: request_type,
-        advancedMode: advancedCheckbox,
-        inpainting: inpaintingCheckbox,
-        inpaintingMask: maskUrl,
-        accountId: accountId,
+        strength,
+        guidance: getValue('cfguidance'),
+        savedloras: buildSavedLoras(selectedLoras),
+        request_type: requestType,
+        advancedMode: 'on',
+        inpainting: requestType === 'inpainting',
+        inpaintingMask: requestType === 'inpainting' ? getMaskWithBlackBackground() : null,
+        accountId: getValue('user-session'),
         fastpass: false,
-        scheduler: schedulerValue,
-        fastqueue: fastqueue,
-        creditsRequired: 0,
-        extras: extras,
-        regionalPromptSettings: regionalPromptSettings
+        scheduler: getValue('scheduler'),
+        fastqueue: funcElementById('fastqueueButton').classList.contains('active'),
+        creditsRequired: Number(funcElementById('currentCreditsPrice').innerText) || 0,
+        extras: {
+            removeWatermark: getCheckboxState('removeWatermarkCheckbox'),
+            upscale: getCheckboxState('upscaleCheckbox'),
+            doubleImages: getCheckboxState('doubleImagesCheckbox'),
+            removeBackground: getCheckboxState('removeBackgroundCheckbox'),
+        },
+        regionalPromptSettings,
     };
+};
 
-    console.log(data)
+const buildSavedLoras = (selectedLoras) => {
+    const categories = ['style', 'effect', 'concept', 'clothing', 'character', 'pose', 'background'];
+    return Object.fromEntries(
+        categories.map(category => [
+            category,
+            selectedLoras.filter(lora => lora.includes(`${category}-`))
+        ])
+    );
+};
 
-    let nextCheckMSOG = 750
-    var nextCheckMS = nextCheckMSOG
+// Button handlers
+const createImageButtons = (container, image, mediaInfo, index, booruData) => {
+    const details = document.createElement('details');
+    details.style.display = 'inline-block';
+    
+    const summary = document.createElement('summary');
+    summary.innerText = `Image #${index}'s Options`;
+    details.appendChild(summary);
+
+    const buttons = [
+        createDownloadButton(image, mediaInfo.fileName),
+        createImg2ImgButton(image, mediaInfo.fileName),
+        createInpaintingButton(image, mediaInfo.fileName)
+    ];
+
+    if (booruData) {
+        // buttons.push(createBooruButton(index, booruData));
+        // add the button outside of the dropdown, so its at the top and always visible:
+        container.appendChild(createBooruButton(index, booruData));
+    }
+
+    buttons.forEach(button => details.appendChild(button));
+    container.appendChild(details);
+};
+
+// Main generation handler
+funcElementById('generateButton').addEventListener('click', async function(event) {
+    event.preventDefault();
+    UIState.setGenerating(true);
+
+    uploadsToBooru = 0
+    everHiddenCancel = false;
+    cancelledGeneration = false
 
     try {
-        document.getElementById('response').innerText = "Requesting Image, please wait...";
+        const data = await buildRequestData();
+        console.log('Request Data:', data);
 
         const response = await fetch(`${API_BASE}/generate`, {
             method: 'POST',
-            headers: getDefaultHeaders(), // Set the headers for the POST request
+            headers: getDefaultHeaders(),
             body: JSON.stringify(data)
         });
 
         const jsonResponse = await response.json();
+        
+        if (jsonResponse.status === "error") {
+            UIState.setError(jsonResponse.message);
+            return;
+        }
 
-        console.log(jsonResponse)
+        if (cancelledGeneration) return;
 
-        // cancel button functionality:
-        document.getElementById('cancelButton').addEventListener('click', async function() {
-            event.preventDefault();
-            // Disable the button and change its text
-            generateButton.disabled = true;
-            generateButton.textContent = 'Cancelling...';
-            generateButton.classList.add('generating'); // Add the 'generating' class when the process starts
+        await handleQueueAndGeneration(jsonResponse);
 
-            try {
-                const response = await fetch(`${API_BASE}/cancel_request/${jsonResponse.request_id}`, {
-                    method: 'GET',
-                    headers: getDefaultHeaders() // Set the headers for the POST request
-                });
+    } catch (error) {
+        console.error('Generation error:', error);
+        UIState.setError(error.message);
+    }
+});
 
-                let cancelResponse = await response.json();
+// Queue position checking
+const checkQueuePosition = async () => {
 
-                if (cancelResponse.status === "cancelled") {
-                    document.getElementById('response').innerText = "Generation has been cancelled";
-                    generateButton.disabled = false;
-                    generateButton.textContent = 'Generate Image';
-                    generateButton.classList.remove('generating');
-                    document.getElementById('cancelButton').style.display = 'none';
-                    return
-                } else {
-                    document.getElementById('response').innerText = "An error occurred: " + cancelResponse.message;
-                    generateButton.disabled = false;
-                    generateButton.textContent = 'Generate Image';
-                    generateButton.classList.remove('generating');
-                    document.getElementById('cancelButton').style.display = 'none';
+    const response = await fetch(`${API_BASE}/queue_position/${requestId}`, {
+        method: 'GET',
+        headers: getDefaultHeaders()
+    });
+    return await response.json();
+};
+
+const handleCompletedGeneration = async () => {
+    UIState.response.innerText = "Your image is ready and will be displayed shortly...";
+    UIState.queuePosition.style.display = 'none';
+
+    const resultResponse = await fetch(`${API_BASE}/result/${requestId}`, {
+        method: 'GET',
+        headers: getDefaultHeaders()
+    });
+
+    if (!resultResponse.ok) {
+        throw new Error('Failed to fetch generation results');
+    }
+
+    const results = await resultResponse.json();
+    await displayResults(results);
+};
+
+const createMediaElement = (image, isVideo = false) => {
+    const time = new Date().getTime();
+    const index = Math.random().toString(36).substr(2, 9);
+    const mediaType = isVideo ? 'video' : 'img';
+    
+    const element = document.createElement(mediaType);
+    if (isVideo) {
+        element.controls = true;
+        element.autoplay = true;
+        element.loop = true;
+        const source = document.createElement('source');
+        source.src = 'data:video/mp4;base64,' + image;
+        source.type = 'video/mp4';
+        element.appendChild(source);
+    } else {
+        // Handle the case where image might be an object with base64 property or a string
+        const base64Data = typeof image === 'object' ? image.base64 : image;
+        element.src = base64Data.startsWith('data:') ? base64Data : 'data:image/png;base64,' + base64Data;
+    }
+    
+    element.style.cssText = 'display: inline; width: auto; height: auto; max-width: 100%;';
+    return { element, fileName: `${mediaType}-${time}-${index}.${isVideo ? 'mp4' : 'png'}` };
+};
+
+const displayResults = async (results) => {
+    // Update credits if using fastqueue
+    if (results.fastqueue) {
+        funcElementById('creditsDisplay').innerText = results.credits;
+    }
+
+    // Clear previous images
+    UIState.imagesContainer.innerHTML = '';
+
+    // Play completion sound if enabled
+    if (results.misc_generationReadyBeep) {
+        const audio = new Audio('https://www.jscammie.com/generationdone.wav');
+        audio.play().catch(error => console.log('Audio playback failed:', error));
+    }
+
+    // Check for booru spam flag
+    const notAllowedBooruImageSpam = ["416790733031211009", "774138250179772437"];
+    const accountId = getValue('user-session');
+    
+    if (notAllowedBooruImageSpam.includes(accountId)) {
+        const warning = document.createElement('p');
+        warning.innerText = "You've been flagged for spamming images to the booru, DO NOT upload images IF they are low quality / do not match the prompt used OR in general have alot of errors!";
+        warning.style.color = 'rgb(255, 200, 200)';
+        UIState.imagesContainer.parentNode.insertBefore(warning, UIState.imagesContainer);
+    }
+
+    // Display images
+    results.images.forEach((image, index) => {
+        const container = document.createElement('div');
+        container.style.cssText = 'display: inline-block; margin: 10px;';
+
+        const isVideo = results.request_type === "txt2video";
+        const mediaInfo = createMediaElement(image.base64 || image, isVideo);
+        
+        container.appendChild(mediaInfo.element);
+
+        // Create buttons container
+        const buttonsContainer = document.createElement('div');
+        buttonsContainer.style.marginTop = '10px';
+        
+        createImageButtons(
+            buttonsContainer, 
+            { base64: image.base64 || image }, 
+            mediaInfo, 
+            index, 
+            results.allImageHistory?.[index]
+        );
+        
+        container.appendChild(buttonsContainer);
+        UIState.imagesContainer.appendChild(container);
+    });
+
+    // Display additional info
+    if (results.additionalInfo) {
+        funcElementById('additionalInfo').innerHTML = `<p>Seed: ${results.additionalInfo.seed}</p>`;
+    }
+};
+
+// Update the createDownloadButton function to handle the new image format
+const createDownloadButton = (image, fileName) => {
+    const button = document.createElement('button');
+    button.innerText = fileName.includes('video') ? 'Download Video' : 'Download Image';
+    button.style.cssText = 'display: block; margin-top: 10px;';
+    
+    button.onclick = async () => {
+        try {
+            // Handle both string and object formats of base64 data
+            const base64Data = image.base64 || image;
+            const base64String = base64Data.startsWith('data:') ? base64Data : `data:image/png;base64,${base64Data}`;
+            
+            const response = await fetch(base64String);
+            const blob = await response.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(blobUrl);
+        } catch (error) {
+            console.error('Download error:', error);
+            options = {
+                message: 'Failed to download image.',
+                question: true,
+                options: {
+                    okay: function() {}
                 }
-            } catch (error) {
-                console.error('An error occurred:', error);
-                document.getElementById('response').innerText = "An error occurred: " + error.message;
-                generateButton.disabled = false;
-                generateButton.textContent = 'Generate Image';
-                generateButton.classList.remove('generating');
-                document.getElementById('cancelButton').style.display = 'none';
             }
+            let alertResponse = await globalAlert(options);
+        }
+    };
+    
+    return button;
+};
+
+// Update the Img2Img and Inpainting button functions to handle the new image format
+const createImg2ImgButton = (image, fileName) => {
+    const button = document.createElement('button');
+    button.innerText = 'Send to Img2Img';
+    button.style.cssText = 'display: block; margin-top: 5px;';
+    
+    button.onclick = async () => {
+        const img2imgCheckbox = funcElementById('img2imgCheckbox');
+        img2imgCheckbox.checked = true;
+        img2imgCheckbox.dispatchEvent(new Event('click'));
+        img2imgCheckbox.dispatchEvent(new Event('change'));
+
+        try {
+            const base64Data = image.base64 || image;
+            const base64String = base64Data.startsWith('data:') ? base64Data : `data:image/png;base64,${base64Data}`;
+            
+            const response = await fetch(base64String);
+            const blob = await response.blob();
+            const file = new File([blob], fileName, { type: 'image/png' });
+            
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            funcElementById('uploadedImage').files = dataTransfer.files;
+        } catch (error) {
+            console.error('Img2Img conversion error:', error);
+            alert('Failed to convert to Img2Img');
+        }
+    };
+    
+    return button;
+};
+
+const createInpaintingButton = (image, fileName) => {
+    const button = document.createElement('button');
+    button.innerText = 'Send to Inpainting';
+    button.style.cssText = 'display: block; margin-top: 5px;';
+    
+    button.onclick = async () => {
+        const inpaintingCheckbox = funcElementById('inpaintingCheckbox');
+        inpaintingCheckbox.checked = true;
+        inpaintingCheckbox.dispatchEvent(new Event('click'));
+        inpaintingCheckbox.dispatchEvent(new Event('change'));
+
+        try {
+            const base64Data = image.base64 || image;
+            const base64String = base64Data.startsWith('data:') ? base64Data : `data:image/png;base64,${base64Data}`;
+            
+            const response = await fetch(base64String);
+            const blob = await response.blob();
+            const file = new File([blob], fileName, { type: 'image/png' });
+            
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            const inpaintingImage = funcElementById('inpaintingImage');
+            inpaintingImage.files = dataTransfer.files;
+            inpaintingImage.dispatchEvent(new Event('change'));
+        } catch (error) {
+            console.error('Inpainting conversion error:', error);
+            alert('Failed to convert to inpainting');
+        }
+    };
+    
+    return button;
+};
+
+// Booru-related functionality
+const createBooruButton = (index, booruData) => {
+    const button = document.createElement('button');
+    button.innerText = 'Upload to Booru';
+    button.style.cssText = 'display: block; margin-top: 5px;';
+    button.id = 'booruButton-' + index;
+    booruData.index = index;
+    button.onclick = () => showBooruPopup(booruData);
+    return button;
+};
+
+const showBooruPopup = (booruData) => {
+    const overlay = funcElementById('overlayBooru');
+    const popupContent = funcElementById('booruPopupContent');
+
+    overlay.style.display = 'block';
+    popupContent.style.display = 'block';
+
+    popupContent.innerHTML = `
+        <button class="closeButton" onclick="closeBooruPopup()">×</button>
+        <h1>Upload to Booru</h1>
+        <p>By uploading to the booru you agree to the following:</p>
+        <ul>
+            <li>Child/Cub/Loli NSFW content are NOT ALLOWED!!!</li>
+            <br>
+            <li>Aged-Up Characters that look over the age of 18 are allowed, if they do not look over 18, the post will be removed!</li>
+            <br>
+            <li>By default, all content is hidden until a moderator approves it and gives it a safety rating (sfw, suggestive, nsfw).</li>
+            <br>
+            <li>ALL SETTINGS used to create an image are visible, if your content shows a word like "loli", even if it's sfw, it will be removed!</li>
+            <br>
+            <li>DO NOT SPAM THE BOORU WITH 1240987 IMAGES OF THE SAME OC IN SAME POSE / LOCATION</li>
+            <br>
+            <li>Realistic Feral are not allowed, only 2d/stylized 3d feral content are allowed</li>
+        </ul>
+        <p>If you agree to these rules/terms, then feel free to click below to upload to the booru, failure to comply with these rules will make you unable to post on the booru.</p>
+        <button id="confirmUploadButton">Upload to Booru</button>
+    `;
+
+    funcElementById('confirmUploadButton').onclick = () => uploadToBooru(booruData);
+    overlay.onclick = closeBooruPopup;
+    document.addEventListener('keydown', handleBooruEscapeKey);
+};
+
+const uploadToBooru = async (booruData) => {
+    try {
+        const response = await fetch('/create-booru-image', {
+            method: 'POST',
+            headers: getDefaultHeaders(),
+            body: JSON.stringify(booruData)
         });
 
-        if (jsonResponse.status === "error") {
-            document.getElementById('response').innerText = "An error occurred: " + jsonResponse.message;
-            generateButton.disabled = false;
-            generateButton.textContent = 'Generate Image';
-            generateButton.classList.remove('generating');
-            document.getElementById('cancelButton').style.display = 'none';
-        }        
-
-
-        if (jsonResponse.status === "queued") {
-            // Display initial queue position to the user
-            document.getElementById('queuePosition').style.display = 'block';
-            document.getElementById('positionNumber').innerText = jsonResponse.position;
-            document.getElementById('response').innerText = "Your image is being generated, please wait...";
-            
-
-            // Replace setInterval with a while loop
-            let isCompleted = false;
-            // Initialize retry parameters
-            const maxRetries = 5;
-            let retryCount = 0;
-
-            // Existing code before the while loop remains unchanged
-
-            let everHiddenCancel = false
-
-            let queueLoops = 0
-
-            while (!isCompleted) {
-                try {
-                    const positionResponse = await fetch(`${API_BASE}/queue_position/${jsonResponse.request_id}`, {
-                        method: 'GET',
-                        headers: getDefaultHeaders() // Set the headers for the GET request
-                    });
-                    
-                    const positionData = await positionResponse.json();
-                    
-                    console.log(positionData);
-
-                    if (Number(positionData.position) < 3 ) {
-                        everHiddenCancel = true
-                    }
-
-                    
-
-                    if (everHiddenCancel) {
-                        document.getElementById('cancelButton').style.display = 'none';
-                    } else {
-                        if (queueLoops > 2) {
-                            document.getElementById('cancelButton').style.display = 'block';
-                        }
-                    }
-
-                    queueLoops += 1
-
-                    if(positionData.status == "error") {
-                        document.getElementById('response').innerText = "An error occurred: " + positionData.message;
-                        generateButton.disabled = false;
-                        generateButton.classList.remove('generating'); // Remove the class when there's an error
-                        document.getElementById('cancelButton').style.display = 'none';
-                        break; // Exit the loop if there's an error
-                    }
-                
-                    if(positionData.status == "not found") {
-                        document.getElementById('queuePosition').style.display = 'none';
-                        document.getElementById('response').innerText = "An error occurred: " + positionData.message;
-                        generateButton.disabled = false;
-                        generateButton.classList.remove('generating'); // Remove the class when there's an error
-                        document.getElementById('cancelButton').style.display = 'none';
-                        break; // Exit the loop if there's an error
-                    }
-                    
-                    if (positionData.status == "waiting") {
-                        retryCount = 0;
-                        document.getElementById('positionNumber').innerText = `${positionData.position}/${positionData.queue_length}`;
-                        await new Promise(resolve => setTimeout(resolve, nextCheckMS)); // Wait for 1 second before the next check
-                        nextCheckMS = 1250
-                    } else if (positionData.status === "completed") {
-                        retryCount = 0;
-                        document.getElementById('response').innerText = "Your image is ready and will be displayed shortly...";
-                        isCompleted = true; // Set the flag to exit the loop
-                        document.getElementById('queuePosition').style.display = 'none';
-                        const resultResponse = await fetch(`${API_BASE}/result/${positionData.request_id}`, {
-                            method: 'GET',
-                            headers: getDefaultHeaders()
-                        });
-                
-                        if (resultResponse.ok) {
-
-                            
-
-                            const results = await resultResponse.json();
-
-                            // update the creditsDisplay IF the results.fastqueue is true:
-                            if (results.fastqueue == true) {
-                                document.getElementById('creditsDisplay').innerText = results.credits;
-                            }
-
-                            base64Images = results.images;
-
-                            document.getElementById('imagesContainer').innerHTML = '';
-
-                            // get the time in ms:
-                            const time = new Date().getTime();
-
-                            if (results.misc_generationReadyBeep == true) {
-                                const audio = new Audio('https://www.jscammie.com/generationdone.wav');
-                                audio.play();
-                            }
-
-
-                            
-                            for (const [key, value] of Object.entries(results)) {
-                                console.log(`${key}: ${value}`);
-                            }
-
-                            // get the image history data:
-                            let allImageHistory = results.allImageHistory
-
-                            notAllowedBooruImageSpam = ["416790733031211009", "774138250179772437"]
-
-                            if (notAllowedBooruImageSpam.includes(accountId)) {
-                                textElement = document.createElement('p');
-                                textElement.innerText = "You've been flagged for spamming images to the booru, DO NOT upload images IF they are low quality / do not match the prompt used OR in general have alot of errors!";
-                                textElement.style.color = 'rgb(255, 200, 200)';
-                                // append in a div OUTSIDE/ABOVE the imagesContainer:
-                                document.getElementById('imagesContainer').parentNode.insertBefore(textElement, document.getElementById('imagesContainer'));
-                            }
-
-                            base64Images.forEach((image, index) => {
-
-
-                                // create a details summary that the buttons are in:
-                                const details = document.createElement('details');
-                                details.style.display = 'inline-block';
-
-                                // create a summary for the details:
-                                const summary = document.createElement('summary');
-                                summary.innerText = `Image #${index}'s Options`;
-                                details.appendChild(summary);
-
-
-
-
-                                let downloadName, downloadText, mediaElement;
-                                const time = new Date().getTime(); // Assuming 'time' variable needs to be defined
-                            
-                                if (data.request_type === "txt2video") {
-                                    // Update for video
-                                    image.base64 = 'data:video/mp4;base64,' + image.base64;
-                                    downloadName = `video-${time}-${index}.mp4`;
-                                    downloadText = 'Download Video';
-                            
-                                    // Create video element for MP4
-                                    mediaElement = document.createElement('video');
-                                    mediaElement.controls = true;
-                                    const sourceElement = document.createElement('source');
-                                    sourceElement.src = image.base64;
-                                    sourceElement.type = 'video/mp4';
-                                    // set the video to auto play and loop:
-                                    mediaElement.autoplay = true;
-                                    mediaElement.loop = true;
-                                    // set the width and height to follow the css width and height limits:
-                                    mediaElement.style.width = '100%';
-                                    mediaElement.style.height = 'auto';
-
-
-                                    mediaElement.appendChild(sourceElement);
-                                } else {
-                                    // Update for image
-                                    image.base64 = 'data:image/png;base64,' + image.base64;
-                                    downloadName = `image-${time}-${index}.png`;
-                                    downloadText = 'Download Image';
-                            
-                                    // Create image element for PNG
-                                    mediaElement = document.createElement('img');
-                                    mediaElement.src = image.base64;
-                                }
-                            
-                                mediaElement.style.display = 'inline';
-                                mediaElement.style.width = 'auto';
-                                mediaElement.style.height = 'auto';
-                            
-                                const container = document.createElement('div');
-                                container.style.display = 'inline-block';
-                                container.style.margin = '10px';
-                                container.appendChild(mediaElement);
-                            
-                                // Create download button
-                                const downloadButton = document.createElement('button');
-                                downloadButton.innerText = downloadText;
-                                downloadButton.style.display = 'block';
-                                downloadButton.style.marginTop = '10px';
-                            
-                                // Function to trigger download
-                                downloadButton.onclick = function() {
-                                    // Convert base64 to blob and trigger download
-                                    fetch(image.base64)
-                                        .then(res => res.blob())
-                                        .then(blob => {
-                                            const blobUrl = window.URL.createObjectURL(blob);
-                                            const tempLink = document.createElement('a');
-                                            tempLink.href = blobUrl;
-                                            tempLink.download = downloadName;
-                                            document.body.appendChild(tempLink);
-                                            tempLink.click();
-                                            document.body.removeChild(tempLink);
-                                            window.URL.revokeObjectURL(blobUrl);
-                                        });
-                                };
-
-
-                                // Create img2img button
-                                const img2imgButton = document.createElement('button');
-                                img2imgButton.innerText = 'Send to Img2Img';
-                                img2imgButton.style.display = 'block';
-                                img2imgButton.style.marginTop = '5px';
-                                img2imgButton.onclick = function() {
-                                    document.getElementById('img2imgCheckbox').checked = true;
-                                    document.getElementById('img2imgCheckbox').dispatchEvent(new Event('click'));
-                                    document.getElementById('img2imgCheckbox').dispatchEvent(new Event('change'));
-                                    // Assuming uploadedImage is an input of type 'file'
-                                    const dataUrlToFile = async (dataUrl, fileName) => {
-                                        const res = await fetch(dataUrl);
-                                        const blob = await res.blob();
-                                        return new File([blob], fileName, { type: 'image/png' });
-                                    };
-                                    dataUrlToFile(image.base64, downloadName).then(file => {
-                                        const dataTransfer = new DataTransfer();
-                                        dataTransfer.items.add(file);
-                                        document.getElementById('uploadedImage').files = dataTransfer.files;
-                                    });
-                                };
-
-                                // Create inpainting button
-                                const inpaintingButton = document.createElement('button');
-                                inpaintingButton.innerText = 'Send to Inpainting';
-                                inpaintingButton.style.display = 'block';
-                                inpaintingButton.style.marginTop = '5px';
-                                inpaintingButton.onclick = async function() {
-                                    // fire the click event for the inpainting checkbox:
-                                    document.getElementById('inpaintingCheckbox').checked = true;
-                                    document.getElementById('inpaintingCheckbox').dispatchEvent(new Event('click'));
-                                    document.getElementById('inpaintingCheckbox').dispatchEvent(new Event('change'));
-                                    const dataUrlToFile = async (dataUrl, fileName) => {
-                                        const res = await fetch(dataUrl);
-                                        const blob = await res.blob();
-                                        return new File([blob], fileName, { type: 'image/png' });
-                                    };
-                                    await dataUrlToFile(image.base64, downloadName).then(file => {
-                                        const dataTransfer = new DataTransfer();
-                                        dataTransfer.items.add(file);
-                                        document.getElementById('inpaintingImage').files = dataTransfer.files;
-                                    });
-                                    document.getElementById('inpaintingImage').dispatchEvent(new Event('change'));
-                                };
-
-                                let booruData; // Declare this globally so it's accessible in both functions
-
-                                function showBooruPopup(booruDataCurrent) {
-                                    event.preventDefault();
-
-                                    const booruPopupContent = document.getElementById('booruPopupContent');
-                                    const overlay = document.getElementById('overlayBooru');
-
-                                    // If the user clicks outside the popup, close it:
-                                    overlay.onclick = function() {
-                                        closeBooruPopup();
-                                    }
-
-                                    // Assign booruData for this image, waiting until the user clicks confirm
-                                    booruData = {
-                                        prompt: `${booruDataCurrent.prompt}`,
-                                        negative_prompt: `${booruDataCurrent.negative_prompt}`,
-                                        aspect_ratio: `${booruDataCurrent.aspect_ratio}`,
-                                        model: `${booruDataCurrent.model}`,
-                                        loras: `${booruDataCurrent.loras}`,
-                                        lora_strengths: `${booruDataCurrent.lora_strengths}`,
-                                        steps: `${booruDataCurrent.steps}`,
-                                        cfg: `${booruDataCurrent.cfg}`,
-                                        seed: `${booruDataCurrent.seed}`,
-                                        image_url: `${booruDataCurrent.image_url}`
-                                    };
-
-                                    // Insert the popup content
-                                    booruPopupContent.innerHTML = `
-                                        <button class="closeButton" onclick="closeBooruPopup()">×</button>
-                                        <h1>Upload to Booru</h1>
-                                        <p>By uploading to the booru you agree to the following:</p>
-                                        <ul>
-                                            <li>Child/Cub/Loli NSFW content are NOT ALLOWED!!!</li>
-                                            <br>
-                                            <li>Aged-Up Characters that look over the age of 18 are allowed, if they do not look over 18, the post will be removed!</li>
-                                            <br>
-                                            <li>By default, all content is hidden until a moderator approves it and gives it a safety rating (sfw, suggestive, nsfw).</li>
-                                            <br>
-                                            <li>ALL SETTINGS used to create an image are visible, if your content shows a word like "loli", even if it's sfw, it will be removed!</li>
-                                            <br>
-                                            <li>DO NOT SPAM THE BOORU WITH 1240987 IMAGES OF THE SAME OC IN SAME POSE / LOCATION</li>
-                                            <br>
-                                            <li>Realistic Feral are not allowed, only 2d/stylized 3d feral content are allowed</li>
-                                        </ul>
-                                        <p>If you agree to these rules/terms, then feel free to click below to upload to the booru, failure to comply with these rules will make you unable to post on the booru.</p>
-                                        <button id="confirmUploadButton" onclick="uploadToBooru()">Upload to Booru</button>
-                                    `;
-
-                                    document.getElementById('overlayBooru').style.display = 'block';
-                                    document.getElementById('booruPopupContent').style.display = 'block';
-
-                                    // Listen for the ESC key to close the popup
-                                    document.addEventListener('keydown', escCloseBooruPopup);
-                                }
-
-                                async function uploadToBooru() {
-                                    // Use the booruData stored when the popup was shown
-                                    const response = await fetch('/create-booru-image', {
-                                        method: 'POST',
-                                        headers: getDefaultHeaders(),
-                                        body: JSON.stringify(booruData)
-                                    });
-
-                                    const jsonResponse = await response.json();
-
-                                    if (jsonResponse.status === "success") {
-                                        alert('Image uploaded to Booru successfully!');
-                                        closeBooruPopup(); // Close the popup once the upload is successful
-                                    } else {
-                                        alert('Failed to upload image to Booru.');
-                                    }
-                                }
-
-                                function closeBooruPopup() {
-                                    document.getElementById('overlayBooru').style.display = 'none';
-                                    document.getElementById('booruPopupContent').style.display = 'none';
-                                    document.removeEventListener('keydown', escCloseBooruPopup); // Remove the keydown listener
-                                }
-
-                                function escCloseBooruPopup(event) {
-                                    if (event.key === 'Escape') {
-                                        closeBooruPopup();
-                                    }
-                                }
-
-                                // Assuming this is where the button creation happens in a loop for each image:
-                                if (allImageHistory[index] !== undefined) {
-
-                                    let uploadToBooruButton = document.createElement('button');
-
-                                    uploadToBooruButton.innerText = 'Upload to Booru';
-                                    uploadToBooruButton.style.display = 'block';
-                                    uploadToBooruButton.style.marginTop = '5px';
-                                    uploadToBooruButton.id = `uploadToBooruButton-${index}`;
-
-                                    uploadToBooruButton.onclick = function() {
-                                        const booruDataCurrent = allImageHistory[index];
-                                        showBooruPopup(booruDataCurrent); // Pass the current image data to the popup
-
-                                        // Embed the upload function directly in the onclick handler for the confirm button
-                                        document.getElementById('confirmUploadButton').onclick = async function() {
-                                            // Construct booruData dynamically
-                                            let booruData = {
-                                                prompt: booruDataCurrent.prompt,
-                                                negative_prompt: booruDataCurrent.negative_prompt,
-                                                aspect_ratio: booruDataCurrent.aspect_ratio,
-                                                model: booruDataCurrent.model,
-                                                loras: booruDataCurrent.loras,
-                                                lora_strengths: booruDataCurrent.lora_strengths,
-                                                steps: booruDataCurrent.steps,
-                                                cfg: booruDataCurrent.cfg,
-                                                seed: booruDataCurrent.seed,
-                                                image_url: booruDataCurrent.image_url
-                                            };
-
-                                            // Upload the image to the Booru
-                                            const response = await fetch('/create-booru-image', {
-                                                method: 'POST',
-                                                headers: getDefaultHeaders(),
-                                                body: JSON.stringify(booruData)
-                                            });
-
-                                            const jsonResponse = await response.json();
-
-                                            if (jsonResponse.status === "success") {
-                                                alert('Image uploaded to Booru successfully!');
-                                                closeBooruPopup(); // Close the popup after upload success
-                                                uploadToBooruButton.style.display = 'none'; // Hide the button after upload
-                                            } else {
-                                                alert('Failed to upload image to Booru.');
-                                            }
-                                        };
-                                    };
-
-                                    container.appendChild(uploadToBooruButton);
-
-                                }
-
-                                
-                                // append the buttons to the details:
-                                details.appendChild(downloadButton);
-                                details.appendChild(img2imgButton);
-                                details.appendChild(inpaintingButton);
-
-                                container.appendChild(details);
-
-                                document.getElementById('imagesContainer').appendChild(container);
-                            });
-
-                            let additionalInfo = results.additionalInfo;
-                            let executionshort = additionalInfo.executiontime.toFixed(2);
-
-                            // document.getElementById('additionalInfo').innerHTML = 
-                            //     `<p>Seed: ${additionalInfo.seed}<br>` +
-                            //     `Execution Time: ${executionshort}s<br>` +
-                            //     `Loras: ${additionalInfo.loras}<br>`;
-
-                            document.getElementById('additionalInfo').innerHTML =
-                                `<p>Seed: ${additionalInfo.seed}<br>`
-                                // `Execution Time: ${executionshort}s</p>`;
-
-                        
-                        } else {
-                            // Handle errors or different response types
-                            console.error('Failed to get images:', await resultResponse.text());
-                        }
-                        generateButton.disabled = false;
-                    }
-                } catch (error) {
-                    console.error('An error occurred during position check:', error);
-                
-                    // Check if the error is related to the server being unavailable
-                    const isServerDown = error.message.includes('server not responding') || error.status === 503;
-                
-                    if (isServerDown) {
-                        // If the server is down, wait for a longer period before retrying
-                        const retryDelayInSeconds = 5; // Adjust this value based on your needs
-                        console.log(`Server is down, retrying in ${retryDelayInSeconds} seconds...`);
-                        await new Promise(resolve => setTimeout(resolve, retryDelayInSeconds * 1000));
-                        continue; // Retry the loop after the delay
-                    } else {
-                        // Handle other errors with the existing retry strategy
-                        if (retryCount < maxRetries) {
-                            retryCount++;
-                            console.log(`Retry attempt ${retryCount} due to error: ${error.message}`);
-                            document.getElementById('response').innerText = `Temporary error, retrying... (${retryCount}/${maxRetries})`;
-                            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential back-off could be considered here
-                            continue; // Skip the rest of the loop and retry
-                        } else {
-                            // Handle the error after max retries have been reached
-                            document.getElementById('response').innerText = "An error occurred after multiple retries: " + error.message;
-                            generateButton.disabled = false;
-                            generateButton.textContent = 'Generate Image';
-                            generateButton.classList.remove('generating');
-                            document.getElementById('cancelButton').style.display = 'none';
-                            break; // Exit the loop if max retries reached
-                        }
-                    }
+        const result = await response.json();
+
+        uploadsToBooru += 1;
+
+        // if uploadsToBooru is 2, then remove the upload to booru buttons off all images:
+        if (uploadsToBooru >= 2) {
+            const buttons = document.querySelectorAll('button[id^="booruButton-"]');
+            buttons.forEach(button => button.remove());
+        }
+        
+        if (result.status == "success") {
+            let options = {
+                message: 'Image uploaded to Booru successfully!',
+                question: true,
+                options: {
+                    okay: function() {}
                 }
             }
-            // After the loop, you can re-enable the button if needed
-            generateButton.disabled = false;
-            generateButton.textContent = 'Generate Image';
-            generateButton.classList.remove('generating');
-            document.getElementById('response').innerText = ''
-            document.getElementById('cancelButton').style.display = 'none';
-            populateImagesSrcList();
+            await globalAlert(options);
+            closeBooruPopup();
+            // remove the button:
+            const button = funcElementById('booruButton-' + booruData.index);
+            button.parentNode.removeChild(button);
+        } else if (result.status == "error") {
+            await globalAlert({ message: result.message, question: true, options: { okay: function() {} } });
+        } else {
+            await globalAlert({ message: 'Failed to upload image to Booru.', question: true, options: { okay: function() {} } });
         }
     } catch (error) {
-        console.error('An error occurred:', error);
-        document.getElementById('response').innerText = "An error occurred: " + error.message;
-        generateButton.disabled = false;
-        generateButton.textContent = 'Generate Image';
-        generateButton.classList.remove('generating');
-        document.getElementById('cancelButton').style.display = 'none';
+        console.error('Booru upload error:', error);
+        alert('Failed to upload image to Booru.');
     }
-})
+};
+
+const closeBooruPopup = () => {
+    funcElementById('overlayBooru').style.display = 'none';
+    funcElementById('booruPopupContent').style.display = 'none';
+    document.removeEventListener('keydown', handleBooruEscapeKey);
+};
+
+const handleBooruEscapeKey = (event) => {
+    if (event.key === 'Escape') {
+        closeBooruPopup();
+    }
+};
+
+let everHiddenCancel = false;
+
+// Update queue handling functions
+const handleQueueAndGeneration = async (jsonResponse) => {
+    if (jsonResponse.status !== "queued") return;
+    if (cancelledGeneration) return;
+
+    UIState.queuePosition.style.display = 'block';
+    UIState.updateQueuePosition(jsonResponse.position, jsonResponse.queue_length || '?');
+    UIState.response.innerText = "Your image is being generated, please wait...";
+
+    let isCompleted = false;
+    let retryCount = 0;
+    let queueLoops = 0;
+    let nextCheckMS = 1250;
+
+    while (!isCompleted && retryCount < 5) {
+        try {
+
+            if (cancelledGeneration) return;
+
+            requestId = jsonResponse.request_id;
+
+            const positionData = await checkQueuePosition();
+            
+            if (!handlePositionResponse(positionData, queueLoops)) {
+                break;
+            }
+
+            if (positionData.status === "completed") {
+                await handleCompletedGeneration();
+                isCompleted = true;
+            } else if (positionData.status === "waiting") {
+                retryCount = 0;
+                UIState.updateQueuePosition(positionData.position, positionData.queue_length);
+                await new Promise(resolve => setTimeout(resolve, nextCheckMS));
+            }
+
+            queueLoops++;
+
+        } catch (error) {
+            retryCount++;
+            if (cancelledGeneration) return;
+            console.error('Queue check error:', error);
+            UIState.response.innerText = `Temporary error, retrying... (${retryCount}/5)`;
+            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+        }
+    }
+
+    if (!isCompleted) {
+        UIState.setError('Maximum retry attempts reached');
+    }
+
+    UIState.setGenerating(false);
+    UIState.response.innerText = '';
+    UIState.cancelButton.style.display = 'none';
+};
+
+
+
+const handlePositionResponse = (positionData, queueLoops) => {
+    if (positionData.status === "error") {
+        UIState.setError(positionData.message);
+        return false;
+    }
+
+    if (positionData.status === "not found") {
+        UIState.queuePosition.style.display = 'none';
+        UIState.setError(positionData.message);
+        return false;
+    }
+
+    const position = Number(positionData.position);
+    
+    if (position < 3) {
+        everHiddenCancel = true;
+        UIState.cancelButton.style.display = 'none';
+    } else if (queueLoops > 2 && !everHiddenCancel) {
+        UIState.cancelButton.style.display = 'block';
+    }
+
+    if (positionData.status === "waiting") {
+        UIState.updateQueuePosition(position, positionData.queue_length);
+    }
+
+    return true;
+};
+
+// Initialize cancel button handler
+funcElementById('cancelButton').addEventListener('click', async function(event) {
+    event.preventDefault();
+    UIState.setGenerating(true);
+    UIState.generateButton.textContent = 'Cancelling...';
+
+    try {
+        const response = await fetch(`${API_BASE}/cancel_request/${requestId}`, {
+            method: 'GET',
+            headers: getDefaultHeaders()
+        });
+
+        const cancelResponse = await response.json();
+
+        cancelledGeneration = true;
+        
+        if (cancelResponse.status == "cancelled") {
+            UIState.response.innerText = "Generation has been cancelled";
+            UIState.setGenerating(false);
+            UIState.cancelButton.style.display = 'none';
+        } else {
+            UIState.setError(cancelResponse.message);
+        }
+    } catch (error) {
+        UIState.setError(error.message);
+    }
+});

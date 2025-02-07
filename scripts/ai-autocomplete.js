@@ -53,6 +53,9 @@ function initializePromptAutocomplete() {
             let { phrase: phraseAtCursor, start, end } = getPhraseAtCursor(textarea);
 
             if (!phraseAtCursor || phraseAtCursor.trim() === "") {
+                // clear the autocomplete div if the phrase is empty
+                let searchResultsDiv = document.getElementById("autocomplete-div");
+                searchResultsDiv.innerHTML = "";
                 return;
             }
 
@@ -77,6 +80,8 @@ function initializePromptAutocomplete() {
 
                     // remove any empty tags:
                     searchTags = searchTags.filter(tag => tag.tag !== "");
+
+                    index = 0
 
                     // Display the tag along with its score, but only paste the tag
                     searchTags.forEach(result => {
@@ -112,8 +117,14 @@ function initializePromptAutocomplete() {
                             // Replace the exact phrase at the cursor with the cleaned & escaped tag, keeping text before and after the cursor intact
                             textarea.value = searchValue.slice(0, start) + `${escapedTag}, ` + searchValue.slice(end);
 
-                            let inputEvent = new Event('input');
-                            textarea.dispatchEvent(inputEvent);
+                            // set the cursor position to the end of the tag:
+                            textarea.focus()
+                            textarea.selectionStart = start + escapedTag.length + 2
+                            textarea.selectionEnd = start + escapedTag.length + 2
+
+
+                            // Trigger an input event to update the textarea:
+                            textarea.dispatchEvent(new Event('input'));
                         });
 
                         searchResultsDiv.appendChild(resultDiv);
@@ -128,7 +139,7 @@ function initializePromptAutocomplete() {
     });
 }
 
-// Initialize the autocomplete feature
-$(document).ready(function() {
+// Initialize the autocomplete feature once everything else is loaded:
+document.addEventListener("DOMContentLoaded", function () {
     initializePromptAutocomplete();
 });

@@ -44,6 +44,8 @@
 
         var userProfile = {
             accountId: `<%= userProfile?.accountId %>`,
+            followedAccounts: <%- JSON.stringify(userProfile?.followedAccounts) %>,
+            blockedAccounts: <%- JSON.stringify(userProfile?.blockedAccounts) %>,
             }
 
         <% userBooru.forEach(image => { %>
@@ -64,13 +66,24 @@
                 thumbnailMade: Boolean(<%=image.thumbnailMade%>),
                 timestamp: `<%=image.timestamp%>`,
                 safety: `<%=image.safety%>`,
-                upvotes: <%- JSON.stringify(image.upvotes) %>,
-                downvotes: <%- JSON.stringify(image.downvotes) %>,
+                upvotes: `<%= image.upvotes ? image.upvotes.length : 0 %>`,
+                downvotes: `<%= image.downvotes ? image.downvotes.length : 0 %>`,
+                comments: `<%=image.comments?.length? image.comments.length : 0%>`
             }
         <% }) %>
 
         // reverse the order of the booru posts
         masterBooruData = Object.fromEntries(Object.entries(masterBooruData).reverse())
+
+        var masterAccountData = {}
+        <% booruAccounts.forEach(account => { %>
+            masterAccountData[`<%=account.accountId%>`] = {
+                accountId: `<%=account.accountId%>`,
+                username: `<%=account.username%>`,
+                profileImg: `<%=account.profileImg%>`,
+                level: `<%=account.level%>`,
+            }
+        <% }) %>
 
     </script>
 
@@ -144,63 +157,160 @@
     </style>
 
     <script>
-    
-        let profileProfileDiv = document.getElementById('profileProfileDiv')
 
-        let profileProfileHTML = `
-        <div class="profileProfileTop">
-            <div>
-                <img class="profileImage" src="${profileProfile.profileImg}" alt="Profile Image">
-            </div>
-            <div class="profileProfileInfo">
-                <h1>${profileProfile.username}</h1>
-                <p>${profileProfile.userBio}</p>
-            </div>
-            ${userProfile.accountId === profileProfile.accountId ? `<a href="/settings">Edit Profile</a>` : ""}
-        </div>
-        <div id="booruPosts" class="booruPostsGrid"></div>
-        `
+        async function followAccount(accountId) {
+            fetch(`/follow-account/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({accountId: accountId}),
+            }).then(response => response.json())
+            .then(data => {
+                userProfile.followedAccounts = data.followedAccounts
+                createProfileTop()
+            })
+        }
 
-        // set the profileBooruDiv to be profileBooruDiv
-        profileProfileDiv.innerHTML = profileProfileHTML
-
-        let booruPostsDiv = document.getElementById('booruPosts')
-
-        booruPostsDivHTML = ""
-
-        for (const [key, value] of Object.entries(masterBooruData)) {
-            let newContentUrl = ""
-
-            if (value.thumbnailMade) {
-                newContentUrl = value.content_url.split(".png")[0] + "-thumb.png"
-            } else {
-                newContentUrl = value.content_url
-            }
-
-            let booruThumbnailHTML = `
-                <img src="${newContentUrl}" alt="Booru Image" style="max-width: 100%;" loading="lazy"/>
-            `
-
-            let postDiv = `
-                <div class="booruPost">
-                    <h3>${profileProfile.username} | ${value.safety.toUpperCase()}</h3>
-                    <a href="/booru/post/${value.booru_id}">
-                        ${booruThumbnailHTML}
-                    </a>
-                    <div class="votesDiv">
-                        <button id="upvoteButton${value.booru_id}" onclick="votePost('upvote', '${value.booru_id}')">${value.upvotes.length} ⬆️</button>
-                        <button id="downvoteButton${value.booru_id}" onclick="votePost('downvote', '${value.booru_id}')">${value.downvotes.length} ⬇️</button>
-                    </div>
-                </div>
-            `
-            
-            booruPostsDivHTML += postDiv
+        async function blockAccount(accountId) {
+            fetch(`/block-account/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({accountId: accountId}),
+            }).then(response => response.json())
+            .then(data => {
+                userProfile.blockedAccounts = data.blockedAccounts
+                createProfileTop()
+            })
         }
 
 
+        async function createProfileTop() {
+        
+            let profileProfileDiv = document.getElementById('profileProfileDiv')
 
-        booruPostsDiv.innerHTML = booruPostsDivHTML
+            let followButton = null
+            let blockButton = null  
+            if (userProfile.accountId !== profileProfile.accountId) {
+                followButton = document.createElement("button")
+                blockButton = document.createElement("button")
+            }
 
+            if (userProfile.accountId !== profileProfile.accountId) {
+                if (userProfile.followedAccounts.includes(profileProfile.accountId)) {
+                    followButton.innerHTML = "Unfollow"
+                    followButton.onclick = function() {
+                        followAccount(profileProfile.accountId)
+                    }
+                } else {
+                    followButton.innerHTML = "Follow"
+                    followButton.onclick = function() {
+                        followAccount(profileProfile.accountId)
+                    }
+                }
+
+                if (userProfile.blockedAccounts.includes(profileProfile.accountId)) {
+                    blockButton.innerHTML = "Unblock"
+                    blockButton.onclick = function() {
+                        blockAccount(profileProfile.accountId)
+                    }
+                } else {
+                    blockButton.innerHTML = "Block"
+                    blockButton.onclick = function() {
+                        blockAccount(profileProfile.accountId)
+                    }
+                }
+            }
+
+            // clear it:
+            profileProfileDiv.innerHTML = "";
+
+            let profileProfileHTML = `
+                <div class="profileProfileTop">
+                    <div>
+                        <img class="profileImage" src="${profileProfile.profileImg}" alt="Profile Image">
+                    </div>
+                    <div class="profileProfileInfo">
+                        <h1>${profileProfile.username}</h1>
+                        <p>${profileProfile.userBio}</p>
+                        <div id="actionButtons"></div>
+                    </div>
+                    ${userProfile.accountId === profileProfile.accountId ? `<a href="/settings">Edit Profile</a>` : ""}
+                </div>
+                <div id="booruPosts" class="booruPostsGrid"></div>
+            `;
+
+            profileProfileDiv.innerHTML = profileProfileHTML;
+
+            // Append the buttons programmatically
+            const actionButtonsDiv = document.getElementById("actionButtons");
+
+            if (followButton) actionButtonsDiv.appendChild(followButton);
+            if (blockButton) actionButtonsDiv.appendChild(blockButton);
+
+
+            createBooruPosts()
+
+        }
+
+        async function createBooruPosts() {
+
+            let booruPostsDiv = document.getElementById('booruPosts')
+
+            booruPostsDivHTML = ""
+
+            for (const [key, value] of Object.entries(masterBooruData)) {
+
+                // if (value.safety === "na") {
+                //     continue
+                // }
+
+                let newContentUrl = ""
+
+                if (value.thumbnailMade) {
+                    newContentUrl = value.content_url.split(".png")[0] + "-thumb.png"
+                } else {
+                    newContentUrl = value.content_url
+                }
+
+                let booruThumbnailHTML = `
+                    <img src="${newContentUrl}" alt="Booru Image" style="max-width: 100%;" loading="lazy"/>
+                `
+
+                let postDiv = `
+                    <div class="booruPost">
+                        <div class="abovePost">
+                            <a href="https://www.jscammie.com/profile/${value.account_id}" target="_blank">
+                                <img src="${masterAccountData[value.account_id].profileImg}" alt="Profile Image" />
+                            </a>
+                            <div class="userDetails">
+                                <p class="username">${masterAccountData[value.account_id].username}</p>
+                                <p class="safety">${value.safety.toUpperCase()}</p>
+                            </div>
+                        </div>
+                        <a href="/booru/post/${value.booru_id}">
+                            ${booruThumbnailHTML}
+                        </a>
+                        <div class="votesDiv">
+                            <button id="upvoteButton${value.booru_id}" onclick="votePost('upvote', '${value.booru_id}')">${value.upvotes} ⬆️</button>
+                            <button id="commentButton${value.booru_id}" onclick="window.open('/booru/post/${value.booru_id}', '_blank')">${value.comments} 💬</button>
+                            <button id="downvoteButton${value.booru_id}" onclick="votePost('downvote', '${value.booru_id}')">${value.downvotes} ⬇️</button>
+                        </div>
+                    </div>
+                `
+                
+                booruPostsDivHTML += postDiv
+            }
+
+
+
+            booruPostsDiv.innerHTML = booruPostsDivHTML
+
+        }
+
+        createProfileTop()
     
     </script>
 

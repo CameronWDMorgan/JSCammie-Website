@@ -69,8 +69,8 @@
             booruImage.content_url = `<%= booruImage.content_url %>`
             booruImage.timestamp = `<%= booruImage.timestamp %>`
             booruImage.safety = `<%= booruImage.safety %>`
-            booruImage.upvotes = <%- JSON.stringify(booruImage.upvotes) %>
-            booruImage.downvotes = <%- JSON.stringify(booruImage.downvotes) %>
+            booruImage.upvotes = `<%= booruImage.upvotes ? booruImage.upvotes.length : 0 %>`
+            booruImage.downvotes = `<%= booruImage.downvotes ? booruImage.downvotes.length : 0 %>`
 
             function exportAIData() {
 
@@ -130,10 +130,45 @@
                 }
             }
 
-            function deletePost() {
-                if (confirm("Are you sure you want to delete this post?")) {
-                    window.location.href = `/booru/delete/${booruImage.booru_id}`
+            async function deletePost() {
+                // ask the user to confirm the deletion:
+                let confirmDelete = await globalAlert({ message: "Are you sure you want to delete this post?", question: true, options: {yes: function(){return "yes"}, no: function(){}} })
+                if (confirmDelete != "yes") {
+                    return
                 }
+                // send the delete request:
+                fetch(`/booru/delete`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        reason: "self-delete",
+                        booru_id: booruImage.booru_id,
+                    }),
+                })
+                .then((res) => res.json())
+                .then(async (data) => {
+                    if (data.status == "success") {
+                        // ("Post has been deleted successfully.");
+                        options = {
+                            message: "Post has been deleted successfully.",
+                            question: true,
+                            options: {
+                                okay: function (){}
+                            }
+                        }
+                        window.location.href = "/profile/" + postProfile.accountId
+                    } else {
+                        let respose = await globalAlert({
+                            message: "Failed to delete post. Please try again later.",
+                            question: true,
+                            options: {
+                                okay: function (){}
+                            }
+                        })
+                    }
+                })
             }
 
             window.onload = () => {
@@ -164,8 +199,8 @@
                                      
                     <img class="postImage" src="${booruImage.content_url}" alt="Booru Image" style="max-width: 100%;"/>
                     <div class="postButtons" id="postButtons">
-                        <button id="upvoteButton${booruImage.booru_id}" onclick="votePost('upvote', '${booruImage.booru_id}')">${booruImage.upvotes.length} ⬆️</button>
-                        <button id="downvoteButton${booruImage.booru_id}" onclick="votePost('downvote', '${booruImage.booru_id}')">${booruImage.downvotes.length} ⬇️</button>
+                        <button id="upvoteButton${booruImage.booru_id}" onclick="votePost('upvote', '${booruImage.booru_id}')">${booruImage.upvotes} ⬆️</button>
+                        <button id="downvoteButton${booruImage.booru_id}" onclick="votePost('downvote', '${booruImage.booru_id}')">${booruImage.downvotes} ⬇️</button>
                         ${moderatorButtons}
                         ${postAccountIdButtons}
                         <button onclick="exportAIData()">Export to .AIDATA</button>
@@ -344,8 +379,9 @@
                         } else if (userProfile.badges.moderator) {
                             // show delete button for post owner and moderators:
                             commentButtons = `
-                                ${comment.commentId}
-                                <button onclick="deleteComment('${comment.commentId}')">Delete</button>
+                                <button onclick="deleteComment('${comment.commentId}')">Mod Delete</button>
+                                <button onclick="voteComment('upvote', '${comment.commentId}')">${comment.upvotes}⬆️</button>
+                                <button onclick="voteComment('downvote', '${comment.commentId}')">${comment.downvotes}⬇️</button>
                             `
                         } else {
                             commentButtons = `

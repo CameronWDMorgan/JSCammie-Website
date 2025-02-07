@@ -15,6 +15,10 @@
 
     gtag('config', 'G-K3KJJKS1R4');
     </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
     
 </head>
 <body>
@@ -30,9 +34,190 @@
         
         <h1>Credits History</h1>
 
+        <div>
+            <!-- Tab Buttons -->
+            <div style="margin-bottom: 10px;">
+                <button onclick="showGraph('positive')">Positive Changes</button>
+                <button onclick="showGraph('negative')">Negative Changes</button>
+                <button onclick="showGraph('combined')">Combined Changes</button>
+            </div>
+
+            <!-- Graph Canvas -->
+            <canvas id="credits-history-graph" width="800" height="400"></canvas>
+        </div>
+
+
+        <br>
+
         <div class="credits-history-container" id="credits-history"></div>
 
     </div>
+
+    <script>
+        var creditsHistory = [];
+
+        <% for (let i = 0; i < creditsHistory.length; i++) { %>
+            creditsHistory.push({
+                accountId: "<%= creditsHistory[i].accountId %>",
+                previousCredits: Number("<%= creditsHistory[i].previousCredits %>"),
+                newCredits: Number("<%= creditsHistory[i].newCredits %>"),
+                timestamp: new Date(<%= creditsHistory[i].timestamp %>),
+                message: "<%= creditsHistory[i].message %>",
+                operation: "<%= creditsHistory[i].newCredits < creditsHistory[i].previousCredits ? 'minus' : 'plus' %>",
+                difference: ""
+            });
+        <% } %>
+
+        // Calculate differences for each transaction
+        for (let i = 0; i < creditsHistory.length; i++) {
+            const currentHistory = creditsHistory[i];
+            currentHistory.difference =
+                currentHistory.operation === "minus"
+                    ? currentHistory.newCredits - currentHistory.previousCredits // Negative for loss
+                    : currentHistory.newCredits - currentHistory.previousCredits; // Positive for gain
+        }
+
+        // Reverse to make recent transactions first
+        creditsHistory.reverse();
+
+        // Aggregate data week by week
+        const weeklyData = { positive: {}, negative: {}, combined: {} };
+        creditsHistory.forEach((entry) => {
+            const parsedTimestamp = new Date(entry.timestamp);
+            if (isNaN(parsedTimestamp.getTime())) {
+                console.error("Invalid timestamp:", entry.timestamp);
+                return; // Skip invalid entry
+            }
+
+            const weekStart = new Date(parsedTimestamp);
+            weekStart.setDate(weekStart.getDate() - weekStart.getDay()); // Start of the week (Sunday)
+            const weekKey = weekStart.toISOString().split("T")[0]; // Week start date as key
+
+            // Initialize keys
+            if (!weeklyData.positive[weekKey]) weeklyData.positive[weekKey] = 0;
+            if (!weeklyData.negative[weekKey]) weeklyData.negative[weekKey] = 0;
+            if (!weeklyData.combined[weekKey]) weeklyData.combined[weekKey] = 0;
+
+            // Add to the appropriate dataset
+            if (entry.difference > 0) {
+                weeklyData.positive[weekKey] += entry.difference;
+            } else if (entry.difference < 0) {
+                weeklyData.negative[weekKey] += entry.difference;
+            }
+            weeklyData.combined[weekKey] += entry.difference; // Add to combined data
+        });
+
+        // Prepare data for charts
+        const labels = Object.keys(weeklyData.combined).sort();
+        const data = {
+            positive: labels.map((week) => weeklyData.positive[week] || 0),
+            negative: labels.map((week) => weeklyData.negative[week] || 0),
+            combined: labels.map((week) => weeklyData.combined[week] || 0),
+        };
+
+        // Initialize Chart.js
+        let chartInstance = null;
+
+        function renderGraph(type) {
+            const ctx = document.getElementById("credits-history-graph").getContext("2d");
+            if (chartInstance) {
+                chartInstance.destroy(); // Destroy existing chart before re-rendering
+            }
+
+            const backgroundColor = {
+                positive: "rgba(75, 192, 192, 0.2)",
+                negative: "rgba(255, 99, 132, 0.2)",
+                combined: data.combined.map(value =>
+                    value < 0 ? "rgba(255, 99, 132, 0.2)" : "rgba(75, 192, 192, 0.2)"
+                ),
+            };
+
+            const borderColor = {
+                positive: "rgba(75, 192, 192, 1)",
+                negative: "rgba(255, 99, 132, 1)",
+                combined: data.combined.map(value =>
+                    value < 0 ? "rgba(255, 99, 132, 1)" : "rgba(75, 192, 192, 1)"
+                ),
+            };
+
+            chartInstance = new Chart(ctx, {
+                type: "bar",
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: `${type.charAt(0).toUpperCase() + type.slice(1)} Changes`,
+                            data: data[type],
+                            backgroundColor: Array.isArray(backgroundColor[type])
+                                ? backgroundColor[type]
+                                : new Array(labels.length).fill(backgroundColor[type]),
+                            borderColor: Array.isArray(borderColor[type])
+                                ? borderColor[type]
+                                : new Array(labels.length).fill(borderColor[type]),
+                            borderWidth: 2,
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            labels: {
+                                color: "#fff", // White text for legend
+                            },
+                        },
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: "Week Starting",
+                                color: "#fff", // White text for axis title
+                            },
+                            ticks: {
+                                color: "#fff", // White text for x-axis labels
+                            },
+                            grid: {
+                                color: "rgba(255, 255, 255, 0.1)", // White grid lines
+                            },
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: "Credits Change",
+                                color: "#fff", // White text for axis title
+                            },
+                            ticks: {
+                                color: "#fff", // White text for y-axis labels
+                                callback: function (value) {
+                                    return value.toLocaleString(); // Format y-axis values
+                                },
+                            },
+                            grid: {
+                                color: "rgba(255, 255, 255, 0.1)", // White grid lines
+                            },
+                        },
+                    },
+                    layout: {
+                        backgroundColor: "#333", // Dark background for the entire chart area
+                    },
+                },
+            });
+        }
+
+        // Show the selected graph
+        function showGraph(type) {
+            renderGraph(type);
+        }
+
+        // Render combined graph by default
+        renderGraph("combined");
+    </script>
+
+
+
+
 
     <style>
         /* Container Styling */
@@ -119,41 +304,6 @@
 
 
     <script>
-        // const creditsHistorySchema = new Schema({
-        //     accountId: { type: String, required: true },
-        //     previousCredits: { type: String, required: true },
-        //     newCredits: { type: String, required: true },
-        //     timestamp: { type: Number, required: true },
-        //     message: { type: String, default: "" }
-        // });
-
-        let creditsHistory = []
-
-        <% for (let i = 0; i < creditsHistory.length; i++) { %>
-            creditsHistory.push({
-                accountId: "<%= creditsHistory[i].accountId %>",
-                previousCredits: "<%= creditsHistory[i].previousCredits %>",
-                newCredits: "<%= creditsHistory[i].newCredits %>",
-                timestamp: "<%= creditsHistory[i].timestamp %>",
-                message: "<%= creditsHistory[i].message %>",
-                operation: "<%= creditsHistory[i].newCredits < creditsHistory[i].previousCredits ? 'minus' : 'plus' %>",
-                difference: ""
-            })
-        <% } %>
-
-        // set the difference for each operation:
-        for (let i = 0; i < creditsHistory.length; i++) {
-            currentHistory = creditsHistory[i]
-
-            if (currentHistory.operation === "minus") {
-                currentHistory.difference = currentHistory.previousCredits - currentHistory.newCredits
-            } else {
-                currentHistory.difference = currentHistory.newCredits - currentHistory.previousCredits
-            }
-        }
-
-        // reverse the array so the most recent transactions are at the top:
-        creditsHistory.reverse()
 
         let creditsHistoryHtml = "";
 
@@ -170,7 +320,7 @@
             leftDiv.innerHTML = `
                 <div class="${currentHistory.operation === 'minus' ? 'minus-class' : 'plus-class'}">
                     <p>
-                        ${currentHistory.operation === 'minus' ? '-' : '+'}${currentHistory.difference} Credits
+                        ${currentHistory.operation != "minus" ? "+" : ""}${currentHistory.difference} Credits
                     </p>
                     <p>
                         Running Total: ${currentHistory.newCredits} Credits

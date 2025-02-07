@@ -2,9 +2,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FREE Stable Diffusion AI Generator FLUX/PDXL/SD1.5 | JSCammie.com</title>
-    <meta name="description" content="Free FLUX, PDXL and SD 1.5 Stable Diffusion Generator | Generate free images SFW & NSFW with multiple models, loras & more!">
-    <meta name="keywords" content="no sign up, no restrictions, regional prompt, regional prompter, regional prompting, comfyui, flux ai, flux dev, flux schnell, flux loras, flux free, flux ai free, nsfw, uncensored, free, online, inpainting, img2img, txt2img, stable diffusion, ai image generator, sdxl ai image generator, ai free online, sfw, nsfw, sdxl, sd1.5, loras, lora, embeddings, pdxl, pony diffusion">
+    <title>FREE AI Image Generator | JSCammie.com</title>
+    <meta name="description" content="Free Illustrious, PDXL, Stable Diffusion Generator | Generate free images SFW & NSFW with multiple models, loras & more!">
+    <meta name="keywords" content="mobians.ai, illustrious, illustrious wai, illustrious loras, no sign up, no restrictions, regional prompt, regional prompter, regional prompting, comfyui, nsfw, uncensored, free, online, inpainting, img2img, txt2img, stable diffusion, ai image generator, pdxl ai image generator, ai free online, sfw, nsfw, pdxl, sd1.5, loras, lora, embeddings, pdxl, pony diffusion">
     <meta name="author" content="JSCammie">
 
     <%- include('../partials/_headerAll') %>
@@ -25,43 +25,41 @@
     <style>
 
 
-    .container {
-        display: flex;
-        flex-direction: column;
-        /* same width for both: */
-        width: 100%;
-        flex-grow: 1;
-        flex-shrink: 1;
-        justify-content: center;
-        flex-basis: 0%;
-    }
-
-    .flex-under-div {
-        margin: 20px;
-        width: auto;
-    }
-
-    .flex-div {
-        width: auto;
-    }
-
-    @media (min-width: 1081px) {
         .container {
-            flex-direction: row;
+            display: flex;
+            flex-direction: column;
+            /* same width for both: */
+            width: 100%;
+            flex-grow: 1;
+            flex-shrink: 1;
+            justify-content: center;
+            flex-basis: 0%;
         }
 
         .flex-under-div {
-            margin-top: 20px;
-            margin: 0px;
-            width: 50%;
+            margin: 20px;
+            width: auto;
         }
 
         .flex-div {
-            width: 50%;
+            width: auto;
         }
-    }
 
+        @media (min-width: 1081px) {
+            .container {
+                flex-direction: row;
+            }
 
+            .flex-under-div {
+                margin-top: 20px;
+                margin: 0px;
+                width: 50%;
+            }
+
+            .flex-div {
+                width: 50%;
+            }
+        }
 
         li{
             list-style-type:square;
@@ -375,7 +373,7 @@
             display: flex;
             justify-content: center; /* Centers horizontally */
             align-items: center;     /* Centers vertically */
-            z-index: 1000; /* Ensure it's above other elements */
+            z-index: 800; /* Ensure it's above other elements */
         }
 
         #overlayImage {
@@ -413,6 +411,350 @@
 
 </head>
 <body>
+
+    <script>
+    
+        function observeChildChanges(targetNode, callback, customEventName = null) {
+            if (!targetNode) {
+                console.warn('Target node is not provided or does not exist.');
+                return null;
+            }
+
+            const observer = new MutationObserver((mutationsList) => {
+                for (const mutation of mutationsList) {
+                    if (mutation.type === 'childList') {
+                        callback(mutation);
+                    }
+                }
+            });
+
+            // Start observing the target node for childList changes
+            observer.observe(targetNode, { childList: true });
+
+            // Optionally attach a custom event listener
+            if (customEventName) {
+                targetNode.addEventListener(customEventName, () => callback({ type: 'customEvent' }));
+            }
+
+            // Return the observer instance to allow manual disconnection if needed
+            return observer;
+        }
+
+
+    
+    </script>
+
+    <style>
+    .modelSelectionDiv {
+        display: none;
+        position: fixed;
+        z-index: 102235440 !important;
+        width: 90%;
+        max-height: calc(100vh - 20px); /* Ensures the modal fits within the viewport */
+        top: 10px; /* Provides a small margin from the top */
+        left: 50%;
+        transform: translateX(-50%); /* Centers the modal horizontally */
+        background-color: rgba(0, 0, 0, 0.8);
+        overflow-y: auto; /* Enables vertical scrolling if content overflows */
+        border-radius: 10px;
+        box-sizing: border-box;
+        padding: 10px;
+    }
+
+    .modelGrid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 10px;
+        padding: 20px;
+        max-width: 100%;
+        width: 100%;
+        margin: 0 auto;
+    }
+
+    .modelSelectionCard {
+        background-color: #353535;
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid #888;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        color: white;
+        cursor: pointer;
+        transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .modelSelectionCard:hover {
+        transform: translateY(-5px);
+        border-color: #1e90ff;
+    }
+
+    .modelSelectionCard.selected {
+        border-color: #1e90ff;
+        border: 2px solid #1e90ff;
+        box-shadow: 0 0 10px rgb(0, 128, 255);
+    }
+
+    .modelSelectionCard img {
+        width: 100%;
+        height: 150px;
+        object-fit: cover;
+        border-radius: 5px;
+    }
+
+    .closeButton {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        font-size: 24px;
+        color: white;
+        cursor: pointer;
+        background: transparent;
+        border: none;
+    }
+
+    @media (max-width: 768px) {
+        .modelGrid {
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            padding: 10px;
+        }
+
+        .modelSelectionCard {
+            padding: 8px;
+        }
+
+        .modelSelectionCard img {
+            height: 120px;
+        }
+
+        .closeButton {
+            font-size: 20px;
+        }
+    }
+
+    .modelOverlay {
+        display: none;
+        position: fixed;
+        z-index: 102235439 !important;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+    }
+</style>
+
+    <div class="modelSelectionDiv" id="modelSelectionDiv">
+        <span class="closeButton" onclick="closeModelSelectionPopup()">×</span>
+        <div class="modelGrid">
+            <!-- Model cards are dynamically generated by JavaScript -->
+        </div>
+    </div>
+
+    <div id="modelOverlay" class="modelOverlay"></div>
+
+    <script>
+
+        // Model data structure
+        const modelData = [
+            {
+                id: 'fluffysonic',
+                name: 'SD 1.5 | FluffySonic',
+                description: 'FluffySonic is a model that is based on Sonic the Hedgehog characters in a certain style.',
+                author: 'Kitsune_Sage',
+                authorLink: '',
+                image: 'https://www.jscammie.com/modelImages/fluffysonic.png'
+            },
+            {
+                id: 'realisticVision',
+                name: 'SD 1.5 | RealisticVision',
+                description: 'RealisticVision is a model that is based on realistic images.',
+                author: 'SG_161222',
+                authorLink: 'https://civitai.com/models/4201/realistic-vision-v60-b1',
+                image: 'https://www.jscammie.com/modelImages/realisticvision.png'
+            },
+            
+            {
+                id: 'pdxl-autismmix',
+                name: 'PDXL | AutismMix',
+                description: 'AutismMix is a model that is based on PonyDiffusion and is more fine-tuned for better images.',
+                author: 'Autismmix_anon',
+                authorLink: 'https://civitai.com/models/288584/autismmix-sdxl',
+                image: 'https://www.jscammie.com/modelImages/pdxl-autismmix.png'
+            },
+
+            {
+                id: 'pdxl-sonichasautismmix',
+                name: 'PDXL | SonicHasAutismMix',
+                description: 'SonicHasAutismMix is a model that is based on SonicDiffusionXL and AutismMix merged together.',
+                author: "LOL2024",
+                authorLink: 'https://huggingface.co/LOL2024/SonicHasAutismMix',
+                image: 'https://www.jscammie.com/modelImages/pdxl-sonichasautismmix.png'
+            },
+
+            {
+                id: 'pdxl-ponyrealism',
+                name: 'PDXL | PonyRealism',
+                description: 'PonyRealism is a model that is based on realistic images.',
+                author: "ZyloO",
+                authorLink: 'https://civitai.com/models/372465/pony-realism',
+                image: 'https://www.jscammie.com/modelImages/pdxl-ponyrealism.png'
+            },
+
+            {
+                id: 'pdxl-fluffysonic',
+                name: 'PDXL | FluffySonic',
+                description: 'FluffySonic is a model that is based on Sonic the Hedgehog characters in a certain style.',
+                author: 'Kitsune_Sage',
+                authorLink: '',
+                image: 'https://www.jscammie.com/modelImages/pdxl-fluffysonic.png'
+            },
+
+            {
+                id: 'illustrious-wai',
+                name: 'BEST | ILLUSTRIOUS | WAI',
+                description: 'WAI is a model that is based on 2D, Anime, and Human images.',
+                author: 'WAI0731',
+                authorLink: 'https://civitai.com/models/827184?modelVersionId=1283437',
+                image: 'https://www.jscammie.com/modelImages/illustrious-wai.png'
+            },
+
+            {
+                id: 'illustrious-novafurry',
+                name: 'ILLUSTRIOUS | NovaFurry',
+                description: 'NovaFurry is a model that is based on 2D, 3D, and Furry images.',
+                author: "Crody",
+                authorLink: 'https://civitai.com/models/503815/nova-furry-xl',
+                image: 'https://www.jscammie.com/modelImages/illustrious-novafurry.png'
+            }
+        ];
+
+        // Get DOM elements
+        let modal = null
+        let modelSelect = null
+        let modelGrid = null
+        let currentModelText = null
+        let valuesSetup = false
+
+        function setupModelValues() {
+            modal = document.getElementById('modelSelectionDiv');
+            modelSelect = document.getElementById('model');
+            modelGrid = modal.querySelector('.modelGrid');
+            currentModelText = document.getElementById('currentModelText');
+
+            // Close when clicking outside modal content
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeModelSelectionPopup();
+                }
+            });
+
+            // Close when pressing the ESC key
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && modal.style.display === 'flex') {
+                    closeModelSelectionPopup();
+                }
+            });
+
+            // set the currentModelText to be modelSelect selected model:
+            currentModelText.innerText = `Current Model: ${modelData.find(model => model.id === modelSelect.value).name}`;
+        }
+
+        function modelOverlayShowHide() {
+            const modelOverlay = document.getElementById('modelOverlay');
+            modelOverlay.style.display = modelOverlay.style.display === 'block' ? 'none' : 'block';
+        }
+
+        // Initialize the modal content
+        function initializeModelCards() {
+
+            if (!valuesSetup) {
+                setupModelValues();
+                valuesSetup = true;
+            }
+
+            modelGrid.innerHTML = ''; // Clear existing content
+            
+            modelData.forEach(model => {
+                const card = document.createElement('div');
+                card.className = 'modelSelectionCard';
+                card.dataset.modelId = model.id;
+                
+                card.innerHTML = `
+                    <img src="${model.image}" alt="${model.name}">
+                    <div class="modelSelectionContainer">
+                        <h4><b>${model.name}</b></h4>
+                        <p>${model.description}</p>
+                        <p>Model Author/Link: ${model.authorLink ? 
+                            `<a href="${model.authorLink}" target="_blank">By ${model.author}</a>` : 
+                            `<a>By ${model.author}</a>`}</p>
+                    </div>
+                `;
+                
+                // Add click handler to select model
+                card.addEventListener('click', () => selectModel(model.id));
+                
+                modelGrid.appendChild(card);
+            });
+            
+            // Highlight the currently selected model
+            updateSelectedCard();
+        }
+
+        function keepModelCardsCentered() {
+            const modelSelectionDiv = document.getElementById('modelSelectionDiv');
+            if (modelSelectionDiv) {
+                // modelSelectionDiv.style.top = `${window.scrollY + window.innerHeight / 2 - modelSelectionDiv.clientHeight / 2}px`; scrolls too much causing issues:
+                modelSelectionDiv.style.top = `${window.innerHeight / 2 - modelSelectionDiv.clientHeight / 2}px`;
+            }
+        }
+
+        // Keep the model selection modal centered
+        setInterval(keepModelCardsCentered, 1000);
+
+
+        // Select a model
+        function selectModel(modelId) {
+            modelSelect.value = modelId;
+            
+            // Trigger change event on select element
+            const event = new Event('change', { bubbles: true });
+            modelSelect.dispatchEvent(event);
+
+            currentModelText.innerText = `Current Model: ${modelData.find(model => model.id === modelId).name}`;
+            
+            updateSelectedCard();
+            closeModelSelectionPopup();
+        }
+
+        // Update the visual selection state of cards
+        function updateSelectedCard() {
+            const cards = document.querySelectorAll('.modelSelectionCard');
+            cards.forEach(card => {
+                card.classList.toggle('selected', card.dataset.modelId === modelSelect.value);
+            });
+        }
+
+        // Open modal
+        function openModelSelectionPopup() {
+            modal.style.display = 'flex';
+            modelOverlayShowHide();
+            initializeModelCards();
+        }
+
+        // Close modal
+        function closeModelSelectionPopup() {
+            modal.style.display = 'none';
+            modelOverlayShowHide();
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeModelCards();
+        });
+    </script>
+
 
     <div id="description" style="display: none;">
         JSCammie is a Free FLUX, PDXL and SD 1.5 Stable Diffusion Generator | Generate free images SFW & NSFW with multiple models, loras & more!
@@ -499,10 +841,13 @@
         // spin the loading gradient
         let loadingGradient = document.getElementsByClassName('loadingGradient')[0];
         let loadingGradientDeg = 0;
-        setInterval(() => {
+        function spinLoadingGradient() {
             loadingGradient.style.backgroundImage = `linear-gradient(${loadingGradientDeg}deg, var(--bg-colour-1), var(--bg-colour-2))`;
             loadingGradientDeg += 1;
-        }, 100);
+            requestAnimationFrame(spinLoadingGradient);
+        }
+        spinLoadingGradient();
+        
     </script>
 
     <script>
@@ -518,7 +863,7 @@
 
     <div class="container round-frosted page-content mw75-dynamic" style="margin-bottom: 12rem;">
         
-        <div class="flex-div" style="padding: 40px; padding-bottom: 0px; justify-content: center;">
+        <div class="flex-div" style="padding-left: 20px; padding-bottom: 0px; justify-content: center;">
 
             <h2>Welcome to the AI Image Generator!</h2>
 
@@ -530,18 +875,25 @@
             
             </style>
 
-            <div id="simpleAdvancedToggle">
-                <!-- tooltip: -->
-                <a class="tooltip" onclick="showTooltip(this)">❓</a>
-                <div class="tooltiptext">
-                    <p>Simple Mode:</p>
-                    <p>Simple mode is a more user-friendly version of the AI Image Generator, with less options and settings to configure.</p>
-                    <p>Advanced Mode:</p>
-                    <p>Advanced mode is a more complex version of the AI Image Generator, with more options and settings to configure.</p>
+            <details>
+                <summary>Misc Options</summary>
+
+                <div id="simpleAdvancedToggle">
+                    <!-- tooltip: -->
+                    <a class="tooltip" onclick="showTooltip(this)">❓</a>
+                    <div class="tooltiptext">
+                        <p>Simple Mode:</p>
+                        <p>Simple mode is a more user-friendly version of the AI Image Generator, with less options and settings to configure.</p>
+                        <p>Advanced Mode:</p>
+                        <p>Advanced mode is a more complex version of the AI Image Generator, with more options and settings to configure.</p>
+                    </div>
+                    <button id="simpleToggle" class="simpleAdvancedButton">Simple</button>
+                    <button id="advancedToggle" class="simpleAdvancedButton active">Advanced</button>
                 </div>
-                <button id="simpleToggle" class="simpleAdvancedButton">Simple</button>
-                <button id="advancedToggle" class="simpleAdvancedButton active">Advanced</button>
-            </div>
+            
+            </details>
+
+            
 
 
 
@@ -567,7 +919,7 @@
                         advancedElements[i].style.display = 'none';
                     }
 
-                    // depending on the model prefix sdxl- flux- or no prefix (doesnt have sdxl- or flux-) change the cfg, steps etc:
+                    // depending on the model prefix pdxl- flux- or no prefix (doesnt have pdxl- or flux-) change the cfg, steps etc:
 
                     let model = document.getElementById('model').value;
 
@@ -582,11 +934,14 @@
                     }
 
                     switch(modelPrefix) {
-                        case 'sdxl-':
+                        case 'pdxl-':
                             setSimpleDefaults(30, 3.5)
                             break;
                         case 'flux-':
                             setSimpleDefaults(20, 1)
+                            break;
+                        case 'illustrious-':
+                            setSimpleDefaults(35, 6)
                             break;
                         default:
                             setSimpleDefaults(40, 6)
@@ -614,93 +969,105 @@
 
             <!-- style the save slot buttons, with on hover effects -->
             <style>
-
                 .saveSlotButtonDiv {
                     display: flex;
-                    justify-content: space-between;
+                    justify-content: flex-start; /* Align buttons to the left */
+                    gap: 8px; /* Space between buttons */
+                    flex-wrap: wrap; /* Ensure buttons wrap if space is tight */
                 }
 
-                .saveSlobtDiv[button] {
-                    margin-right: 0%;
-                    margin-left: 80%;
-                }
-
-                /* make sure the save slot button is ONLY ONE LINE: */
                 .saveSlotButton {
                     border: none;
                     color: white;
-                    padding: 2px;
+                    padding: 6px 10px; /* Adjust padding for a more compact button */
                     text-align: center;
-                    word-wrap: normal;
                     text-decoration: none;
-                    display: inline-block;
-                    font-size: 15px;
-                    margin: 0 2px;
+                    font-size: 14px; /* Slightly smaller text */
                     cursor: pointer;
-                    transition: transform 0.7s, background-color 0.3s; /* Adjust time as needed */
-                    transform: scale(1) rotate(0deg); /* Default state */
-                    transform-origin: center; /* Ensures the scaling happens from the center */
-                    width: fit-content;
+                    transition: transform 0.3s, background-color 0.3s;
+                    transform: scale(1) rotate(0deg);
+                    transform-origin: center;
+                    width: auto; /* Remove fixed width */
+                    margin: 0; /* Remove margin */
                 }
 
+                .saveSlotButton:hover {
+                    transform: scale(1.05); /* Smaller scale effect */
+                    background-color: #555555; /* Subtle hover effect */
+                }
 
                 .saveSlotButton.Load {
-                    background-color: #4c68af95; /* Green */
-                }
-                .saveSlotButton.Load:hover {
-                    transform: scale(1.08) rotate(1deg); 
-                    background-color: #4c6aaf; /* Green */
+                    background-color: #4c68af95; /* Blue */
                 }
 
+                .saveSlotButton.Load:hover {
+                    background-color: #4c6aaf; /* Blue */
+                }
 
                 .saveSlotButton.Delete {
                     background-color: #ff000095; /* Red */
                 }
+
                 .saveSlotButton.Delete:hover {
-                    transform: scale(1.08) rotate(1deg); 
                     background-color: #ff0000; /* Red */
                 }
 
-
                 .saveSlotButton.Update {
-                    background-color: #2fa72d95; /* Red */
+                    background-color: #2fa72d95; /* Green */
                 }
+
                 .saveSlotButton.Update:hover {
-                    transform: scale(1.08) rotate(1deg); 
-                    background-color: #5dbe40; /* Red */
+                    background-color: #5dbe40; /* Green */
                 }
 
                 .createSaveSlotButton {
                     background-color: #4caf4f95; /* Green */
                     border: none;
                     color: white;
-                    padding: 7px 12px;
+                    padding: 6px 12px; /* Adjust padding for a more compact button */
                     text-align: center;
                     text-decoration: none;
-                    display: inline-block;
-                    font-size: 16px;
-                    margin: 4px 2px;
+                    font-size: 15px;
                     cursor: pointer;
-                    transition: transform 0.7s, background-color 0.3s; /* Adjust time as needed */
-                    transform: scale(1) rotate(0deg); /* Default state */
-                    transform-origin: center; /* Ensures the scaling happens from the center */
+                    transition: transform 0.3s, background-color 0.3s;
                 }
+
                 .createSaveSlotButton:hover {
-                    transform: scale(1.08) rotate(1deg); 
+                    transform: scale(1.05) rotate(1deg);
                     background-color: #4CAF50; /* Green */
                 }
+
                 .createSaveSlotButton:active {
                     transform: scale(1.1);
-                    background-color: #ffe600; /* Red */
+                    background-color: #ffe600; /* Yellow */
                 }
+
                 .createSaveSlotButton[disabled] {
-                    background-color: #60606095; /* Green */
+                    background-color: #60606095; /* Disabled button color */
                     cursor: not-allowed;
                 }
 
+                .disabledSaveSlots {
+                    text-align: center;
+                }
 
+                #saveSlotMasterDiv {
+                    display: flex;
+                    flex-direction: row;
+                    gap: 10px;
+                    flex-wrap: wrap;
+                }
+
+                .saveSlotDivClass {
+                    border-radius: 10px;
+                    border: 1px solid #00000015;
+                    padding: 10px;
+                    background-color: #00000015;
+                    width: 25vh;
+                }
 
             </style>
+
 
             
 
@@ -734,7 +1101,7 @@
                                     saveSlots.forEach(saveSlot => {
                                         // made the div id the saveSlot id so it can be used to load the save slot:
                                         
-                                        finalHtml += `<div id="saveSlot-${saveSlot.saveSlotId}">
+                                        finalHtml += `<div id="saveSlot-${saveSlot.saveSlotId}" class="saveSlotDivClass">
                                             <details>
                                             <summary class="saveSlotButtonDiv">${saveSlot.name} <br>
                                                 <button class="saveSlotButton Load" type="button" onclick="loadSlot('${saveSlot.saveSlotId}')">Load 💾</button>
@@ -764,8 +1131,6 @@
                                             </details>
                                             </div>
 
-                                            <br>
-                                            </div>
                                             `  
                                     })
                                     finalHtml += ''
@@ -1000,15 +1365,18 @@
                             document.getElementById('negativeprompt').value = saveSlotNegativePrompt;
                             document.getElementById('aspectRatio').value = saveSlotAspectRatio;
                             
-                            // if the model value starts sdxl- AND isnt in the select box then default to sdxl-autismmix:
+                            // if the model value starts pdxl- AND isnt in the select box then default to pdxl-autismmix:
                             if (!document.getElementById('model').querySelector(`option[value="${saveSlotModel}"]`)) {
-                                if (saveSlotModel.startsWith('sdxl-')) {
-                                    document.getElementById('model').value = 'sdxl-autismmix';
+                                if (saveSlotModel.startsWith('pdxl-')) {
+                                    document.getElementById('model').value = 'pdxl-autismmix';
+                                }
+                                if (saveSlotModel.startsWith('illustrious-')) {
+                                    document.getElementById('model').value = 'illustrious-wai';
                                 }
                                 if (saveSlotModel.startsWith('flux-')) {
                                     document.getElementById('model').value = 'flux-unchained';
                                 }
-                                if (!saveSlotModel.startsWith('sdxl-') && !saveSlotModel.startsWith('flux-')) {
+                                if (!saveSlotModel.startsWith('pdxl-') && !saveSlotModel.startsWith('flux-') && !saveSlotModel.startsWith('illustrious-')) {
                                     document.getElementById('model').value = 'fluffysonic';
                                 }
                             } else {
@@ -1213,12 +1581,24 @@
 
                         function importAiData(yamlData) {
 
+                            // if models starts with sdxl- then replace it with pdxl-:
+                            if (yamlData[3].startsWith('sdxl-')) {
+                                yamlData[3] = yamlData[3].replace('sdxl-', 'pdxl-');
+                            }
+
+                            // replace any -sdxl in loras with -pdxl:
+                            loras = yamlData[4].replace('[','').replace(']','').split(',').map(lora => lora.replace(/'/g, '').trim())
+                            
+                            for (let i = 0; i < loras.length; i++) {
+                                loras[i] = loras[i].replace('-sdxl', '-pdxl');
+                            }
+
                             let aiData = {
                                 prompt: yamlData[0],
                                 negativeprompt: yamlData[1],
                                 aspectRatio: yamlData[2],
                                 model: yamlData[3],
-                                loras: yamlData[4].replace('[','').replace(']','').split(',').map(lora => lora.replace(/'/g, '').trim()),
+                                loras: loras,
                                 lora_strengths: yamlData[5].replace('[','').replace(']','').split(',').map(strength => strength.replace(/'/g, '').trim()),
                                 steps: yamlData[6],
                                 cfg: yamlData[8],
@@ -1241,6 +1621,11 @@
                                 }
                             }
 
+                            // replace sdxl- with pdxl- in the model value:
+                            if (aiData.model.startsWith('sdxl-')) {
+                                aiData.model = aiData.model.replace('sdxl-', 'pdxl-');
+                            }
+
                             // Set the values in the form
                             setValueSafelyIfNotUndefinedOrNull('prompt', aiData.prompt);
                             setValueSafelyIfNotUndefinedOrNull('negativeprompt', aiData.negativeprompt);
@@ -1255,15 +1640,18 @@
                             document.getElementById('prompt').dispatchEvent(new Event('change'));
                             document.getElementById('negativeprompt').dispatchEvent(new Event('change'));
 
-                            // if the model value starts sdxl- AND isnt in the select box then default to sdxl-autismmix:
+                            // if the model value starts pdxl- AND isnt in the select box then default to pdxl-autismmix:
                             if (!document.getElementById('model').querySelector(`option[value="${aiData.model}"]`)) {
-                                if (aiData.model.startsWith('sdxl-')) {
-                                    document.getElementById('model').value = 'sdxl-autismmix';
+                                if (aiData.model.startsWith('pdxl-') || aiData.model.startsWith('sdxl-')) {
+                                    document.getElementById('model').value = 'pdxl-autismmix';
+                                }
+                                if (aiData.model.startsWith('illustrious-')) {
+                                    document.getElementById('model').value = 'illustrious-wai';
                                 }
                                 if (aiData.model.startsWith('flux-')) {
                                     document.getElementById('model').value = 'flux-unchained';
                                 }
-                                if (!aiData.model.startsWith('sdxl-') && !aiData.model.startsWith('flux-')) {
+                                if (!aiData.model.startsWith('pdxl-') || !aiData.model.startsWith('sdxl-') && !aiData.model.startsWith('flux-')) {
                                     document.getElementById('model').value = 'fluffysonic';
                                 }
                             } else {
@@ -1618,27 +2006,31 @@
                                 <div class="tooltiptext">
                                     Select the model you want to use to generate the image.<br>
                                     Certain models have different architectures and will need different prompts to generate the desired image, this can be denoted by the keyword in brackets at the start of the model.<br>
-                                    For example: "(SDXL) AutismMix" is an SDXL architecture model.
+                                    For example: "(PDXL) AutismMix" is an PDXL architecture model.
                                 </div>
                         </label>
-                        <select id="model" name="model">
-                            <option value="fluffysonic">(SD 1.5) FluffySonic (Sonic the Hedgehog by kitsune_sage)</option>
+                        <select id="model" name="model" value="illustrious-novafurry" style="display: none;">
+                            <option value="fluffysonic">(SD 1.5) FluffySonic (Sonic the Hedgehog)</option>
                             <option value="realisticVision">(SD 1.5) realisticVision (Realstic)</option>
-                            <option value="furryblend">(SD 1.5) FurryBlend (Furry/Anime)</option>
-                            <option value="sdxl-autismmix">(SDXL) Autism Mix ("Better" PonyXL, uses PonyXL Prompting)</option>
-                            <option value="sdxl-sonichasautismmix">(SDXL) SonicHasAutismMix (SonicDiffusionXL & AutismMix merge, uses PonyXL Prompting)</option>
-                            <option value="sdxl-ponyrealism">(SDXL) Pony Realism (Realistic, uses PonyXL Prompting)</option>
-                            <option value="sdxl-fluffysonic">(SDXL) FluffySonic (Sonic the Hedgehog by kitsune_sage, uses PonyXL Prompting)</option>
-                            <option value="flux-unchained">(FLUX) Unchained (Everything, natural language prompting)</option>
+                            <option value="pdxl-autismmix">(PDXL) Autism Mix (2D, 3D)</option>
+                            <option value="pdxl-sonichasautismmix">(PDXL) SonicHasAutismMix (SonicDiffusionXL & AutismMix merge)</option>
+                            <option value="pdxl-ponyrealism">(PDXL) Pony Realism (Realistic)</option>
+                            <option value="pdxl-fluffysonic">(PDXL) FluffySonic (Sonic the Hedgehog)</option>
+                            <option value="illustrious-wai">BEST (ILLUSTRIOUS) WAI (2d, Anime, Human)</option>
+                            <option value="illustrious-novafurry" selected>(ILLUSTRIOUS) NovaFurry (2d, 3d, Furry)</option>
                         </select>
+
+                        <button onclick="openModelSelectionPopup()" class="model-select-button">Open Model Selection</button>
+                        <p id="currentModelText"></p>
+
                     </div>
                 </details>
 
                 <script>
-                    // on document load, if model is set to sdxl-ponydiffusion then set it to sdxl-autismmix:
+                    // on document load, if model is set to pdxl-ponydiffusion then set it to pdxl-autismmix:
                     document.addEventListener('DOMContentLoaded', function() {
-                        if (document.getElementById('model').value === 'sdxl-ponydiffusion') {
-                            document.getElementById('model').value = 'sdxl-autismmix';
+                        if (document.getElementById('model').value === 'pdxl-ponydiffusion') {
+                            document.getElementById('model').value = 'pdxl-autismmix';
                         }
                     })
                 </script>
@@ -1653,12 +2045,13 @@
                       
                         .loraContainer {
                             max-height: 750px !important; /* Adjust as needed for your layout */
-                            height: fit-content;
-                            width: 100%;
+                            height: fit-content; /* make sure the width is virtual width */
+                            width: auto;
                             overflow-y: auto; /* Allows scrolling within the container */
                             border: 1px solid #00ff6a;
                             border-radius: 4px;
-                            padding: 4px;
+                            padding: 0px;
+                            margin: 0px;
                         }
 
                       
@@ -1815,8 +2208,97 @@
                             
                         </style>
 
-                        <div>
+                        <style>
+                            .safetyRatingCheckbox {
+                                display: none; /* Hide the checkbox */
+                            }
 
+                            .safetyRatingLabel {
+                                color: gray; /* Gray out the labels */
+                                cursor: pointer; /* Change cursor to indicate interactivity */
+                                opacity: 0.7; /* Semi-transparent for disabled appearance */
+                                transition: color 0.5s, opacity 0.5s, font-size 0.5s; /* Smooth transition for color change */
+                                padding: 5px; /* Padding to make labels clickable */
+                                background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+                                border-radius: 5px; /* Rounded corners */
+                            }
+
+                            .safety-checkbox-container {
+                                margin: 10px;
+                            }
+
+                            /* make them dark ver of the colour when not checked: */
+                            .safetyRatingLabel[for="showSafeCheckbox"] {
+                                text-shadow: 0 0 5px rgb(0, 255, 0);
+                            }
+
+                            .safetyRatingLabel[for="showSuggestiveCheckbox"] {
+                                text-shadow: 0 0 5px rgb(255, 166, 0);
+                            }
+
+                            .safetyRatingLabel[for="showNSFWCheckbox"] {
+                                text-shadow: 0 0 5px rgb(255, 0, 0);
+                            }
+
+                            .safetyRatingLabel:hover {
+                                opacity: 1; /* Full opacity on hover */
+                                font-size: 18px;
+                            }
+
+                            .safetyRatingCheckbox:checked + .safetyRatingLabel {
+                                opacity: 1; /* Make label fully visible */
+                                font-size: 18px;
+                            }
+
+                            .safetyRatingCheckbox:checked + .safetyRatingLabel[for="showSafeCheckbox"] {
+                                color: rgb(0, 255, 0);
+                                text-shadow: 0 0 5px rgb(0, 255, 0);
+                            }
+
+                            .safetyRatingCheckbox:checked + .safetyRatingLabel[for="showSuggestiveCheckbox"] {
+                                color: rgb(255, 166, 0);
+                                text-shadow: 0 0 5px rgb(255, 166, 0);
+                            }
+
+                            .safetyRatingCheckbox:checked + .safetyRatingLabel[for="showNSFWCheckbox"] {
+                                color: rgb(255, 0, 0);
+                                text-shadow: 0 0 5px rgb(255, 0, 0);
+                            }
+                            
+                        </style>
+
+                        
+                        <div>
+                            Lora Safety Ratings:
+                            <span class="tooltip" onclick="showTooltip(this)">❓</span>
+                            <div class="tooltiptext">
+                            Use these checkboxes to filter Loras by their safety ratings, with explicit loras being hidden behind the "suggestive" and "nsfw" ratings.
+                            </div>
+                        </div>
+
+                        <div class="safety-checkbox-container">
+
+                            <input style="display:none" class="safetyRatingCheckbox" type="checkbox" id="showNACheckbox" name="showNACheckbox" value="showNACheckbox" checked>
+                            <label style="display:none" class="safetyRatingLabel" for="showNACheckbox">N/A</label>
+                            
+                            <input class="safetyRatingCheckbox" type="checkbox" id="showSafeCheckbox" name="showSafeCheckbox" value="showSafeCheckbox" checked>
+                            <label  class="safetyRatingLabel" for="showSafeCheckbox">Safe</label>
+
+                            <input class="safetyRatingCheckbox" type="checkbox" id="showSuggestiveCheckbox" name="showSuggestiveCheckbox" value="showSuggestiveCheckbox">
+                            <label class="safetyRatingLabel" for="showSuggestiveCheckbox">Suggestive</label>
+
+                            <input class="safetyRatingCheckbox" type="checkbox" id="showNSFWCheckbox" name="showNSFWCheckbox" value="showNSFWCheckbox">
+                            <label class="safetyRatingLabel" for="showNSFWCheckbox">NSFW</label>
+                        </div>
+
+
+                        <% loraDataKeys.forEach(category => { %>
+                            <% if (lora_data[category]) { %>
+                                <button id="<%=category%>-CategoryButton" type="button" class="category-btn"><%= category.charAt(0).toUpperCase() + category.slice(1) %></button>
+                            <% } %>
+                        <% }); %>
+
+                        <div>
                             <div>Lora Sorting:
                                 <span class="tooltip" onclick="showTooltip(this)">❓</span>
                                 <div class="tooltiptext">
@@ -1828,59 +2310,6 @@
                             <button class="sorting-btn" id="sortUsesBtn" type="button">Sort by Uses</button>
                             <button class="sorting-btn" id="sortLastUsedBtn" type="button">Sort by Last Used</button>
                         </div>
-
-                        <!-- showSafeCheckbox, showSuggestiveCheckbox, showNSFWCheckbox -->
-
-                        <style>
-                            /* styling for the showSafeCheckbox, showSuggestiveCheckbox, showNSFWCheckbox, make sure they are next to eachother horizontally and not above/below! 
-                            use purple colours and active class to show which one is selected! */
-                            
-                            #showSafeCheckbox, #showSuggestiveCheckbox, #showNSFWCheckbox, #showNACheckbox {
-                                background-color: #8c4caf40;
-                                border: 3px solid #8c4caf !important;
-                                color: white;
-                                padding: 7px 15px;
-                                text-align: center;
-                                font-size: 16px;
-                                border-radius: 10px;
-                                cursor: pointer;
-                                display: inline-block;
-                                margin: 4px 2px;
-                                transition: background-color 0.3s, transform 0.7s !important;
-                                transform-origin: center;
-                            }
-                            </style>
-                            
-                            <div>
-                                <div>
-                                    Lora Safety Ratings:
-                                    <span class="tooltip" onclick="showTooltip(this)">❓</span>
-                                    <div class="tooltiptext">
-                                        Use these checkboxes to filter Loras by their safety ratings, with explicit loras being hidden behind the "suggestive" and "nsfw" ratings.
-                                    </div>
-                                </div>
-
-
-                                <label for="showNACheckbox" >N/A:</label>
-                                <input class="safetyRatingCheckbox" type="checkbox" id="showNACheckbox" name="showNACheckbox" value="showNACheckbox" checked>
-                                
-                                <label for="showSafeCheckbox" style="color: green;"> Safe:</label>
-                                <input class="safetyRatingCheckbox" type="checkbox" id="showSafeCheckbox" name="showSafeCheckbox" value="showSafeCheckbox" checked>
-                                <br>
-                                <label for="showSuggestiveCheckbox" style="color: yellow;"> Suggestive:</label>
-                                <input class="safetyRatingCheckbox" type="checkbox" id="showSuggestiveCheckbox" name="showSuggestiveCheckbox" value="showSuggestiveCheckbox">
-
-                                <label for="showNSFWCheckbox" style="color: red;"> NSFW:</label>
-                                <input class="safetyRatingCheckbox" type="checkbox" id="showNSFWCheckbox" name="showNSFWCheckbox" value="showNSFWCheckbox">
-
-                            </div>
-                        <br>
-
-                        <% loraDataKeys.forEach(category => { %>
-                            <% if (lora_data[category]) { %>
-                                <button id="<%=category%>-CategoryButton" type="button" class="category-btn"><%= category.charAt(0).toUpperCase() + category.slice(1) %></button>
-                            <% } %>
-                        <% }); %>
 
                         <div id="loraContainer" class="loraContainer">
                             <div id="loraGridContainer" class="loraCardGrid">
@@ -1908,6 +2337,15 @@
                             var favorites = {};
 
                             let savedFavoritedIds = lastRequestSD.favoriteLoras || [];
+
+                            // replace any -sdxl with -pdxl in the savedFavoritedIds:
+                            savedFavoritedIds = savedFavoritedIds.map(id => {
+                                if (id.includes('-sdxl')) {
+                                    return id.replace('-sdxl', '-pdxl');
+                                } else {
+                                    return id;
+                                }
+                            })
 
                             // console.log(`${savedFavoritedIds} are the saved favorited ids`)
 
@@ -1950,8 +2388,8 @@
                             }
 
                             function loraChecks(key, value, model, showSafe, showSuggestive, showNSFW, showNA, loraSearch, name) {
-                                // Model is SDXL and lora isnt SDXL
-                                if (model.startsWith("sdxl") && !key.includes("-sdxl")) {
+                                // Model is PDXL and lora isnt PDXL
+                                if (model.startsWith("pdxl") && !key.includes("-pdxl")) {
                                     // console.log(`${name} is not compatible with ${model}`)
                                     masterLoraData[key].selected = false;
                                     return false;
@@ -1960,8 +2398,12 @@
                                     masterLoraData[key].selected = false;
                                     return false;
                                 } 
-                                if (!model.startsWith("sdxl") && !model.startsWith("flux")) {
-                                    if (key.includes("-sdxl") || key.includes("-flux")) {
+                                if (model.startsWith("illustrious") && !key.includes("-illustrious")) {
+                                    masterLoraData[key].selected = false;
+                                    return false;
+                                }
+                                if (!model.startsWith("pdxl") && !model.startsWith("flux") && !model.startsWith('illustrious')) {
+                                    if (key.includes("-pdxl") || key.includes("-flux") || key.includes('-illustrious')) {
                                         masterLoraData[key].selected = false;
                                         return false;
                                     }
@@ -2134,16 +2576,24 @@
                                     loadLoras();
                                     updateLoraSelectionsSummary();
                                 })
+
+                                // if lastRequestSD model has sdxl- then replace it with pdxl-:
+                                if (lastRequestSD.model && lastRequestSD.model.startsWith('sdxl-')) {
+                                    lastRequestSD.model = lastRequestSD.model.replace('sdxl-', 'pdxl-');
+                                }
+
+                               
                                 
                                 // Set form values to the last request values
-                                document.getElementById('prompt').value = lastRequestSD.prompt || '';
-                                document.getElementById('negativeprompt').value = lastRequestSD.negativeprompt || 'nsfw, monochrome, black and white, worst quality, low quality, watermark, signature, bad anatomy, bad hands, deformed limbs, blurry, cropped, cross-eyed, extra arms, extra legs, extra limbs, extra pupils, bad proportions, poorly drawn hands, simple background, bad background, bad lighting, bad perspective';
-                                document.getElementById('aspectRatio').value = lastRequestSD.aspectRatio || 'square';
-                                document.getElementById('model').value = lastRequestSD.model || 'fluffysonic';
-                                document.getElementById('steps').value = lastRequestSD.steps || '20';
-                                document.getElementById('cfguidance').value = lastRequestSD.cfguidance || '6';
+                                document.getElementById('prompt').value = lastRequestSD.prompt || 'masterpiece, best quality, amazing quality, ';
+                                document.getElementById('negativeprompt').value = lastRequestSD.negativeprompt || 'nsfw, bad quality, worst quality, worst detail, sketch, censor, ';
+                                document.getElementById('aspectRatio').value = lastRequestSD.aspectRatio || 'portrait';
+                                document.getElementById('model').value = lastRequestSD.model || 'illustrious-novafurry';
+                                document.getElementById('steps').value = lastRequestSD.steps || '25';
+                                document.getElementById('cfguidance').value = lastRequestSD.cfguidance || '5';
                                 document.getElementById('seed').value = lastRequestSD.seed || '-1';
                                 document.getElementById('scheduler').value = lastRequestSD.scheduler || "eulera";
+
 
                                 // refresh prompt negpromt on input stuff:
                                 document.getElementById('prompt').dispatchEvent(new Event('change'));
@@ -2159,6 +2609,9 @@
                                 }
                                 lastRequestSD.loras.forEach(loraId => {
                                     // check if the loraId exists in the masterLoraData object:
+                                    if (loraId.includes('-sdxl')) {
+                                        loraId = loraId.replace('-sdxl', '-pdxl');
+                                    }
                                     if (masterLoraData[loraId]) {
                                         masterLoraData[loraId].selected = true;
                                     }
@@ -2279,15 +2732,17 @@
                                 loraSelectionsSummary = document.getElementById('loraSelectionsSummary');
                                 loraSelectionsSummary.innerHTML = '';
                                 selectedLoras = Object.entries(masterLoraData).filter(([key, value]) => value.selected);
-                                // total loras needs to respect the model type ("doesnt have sdxl or flux in the key", "sdxl in key", "flux in key")
+                                // total loras needs to respect the model type ("doesnt have pdxl or flux in the key", "pdxl in key", "flux in key")
 
                                 totalLoras = Object.entries(masterLoraData).filter(([key, value]) => {
-                                    if (document.getElementById('model').value.startsWith("sdxl")) {
-                                        return key.includes("-sdxl");
+                                    if (document.getElementById('model').value.startsWith("pdxl")) {
+                                        return key.includes("-pdxl");
                                     } else if (document.getElementById('model').value.startsWith("flux")) {
                                         return key.includes("-flux");
+                                    } else if (document.getElementById('model').value.startsWith("illustrious")) {
+                                        return key.includes("-illustrious");
                                     } else {
-                                        return !key.includes("-sdxl") && !key.includes("-flux");
+                                        return !key.includes("-pdxl") && !key.includes("-flux") && !key.includes("-illustrious");
                                     }
                                 }).length;
 
@@ -2295,12 +2750,14 @@
 
                                 // now have a seperate totalLoras for the safety ratings checkboxes, make sure it also follows the model:
                                 totalRatingLoraCount = Object.entries(masterLoraData).filter(([key, value]) => {
-                                    if (document.getElementById('model').value.startsWith("sdxl")) {
-                                        return key.includes("-sdxl");
+                                    if (document.getElementById('model').value.startsWith("pdxl")) {
+                                        return key.includes("-pdxl");
                                     } else if (document.getElementById('model').value.startsWith("flux")) {
                                         return key.includes("-flux");
+                                    } else if (document.getElementById('model').value.startsWith("illustrious")) {
+                                        return key.includes("-illustrious");
                                     } else {
-                                        return !key.includes("-sdxl") && !key.includes("-flux");
+                                        return !key.includes("-pdxl") && !key.includes("-flux") && !key.includes("-illustrious");
                                     }
                                 }).filter(([key, value]) => {
                                     if (document.getElementById('showSafeCheckbox').checked && value.rating === 'safe') {
@@ -2340,10 +2797,16 @@
                                         if (noWhitespaceWord.endsWith(',')) {
                                             noWhitespaceWord = noWhitespaceWord.slice(0, -1)
                                         }
-                                        wordsFormatted += `<a class="lora-words">
-                                            Words ${index + 1}: ${noWhitespaceWord}<br>
-                                            <button class="lora-words-copy-button" onclick="copyXWordsToClipboard(\`${noWhitespaceWord}\`)">Copy Words</button>
-                                        </a><br>`
+                                        // if the word is "N/A" then dont add it to the list:
+                                        if (noWhitespaceWord.toLowerCase() === "n/a") {
+                                            wordsFormatted += `<a class="lora-words">
+                                            </a>`
+                                        } else {
+                                            wordsFormatted += `<a class="lora-words">
+                                                Words ${index + 1}: ${noWhitespaceWord}<br>
+                                                <button class="lora-words-copy-button" onclick="copyXWordsToClipboard(\`${noWhitespaceWord}\`)">Copy Words</button>
+                                            </a><br>`
+                                        }
                                     })
 
                                     if (value.lastUsed == '0') {
@@ -2373,7 +2836,7 @@
                                             <p class="lora-strength"><strong>Default Strength:</strong> ${value.strength || 'Null'}</p>
                                             ${wordsFormatted}
                                             <p class="lora-strength-slider"> 
-                                                <input type="range" id="strength-${key}" name="strength-${key}" min="-3" max="3" step="0.1" value="${value.strength}" style="width: 80%;">
+                                                <input type="range" id="strength-${key}" name="strength-${key}" min="-3" max="3" step="0.05" value="${value.strength}" style="width: 90%;">
                                                 <a id="strength-${key}-value" style="transform: translateY(-32px) !important; margin: 4px; font-size: 28px">${value.strength}</a>
                                             </p>
                                             <button class="lora-reset-strength-button" onclick="setStrength('${key}', '${value.defaultStrength}')">Reset Strength</button>
@@ -2727,7 +3190,8 @@
                                 document.getElementById('regionalPromptDisplayText').innerHTML = '';
 
                                 if (!document.getElementById('regionalPromptCheckbox').checked) {
-                                    return;
+                                    document.getElementById('regionalPromptControls').style.display = 'none';
+                                    return
                                 }
 
                                 canvas = document.createElement('canvas');
@@ -2741,7 +3205,7 @@
                                 regionalPromptBStrength = document.getElementById('regionalPromptBStrength').value;
 
                                 dimensions = {width:0,height:0}
-                                if (model.startsWith('sdxl') || model.startsWith('flux')) {
+                                if (model.startsWith('pdxl') || model.startsWith('flux') || model.startsWith('illustrious')) {
                                     switch(aspectRatio) {
                                         case 'square':
                                             dimensions = {width: 768, height: 768}
@@ -2915,36 +3379,45 @@
                 const regionalPromptControls = document.getElementById('regionalPromptControls');
         
                 function disableCheckboxes(target) {
-                    if(target != "inpaintingCheckbox") {
-                        inpaintingCheckbox.checked = false;
-                        inpaintingControls.style.display = 'none';
-                    } if (target != "img2imgCheckbox") {
-                        img2imgCheckbox.checked = false;
-                        img2imgControls.style.display = 'none';
-                    } if (target != "regionalPromptCheckbox") {
-                        regionalPromptCheckbox.checked = false;
-                        regionalPromptControls.style.display = 'none';
-                    }
-
-                    // open the details element with the target id: "extrasDetails":
                     
                     extrasDetails = document.getElementById('extrasDetails');
                     extrasDetails.open = true;
 
+                    console.log("disableCheckboxes called")
 
                     switch(target) {
                         case "inpaintingCheckbox":
                             inpaintingCheckbox.checked = true;
                             inpaintingControls.style.display = 'block';
+
+                            img2imgCheckbox.checked = false;
+                            img2imgControls.style.display = 'none';
+                            regionalPromptCheckbox.checked = false;
+                            regionalPromptControls.style.display = 'none';
+
                             break;
                         case "img2imgCheckbox":
                             img2imgCheckbox.checked = true;
                             img2imgControls.style.display = 'block';
+
+                            inpaintingCheckbox.checked = false;
+                            inpaintingControls.style.display = 'none';
+                            regionalPromptCheckbox.checked = false;
+                            regionalPromptControls.style.display = 'none';
                             break;
                         case "regionalPromptCheckbox":
+
+                            console.log("regionalPromptCheckbox checked")
+
                             regionalPromptCheckbox.checked = true;
                             regionalPromptControls.style.display = 'block';
+
+                            inpaintingCheckbox.checked = false;
+                            inpaintingControls.style.display = 'none';
+                            img2imgCheckbox.checked = false;
+                            img2imgControls.style.display = 'none';
                             break;
+                        
                     }
                 }
 
@@ -2954,7 +3427,6 @@
                     }
                 });
 
-                // add an event listener for when the img2imgCheckbox changes
                 img2imgCheckbox.addEventListener('change', function() {
                     if (this.checked) {
                         disableCheckboxes("img2imgCheckbox")
@@ -3018,7 +3490,7 @@
                                 Use this slider to adjust the CFG guidance value<br>
                                 Here are the recommended values for the different model architectures:<br>
                                 SD 1.5: 4-8<br>
-                                SDXL: 3-5<br>
+                                PDXL: 3-5<br>
                                 FLUX: 1<br>
                             </div>
                     </label>
@@ -3086,13 +3558,16 @@
                         cfguidanceInput.max = max;
                     }
                         
-                    if (model.value.includes('sdxl')) {
+                    if (model.value.includes('pdxl')) {
                         setSteps(20, 30);
                         setCfguidance(2, 5)
+                    } else if (model.value.startsWith('illustrious-')) {
+                        setSteps(20, 35);
+                        setCfguidance(3, 6);
                     } else if (model.value.includes('flux')) {
                         setSteps(4, 24);
                         setCfguidance(1, 1);
-                    } else if (!model.value.includes('sdxl') && !model.value.includes('flux')) {
+                    } else if (!model.value.includes('pdxl') && !model.value.includes('flux') && !model.value.includes('illustrious')) {
                         setSteps(20, 40);
                         setCfguidance(3, 10);
                     }
@@ -3137,10 +3612,11 @@
                     <span class="tooltip" onclick="showTooltip(this)">❓</span>
                         <div class="tooltiptext">
                             Use the credits shop to purchase additional temporary features for the AI Image Generator<br>
-                            You can remove the watermark, upscale the image, and apply the fast queue for your generation
+                            You can remove the watermark, upscale the image, and apply the fast queue for your generation<br><br>
+                            You can earn credits for free by participating in the community, posting on the booru, liking booru posts, suggesting suggestions, and more!
                         </div>
                 </label>
-                <details open class="loggedOutCreditsShop" id="creditsShop">
+                <details class="loggedOutCreditsShop" id="creditsShop">
                     <% if (session.loggedIn) { %>
                         <summary><a class="costPElement">Cost: <span class="creditsPriceStyling"><span class="creditsPriceStyling" id="currentCreditsPrice">25</span> Credits</span></a></summary>
                     <% } else { %>
@@ -3174,7 +3650,7 @@
                             <div class="tooltiptext">
                                 Use this checkbox to generate double the images!<br>
                                 SD 1.5: 8 images<br>
-                                SDXL: 8 images<br>
+                                PDXL: 8 images<br>
                                 FLUX: 4 images
                             </div>
                     </label>
@@ -3274,39 +3750,7 @@
                 </style>
 
                 <div class="suggestFL">
-                    <br>
-                    <label>
-                        Suggestions Page:                         
-                        <span class="tooltip" onclick="showTooltip(this)">❓</span>
-                            <div class="tooltiptext">
-                                Use this link to suggest new features for the AI Image Generator<br>
-                                You can also vote on existing suggestions to help prioritize them<br>
-                                This will open in a new tab!
-                            </div>
-                    </label>
-                    <a target="_blank" href="https://www.jscammie.com/suggestions">Suggest & Vote On, Features & Loras!</a>
-                    <br>
-                    <label>
-                        Image History:                         
-                        <span class="tooltip" onclick="showTooltip(this)">❓</span>
-                            <div class="tooltiptext">
-                                Use this link to view the history of images generated by the AI Image Generator<br>
-                                You can view the images you have generated. This will open in a new tab!
-                            </div>
-                    </label>
-                    <a target="_blank" href="https://www.jscammie.com/image-history">View Image History</a>
-                    <br>
-                    <label>
-                        Booru Page:
-                        <span class="tooltip" onclick="showTooltip(this)">❓</span>
-                            <div class="tooltiptext">
-                                Use this link to view the booru page for the AI Image Generator<br>
-                                You can view the images generated by the AI Image Generator, and download them<br>
-                                This will open in a new tab!
-                            </div>
-                    </label>
-                    <a target="_blank" href="https://www.jscammie.com/booru">View Image Board/ Booru</a>
-                    <br>
+                    
                 </div>
 
                 <div id="imageHistoryCount"></div>
@@ -3341,6 +3785,56 @@
                 <button form="generatorForm" type="submit" id="generateButton">Generate Image</button>
                 <button style="display: none;" id="cancelButton">Cancel Request</button>
             </div>
+
+            <style>
+                /* General styling for the advertisement container */
+                .booruAdvert {
+                    text-align: center;
+                    margin: 20px;
+                    text-shadow: 0 0 20px rgb(151, 236, 255);
+                    animation: bounceIn 1s ease-out;
+                }
+
+                /* Styling for the button */
+                .booruButton {
+                    padding: 15px 30px;
+                    font-size: 18px;
+                    font-weight: bold;
+                    color: white;
+                    background: linear-gradient(45deg, rgb(0, 191, 255), rgb(0, 123, 255));
+                    border: none;
+                    border-radius: 10px;
+                    cursor: pointer;
+                    box-shadow: 0 0 15px rgba(0, 191, 255, 0.6);
+                    transition: transform 0.3s ease, box-shadow 0.3s ease, scale 0.3s ease;
+                }
+
+                /* Glow effect on hover */
+                .booruButton:hover {
+                    transform: scale(1.1);
+                    box-shadow: 0 0 30px rgba(0, 191, 255, 0.9);
+                }
+
+                /* Bounce-in animation */
+                @keyframes bounceIn {
+                    0% {
+                        transform: scale(0.8);
+                        opacity: 0;
+                    }
+                    50% {
+                        transform: scale(1.2);
+                        opacity: 1;
+                    }
+                    100% {
+                        transform: scale(1);
+                    }
+                }
+            </style>
+
+            <div class="booruAdvert">
+                <button class="booruButton" onclick="window.open('https://jscammie.com/booru', '_blank')">View Other's Images on Booru!</button>
+            </div>
+
             
             <details id="outputDetails" style="display: block;" open>
                 <summary>Output(s)</summary>
@@ -3353,16 +3847,23 @@
             
             <!-- if the imagesContainer div is empty then hide the dropdown: -->
             <script>
+
+
+
                 imagesContainer = document.getElementById('imagesContainer')
                 outputDetails = document.getElementById('outputDetails')
-                imagesContainer.addEventListener('DOMNodeInserted', function() {
+                function onImagesContainerUpdate(mutation) {
                     if (imagesContainer.children.length > 0) {
                         outputDetails.open = true;
                         outputDetails.style.display = 'block';
+                        console.log('Child change detected or event triggered:', mutation);
                     }
-                });
-                // trigger:
-                imagesContainer.dispatchEvent(new Event('DOMNodeInserted'));
+                }
+
+                observeChildChanges(imagesContainer, onImagesContainerUpdate, 'manualChildUpdate');
+
+                imagesContainer.dispatchEvent(new Event('manualChildUpdate'));
+
             </script>
 
             <style>
@@ -3517,6 +4018,15 @@
 
 
                     document.getElementById('currentCreditsPrice').innerText = runningCost
+
+                    let generateButton = document.getElementById('generateButton')
+
+                    if (runningCost > 0) {
+                        generateButton.innerText = `Generate Image | Cost: ${runningCost} Credits`
+                    } else {
+                        generateButton.innerText = `Generate Image for Free`
+                    }
+            
                 }
 
                 document.addEventListener('DOMContentLoaded', function() {
@@ -3533,10 +4043,21 @@
                 document.getElementById('model').addEventListener('change', function() {
                     prepareData()
                 });
-                // on lora change:
-                document.getElementById('loraSelectionsSummary').addEventListener('DOMSubtreeModified', function() {
-                    prepareData()
-                });
+
+                // Define the callback function to be executed when a change is detected
+                function onLoraChange(mutation) {
+                    prepareData();
+                }
+
+                // Select the target element by its ID
+                let loraSelectionsSummary = document.getElementById('loraSelectionsSummary');
+
+                if (loraSelectionsSummary) {
+                    // Use the observeChildChanges function to monitor the element
+                    observeChildChanges(loraSelectionsSummary, onLoraChange);
+                } else {
+                    console.warn('Element with ID "loraSelectionsSummary" does not exist.');
+                }
 
 
 
@@ -3563,95 +4084,6 @@
         </div>
 
     </div>
-
-    <style>
-        #advertisement {
-            text-align: center !important;
-            color: white;
-            font-size: 20px;
-            width: 90%;
-            height: 80px;
-            border: 1px solid rgb(255, 255, 255);
-            border-radius: 10px;
-            padding: 10px;
-            margin: 10px;
-            justify-content: center;
-            display: flex;
-        }
-        .discordad {
-            background-color: rgba(130, 86, 169, 0.584);
-        }
-        .redditad {
-            background-color: rgba(169, 108, 86, 0.584);
-        }
-        .kofiad {
-            background-color: rgba(86, 134, 169, 0.584);
-        }
-    </style>
-
-    <script>
-        // get advertisement div:
-        const advertisement = document.getElementById('advertisement');
-        // every 30 seconds change the advertisement, make it out of css elements, have a list of ads, and change the innerHTML of the advertisement div:\
-        let ads = [
-            {
-                advert_id: 'discordad',
-                text: ['Want to skip the queue? Join the Discord compete for a FastPass!', 'Share your images on the community Discord!', 'Got Suggestions? Join the community Discord!'],
-                link: 'https://discord.gg/AvbQuRmh7t',
-            },
-            {
-                advert_id: 'redditad',
-                text: ['We have a reddit! Share your creations at r/JSCammie!', 'Share your creations at r/JSCammie!', 'Join the community at r/JSCammie!', 'Got Suggestions? Join the community at r/JSCammie!'],
-                link: 'https://www.reddit.com/r/JSCammie/',
-            },
-            {
-                advert_id: 'kofiad',
-                text: ['Donate to the developer on Ko-fi!', 'Buy the developer a coffee on Ko-fi!', 'Support the developer on Ko-fi!'],
-                link: 'https://ko-fi.com/jscammie',
-            }
-        ]
-
-        function setAdvertisement() {
-            let ad = ads[Math.floor(Math.random() * ads.length)];
-            let adText = ad.text[Math.floor(Math.random() * ad.text.length)];
-            advertisement.innerHTML = `<a id="advertisementcontent" href="${ad.link}" style="color: white; text-decoration: none;">${adText}</a>`;
-            // set the advertisement href click area to be the full advertisement div size:
-            document.getElementById('advertisementcontent').style.display = 'block';
-            document.getElementById('advertisementcontent').style.width = '100%';
-            document.getElementById('advertisementcontent').style.height = '100%';
-            document.getElementById('advertisementcontent').style.textAlign = 'center';
-            if (ad.advert_id === 'discordad') {
-                // remove all classes from the advertisement div:
-                classList = advertisement.classList;
-                for (let i = 0; i < classList.length; i++) {
-                    advertisement.classList.remove(classList[i]);
-                }
-                advertisement.classList.add('discordad');
-            } else if (ad.advert_id === 'redditad') {
-                // remove all classes from the advertisement div:
-                classList = advertisement.classList;
-                for (let i = 0; i < classList.length; i++) {
-                    advertisement.classList.remove(classList[i]);
-                }
-                advertisement.classList.add('redditad');
-            } else if (ad.advert_id === 'kofiad') {
-                // remove all classes from the advertisement div:
-                classList = advertisement.classList;
-                for (let i = 0; i < classList.length; i++) {
-                    advertisement.classList.remove(classList[i]);
-                }
-                advertisement.classList.add('kofiad');
-            }
-
-        }
-
-        setInterval(() => {
-            setAdvertisement()
-        }, 30000);
-        // set initial advertisement:
-        setAdvertisement();
-    </script>
-
 
 
     <div id="imageOverlay" style="display:none;">
@@ -3895,7 +4327,7 @@
 
             function setWordCountClass(element, wordCount) {
                 removeAllClasses(element);
-                if (document.getElementById('model').value.startsWith('sdxl-')) {
+                if (document.getElementById('model').value.startsWith('pdxl-')) {
                     if (wordCount > 90) {
                         element.classList.add('wordCountRed');
                     } else if (wordCount > 75) {
@@ -3907,6 +4339,14 @@
                     if (wordCount > 300) {
                         element.classList.add('wordCountRed');
                     } else if (wordCount > 135) {
+                        element.classList.add('wordCountYellow');
+                    } else {
+                        element.classList.add('wordCountGreen');
+                    }
+                } else if (document.getElementById('model').value.startsWith('illustrious-')) {
+                    if (wordCount > 90) {
+                        element.classList.add('wordCountRed');
+                    } else if (wordCount > 75) {
                         element.classList.add('wordCountYellow');
                     } else {
                         element.classList.add('wordCountGreen');
@@ -4040,24 +4480,10 @@
             });
         });
 
-        
-
-        // // if the user scrolls to where they cant see a textbox, then deselect it (give some padding of 100px):
-        // document.addEventListener('scroll', function() {
-        //     if (document.getElementById('prompt').getBoundingClientRect().top < -400) {
-                
-        //         document.getElementById('prompt').blur();
-        //     }
-        //     if (document.getElementById('negativeprompt').getBoundingClientRect().top < -400) {
-        //         document.getElementById('negativeprompt').blur();
-        //     }
-        // });
-
-
     </script>
     
     <script> <%- scripts.aiForm %> </script>
-    <script src="https://www.jscammie.com/scripts/ai-autocomplete.js?v19" defer></script>
+    <script src="https://www.jscammie.com/scripts/ai-autocomplete.js?v20"></script>
 
     <div class="overlay" id="overlayBooru"></div>
     <div class="booruPopupContent" id="booruPopupContent"></div>

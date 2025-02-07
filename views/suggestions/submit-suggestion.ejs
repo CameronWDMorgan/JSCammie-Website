@@ -52,13 +52,22 @@
                 <option value="lora">💜Lora</option>
                 <option value="model">🧡Model</option>
                 <option value="feature">💚Feature</option>
-                <option value="bug">❤️Bug</option>
+                <!-- <option value="bug">❤️Bug</option> -->
             </select>
             <br>
 
+            <label for="safety">Safety (is it NSFW or SFW in nature)</label>
             <select id="safety" name="safety" required>
                 <option value="sfw">SFW</option>
                 <option value="nsfw">NSFW</option>
+            </select>
+            <br>
+
+            <label for="model">Model</label>
+            <select id="model" name="model" required>
+                <option value="sd1.5">SD 1.5</option>
+                <option value="pdxl">PDXL</option>
+                <option value="illustrious">Illustrious</option>
             </select>
             <br>
 
@@ -70,13 +79,28 @@
             <textarea id="text" name="text" required></textarea>
             <br>
 
+            <script>
+            
+                // only show the model select box if the type is lora or model:
+                document.getElementById('type').addEventListener('change', function() {
+                    if (this.value === 'lora' || this.value === 'model') {
+                        document.getElementById('model').style.display = 'block';
+                    } else {
+                        document.getElementById('model').style.display = 'none';
+                    }
+                });
+            
+            </script>
+
+
+
             <h2>Guidelines</h2>
             <ul>
                 <li>Do not make duplicate suggestions</li>
-                <li>💜Lora | Only 1 lora per suggestion, make sure to say if its for SD1.5, SDXL or FLUX!</li>
-                <li>🧡Model | Only 1 model per suggestion, make sure to say if its for SD1.5, SDXL or FLUX!</li>
-                <li>💚Feature | Explain the feature in detail</li>
-                <li>❤️Bug | Explain the bug in detail & how to recreate it</li>
+                <li>💜Lora | Only 1 lora per suggestion, make sure to specify if its for SD1.5, PDXL or Illustrious!</li>
+                <li>🧡Model | Only 1 model per suggestion, make sure to specify if it is for SD1.5, PDXL or Illustrious!</li>
+                <li>💚Feature | Explain the feature in detail, or link to examples of said feature on other sites / papers</li>
+                <!-- <li>❤️Bug | Explain the bug in detail & how to recreate it</li> -->
             </ul>
             <br>
 

@@ -45,6 +45,7 @@ app.use(express.json({
 	limit: '50mb'
 }));
 
+const moderatePrompt = require('./scripts/moderate-prompt.js')
 
 const cookieSession = require('cookie-session');
 
@@ -196,17 +197,27 @@ app.post('/receive-token', async (req, res) => {
 
 		const newProfile = {
 			accountId: discordUser.id,
+			discordId: discordUser.id,
 			username: discordUser.username,
 			timestamp: Date.now(),
 		};
 
-		// Update or create user profile in database
-		await userProfileSchema.findOneAndUpdate({
-			accountId: discordUser.id
-		}, newProfile, {
-			upsert: true
-		});
+		// check if there is a user with the same discord id:
+		let existingProfile = await userProfileSchema.findOne({
+			discordId: discordUser.id
+		})
 
+		if (!existingProfile) {
+			await mongolib.createSchemaDocument("userProfile", newProfile);
+		} else {
+			await mongolib.updateSchemaDocumentOnce("userProfile", {
+				discordId: discordUser.id
+			}, {
+				accountId: discordUser.id,
+				discordId: discordUser.id,
+			});
+		}
+		
 		// Store user session information
 		req.session.accountId = discordUser.id;
 		req.session.loggedIn = true;
@@ -234,10 +245,11 @@ app.post('/receive-token', async (req, res) => {
 });
 
 app.get('/suggestions', async (req, res) => {
+
+
 	let suggestions = await userSuggestionSchema.find()
-
+	
 	// userProfile:
-
 	if (req.session.loggedIn) {
 		userProfile = await userProfileSchema.findOne({
 			accountId: req.session.accountId
@@ -245,6 +257,10 @@ app.get('/suggestions', async (req, res) => {
 	} else {
 		userProfile = {}
 	}
+
+	// if (userProfile == {} || userProfile.accountId != 1039574722163249233) {
+	// 	res.status(200).send("Suggestions is currently disabled as it is being re-worked to be better! Please check back later.")
+	// }
 
 	res.render('suggestions/suggestions', {
 		suggestions: suggestions,
@@ -387,6 +403,84 @@ app.post('/toggle-suggestion-safety', async (req, res) => {
 	})
 })
 
+app.post('/update-suggestion-model', async (req, res) => {
+
+	// check if they are logged in:
+	if (!req.session.loggedIn) {
+		res.redirect('/login')
+		return
+	}
+
+	let suggestionId = req.body.suggestionId
+	let accountId = req.session.accountId
+
+	let suggestion = await mongolib.getSchemaDocumentOnce("userSuggestion", {
+		suggestionId: suggestionId
+	})
+
+	if (suggestion === null) {
+		res.send({
+			status: 'error',
+			message: 'Suggestion not found'
+		})
+		return
+	}
+
+	let currentUser = await mongolib.getSchemaDocumentOnce("userProfile", {
+		accountId: accountId
+	})
+
+	// check if the user is the author of the suggestion, or a owner:
+	if (suggestion.accountId !== accountId && currentUser.badges?.owner !== true) {
+		res.send({
+			status: 'error',
+			message: 'You are not the author of this suggestion'
+		})
+		return
+	}
+
+	switch (req.body.model) {
+		case 'sd1.5':
+			await mongolib.updateSchemaDocumentOnce("userSuggestion", {
+				suggestionId: suggestionId
+			}, {
+				model: 'sd1.5'
+			})
+			break;
+		
+		case 'pdxl':
+			await mongolib.updateSchemaDocumentOnce("userSuggestion", {
+				suggestionId: suggestionId
+			}, {
+				model: 'pdxl'
+			})
+			break;
+		
+		case 'illustrious':
+			await mongolib.updateSchemaDocumentOnce("userSuggestion", {
+				suggestionId: suggestionId
+			}, {
+				model: 'illustrious'
+			})
+			break;
+		default:
+			res.send({
+				status: 'error',
+				message: 'Invalid model'
+			})
+			return
+	}
+
+	res.send({
+		status: 'success',
+		message: `Suggestion model updated to ${req.body.model}`
+	})
+})
+
+
+
+
+
 app.post('/submit-suggestion', async (req, res) => {
 
 	// check if they are logged in:
@@ -413,9 +507,12 @@ app.post('/submit-suggestion', async (req, res) => {
 	// type:
 	let type = req.body.type
 
+	let model = req.body.model || ""
+
 	let newSuggestion = {
 		title: title,
 		type: type,
+		model: model,
 		suggestionId: String(suggestionId),
 		accountId: accountId,
 		text: text,
@@ -429,10 +526,10 @@ app.post('/submit-suggestion', async (req, res) => {
 	})
 	// remove any that dont have a status of pending:
 	userSuggestions = userSuggestions.filter(suggestion => suggestion.status.toLowerCase() === 'pending')
-	if (userSuggestions.length >= 10) {
+	if (userSuggestions.length >= 15) {
 		res.send({
 			status: 'error',
-			message: 'You have already submitted 10 suggestions'
+			message: 'You can only have 15 PENDING suggestions at once, please wait for some to be accepted or rejected to request more!'
 		})
 		return
 	}
@@ -656,6 +753,12 @@ app.post('/update-suggestion-status', async (req, res) => {
 	})
 
 	await mongolib.createUserNotification(suggestion.accountId, `Your suggestion titled: "${suggestion.title}" has been updated to status: ${newStatus}`, 'suggestion')
+
+	console.log(`Suggestion status updated to ${newStatus} from ${suggestion.status}`)
+
+	if (newStatus == 'added') {
+		await mongolib.modifyUserCredits(suggestion.accountId, 50, '+', `Suggestion Accepted: "${suggestion.title}"`)
+	}
 	
 	res.send({
 		status: 'success',
@@ -675,7 +778,12 @@ app.get('/suggestion/:suggestionId', async (req, res) => {
 		return
 	}
 
+	let userProfile = await mongolib.getSchemaDocumentOnce("userProfile", {
+		accountId: suggestion.accountId
+	})
+
 	res.render('suggestions/suggestion', {
+		userProfile: userProfile,
 		suggestion: suggestion,
 		session: req.session
 	})
@@ -705,7 +813,7 @@ app.get('/image-history', async (req, res) => {
 		let page = parseInt(req.query.page) || 1;
 		let search = req.query.search || '';
 		let model = req.query.model || 'all';
-		const totalPerPage = 24;
+		const totalPerPage = 48;
 		let skip = (page - 1) * totalPerPage;
 
 		if (isNaN(skip)) skip = 0;
@@ -785,6 +893,80 @@ app.get('/image-history', async (req, res) => {
 
 });
 
+const archiver = require('archiver');
+
+app.post('/image-history/download-page', async (req, res) => {
+  try {
+    const accountId = req.session.accountId;
+
+    // Fetch user profile
+    const userProfile = await mongolib.getSchemaDocumentOnce("userProfile", { accountId });
+    if (!userProfile) {
+      return res.status(404).json({ status: 'error', message: 'User not found' });
+    }
+
+    const { imageIds } = req.body;
+
+    // Fetch user history
+    const images = await mongolib.aggregateSchemaDocuments("userHistory", [
+      { $match: { account_id: accountId, image_id: { $in: imageIds } } },
+      { $sort: { timestamp: -1 } }
+    ]);
+
+    if (images.length === 0) {
+      return res.status(404).json({ status: 'error', message: 'No images found' });
+    }
+
+    // Extract relative file paths
+    const imagePaths = images.map(image => {
+      const imageUrl = image.image_url;
+      const relativePath = imageUrl.split('.com/')[1];
+      if (!relativePath) throw new Error(`Invalid URL format: ${imageUrl}`);
+      return relativePath;
+    });
+
+    // Prepare temp directory and zip file
+    const tempFolder = path.join(__dirname, `temp/${accountId}`);
+    const tempFilePath = path.join(tempFolder, `${Date.now()}.zip`);
+
+    if (!fs.existsSync(tempFolder)) {
+      fs.mkdirSync(tempFolder, { recursive: true });
+    }
+
+    const output = fs.createWriteStream(tempFilePath);
+    const zip = archiver('zip', { zlib: { level: 9 } });
+
+    output.on('close', () => {
+      console.log(`Zip file created: ${tempFilePath}`);
+      res.download(tempFilePath, `jscammie-images-${Date.now()}.zip`, () => {
+        fs.unlinkSync(tempFilePath); // Clean up temp file
+      });
+    });
+
+    zip.on('error', err => {
+      console.error('Archiver error:', err);
+      res.status(500).json({ status: 'error', message: 'Failed to create zip file' });
+    });
+
+    zip.pipe(output);
+
+    imagePaths.forEach(imagePath => {
+      const fullPath = path.join(__dirname, imagePath);
+      if (fs.existsSync(fullPath)) {
+        zip.file(fullPath, { name: path.basename(imagePath) });
+      } else {
+        console.warn(`File not found: ${fullPath}`);
+      }
+    });
+
+    await zip.finalize();
+  } catch (error) {
+    console.error('Error in download-page route:', error);
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
+  }
+});
+
+	
 
 
 app.post('/image-history/delete-image', async (req, res) => {
@@ -1062,14 +1244,19 @@ async function loraImagesCache() {
 
 		for (const [lora, loraData] of Object.entries(loras)) {
 
+			// skip it if it starts with flux:
+			if (lora.includes('flux')) {
+				continue
+			}
+
 			// ensure directories exist:
 			if (!fs.existsSync(`.\\loraimages\\${category}`)) {
 				fs.mkdirSync(`.\\loraimages\\${category}`, {
 					recursive: true
 				})
 			}
-			if (!fs.existsSync(`.\\loraimages\\sdxl\\${category}`)) {
-				fs.mkdirSync(`.\\loraimages\\sdxl\\${category}`, {
+			if (!fs.existsSync(`.\\loraimages\\pdxl\\${category}`)) {
+				fs.mkdirSync(`.\\loraimages\\pdxl\\${category}`, {
 					recursive: true
 				})
 			}
@@ -1078,26 +1265,50 @@ async function loraImagesCache() {
 					recursive: true
 				})
 			}
+			if (!fs.existsSync(`.\\loraimages\\illustrious\\${category}`)) {
+				fs.mkdirSync(`.\\loraimages\\illustrious\\${category}`, {
+					recursive: true
+				})
+			}
+
+			let isSD15 = false 
+			switch (lora) {
+				case 'pdxl':
+					break
+				case 'flux':
+					break
+				case 'illustrious':
+					break
+				default:
+					isSD15 = true
+					break
+			}
 
 			// set the image path in the loraData:
-			if (lora.includes('sdxl')) {
+			if (lora.includes('pdxl')) {
 				// if there is no lora image then set it to the default image:
-				if (!fs.existsSync(`.\\loraimages\\sdxl\\${category}\\${lora}.png`)) {
-					fs.writeFileSync(`.\\loraimages\\sdxl\\${category}\\${lora}.png`, defaultImage)
+				if (!fs.existsSync(`.\\loraimages\\pdxl\\${category}\\${lora}.png`)) {
+					fs.writeFileSync(`.\\loraimages\\pdxl\\${category}\\${lora}.png`, defaultImage)
 				}
-				loraData.image = `http://www.jscammie.com/loraimages/sdxl/${category}/${lora}.png`
+				loraData.image = `https://www.jscammie.com/loraimages/pdxl/${category}/${lora}.png`
 			} else if (lora.includes('flux')) {
 				// if there is no lora image then set it to the default image:
 				if (!fs.existsSync(`.\\loraimages\\flux\\${category}\\${lora}.png`)) {
 					fs.writeFileSync(`.\\loraimages\\flux\\${category}\\${lora}.png`, defaultImage)
 				}
-				loraData.image = `http://www.jscammie.com/loraimages/flux/${category}/${lora}.png`
-			} else {
+				loraData.image = `https://www.jscammie.com/loraimages/flux/${category}/${lora}.png`
+			} else if (lora.includes('illustrious')) {
+				// if there is no lora image then set it to the default image:
+				if (!fs.existsSync(`.\\loraimages\\illustrious\\${category}\\${lora}.png`)) {
+					fs.writeFileSync(`.\\loraimages\\illustrious\\${category}\\${lora}.png`, defaultImage)
+				}
+				loraData.image = `https://www.jscammie.com/loraimages/illustrious/${category}/${lora}.png`
+			} else if (isSD15) {
 				// if there is no lora image then set it to the default image:
 				if (!fs.existsSync(`.\\loraimages\\${category}\\${lora}.png`)) {
 					fs.writeFileSync(`.\\loraimages\\${category}\\${lora}.png`, defaultImage)
 				}
-				loraData.image = `http://www.jscammie.com/loraimages/${category}/${lora}.png`
+				loraData.image = `https://www.jscammie.com/loraimages/${category}/${lora}.png`
 			}
 
 			// add it to the cachedYAMLData:
@@ -1456,6 +1667,8 @@ app.post('/generate', async function(req, res) {
 		// make any <rp> lowercase:
 		request.prompt = request.prompt.replace(/<RP>/g, "<rp>")
 
+		moderatedPrompt = await moderatePrompt.positive(request.prompt)
+
 		if (request.model.startsWith('flux')) {
 			request.quantity = 2
 		}
@@ -1474,6 +1687,10 @@ app.post('/generate', async function(req, res) {
 			scheduler: request.scheduler
 		};
 		req.session.lastRequestSD = filteredLastRequest;
+
+		request.prompt = moderatedPrompt
+
+		request.creditsRequired = 0
 
 		if (request.fastqueue == true || request.extras?.removeWatermark == true || request.extras?.upscale == true || request.extras?.doubleImages == true || request.extras?.removeBackground == true) {
 
@@ -1575,6 +1792,8 @@ app.get('/cancel_request/:request_id', async function(req, res) {
 
 		const json = await response.json();
 
+		console.log(`Request cancelled: ${request_id}) `);
+
 		res.send(json);
 	} catch (error) {
 		console.log(`Error cancelling request: ${error}`);
@@ -1607,7 +1826,7 @@ app.get('/queue_position/:request_id', async function(req, res) {
 
 		res.send(json);
 	} catch (error) {
-		console.log(`Error getting queue position: ${error}`);
+		// console.log(`Error getting queue position: ${error}`);
 		res.status(500).send('Error getting queue position');
 	}
 })
@@ -1702,7 +1921,7 @@ app.get('/result/:request_id', async function(req, res) {
 							steps: json.historyData.steps,
 							cfg: json.historyData.cfg,
 							seed: json.historyData.seed,
-							image_url: `http://www.jscammie.com/imagesHistory/${json.historyData.account_id}/${nextImageId}.png`
+							image_url: `https://www.jscammie.com/imagesHistory/${json.historyData.account_id}/${nextImageId}.png`
 						};
 
 						// change the newImageHistory image_id to a string:
@@ -1726,7 +1945,7 @@ app.get('/result/:request_id', async function(req, res) {
 					account_id: json.historyData.account_id
 				})
 
-					if (count < 15000) {
+					if (count < 5000) {
 						
 						if (allImageHistory.length > 0) {
 							for (const image of allImageHistory) {
@@ -2011,6 +2230,8 @@ app.get('/booru/post/:booru_id', async function(req, res) {
 			ratings.suggestive = true
 		} else if (image._id == "nsfw") {
 			ratings.nsfw = true
+		} else if (image._id == "extreme") {
+			ratings.extreme = true
 		}
 	})
 	postProfile.ratings = Object.keys(ratings).filter(key => ratings[key]).join(',')
@@ -2057,18 +2278,50 @@ function splitTags(tags) {
 	return tags
 }
 
+// app.get('/set-timestampRated/', async function(req, res) {
+
+// 	let allBooruImages = await mongolib.getSchemaDocuments("userBooru")
+
+// 	for (const image of allBooruImages) {
+// 		let result = await mongolib.updateSchemaDocumentOnce("userBooru", {
+// 			booru_id: image.booru_id
+// 		}, { // make the timestampRated be 24hrs ago:
+// 			timestampRated: Date.now() - (24 * 60 * 60 * 1000)
+// 		})
+// 	}
+
+// 	res.send({
+// 		status: 'success'
+// 	})
+// })
+
 app.get('/booru/', async function(req, res) {
-	search = req.param('search') || ""
-	page = req.param('page') || 1
-	safety = req.param('safety') || ["sfw"]
-	sort = req.param('sort') || "trending"
 
 	try {
 
+		search = req.param('search') || ""
+		page = req.param('page') || 1
+		safety = req.param('safety') || ["sfw"]
+		sort = req.param('sort') || "trending"
+		followedAccountsOnly = req.param('FAO') || false
+
 		totalPerPage = 48
 
-		// make trending ago 2 days:
-		let trendingAgo = Date.now() - (3 * 24 * 60 * 60 * 1000)
+		let tempBoostBias = 20; // Additional weight for images under x hours old
+
+		let tempBoostHours = 2; // Hours to boost images for
+		let trendingAgoHours = 24
+
+		let tempBoostTimestamp = Date.now() - (tempBoostHours * 60 * 60 * 1000); // Timestamp for x hours ago
+		let trendingAgo = Date.now() - (trendingAgoHours * 60 * 60 * 1000); // Timestamp for x hours ago
+
+		let noVoteBoost = 100; // Additional weight for images with no votes
+
+		let voteBias = 0.05; // Weight of each upvote
+		let commentBias = 0.5; // Weight of each comment
+		let recentVoteBias = 3; // Additional weight for recent votes
+		let recentCommentBias = 6; // Additional weight for recent comments
+
 
 		// add the params to the url if they are not already there:
 		if (!req.url.includes('?')) {
@@ -2081,6 +2334,13 @@ app.get('/booru/', async function(req, res) {
 		if (!Array.isArray(safety)) {
 			safety = safety.split(',')
 		}
+
+		let userProfile = await userProfileSchema.findOne({
+			accountId: req.session.accountId
+		})
+
+		blockedAccounts = userProfile?.blockedAccounts ?? []
+		followedAccounts = userProfile?.followedAccounts ?? []
 
 		skip = (page - 1) * totalPerPage
 
@@ -2106,35 +2366,61 @@ app.get('/booru/', async function(req, res) {
 
 		if (search == "") {
 			if (sort == "recent") {
-				booruImages = await userBooruSchema.find({
-					safety: {
-						$in: safety
-					}
-				}).sort({
-					timestamp: -1
-				}).skip(skip).limit(totalPerPage)
-			} else if (sort == "votes") {
-				booruImages = await userBooruSchema.aggregate([{
+				booruImages = await mongolib.aggregateSchemaDocuments("userBooru", [
+					{
 						$match: {
 							safety: {
 								$in: safety
-							}
-						}
-					},
-					{
-						$addFields: {
-							votes: {
-								$subtract: [{
-									$size: "$upvotes"
-								}, {
-									$size: "$downvotes"
-								}]
+							},
+							account_id: {
+								$nin: blockedAccounts
 							}
 						}
 					},
 					{
 						$sort: {
-							votes: -1,
+							timestamp: -1
+						}
+					},
+					{
+						$skip: skip
+					},
+					{
+						$limit: totalPerPage
+					}
+				])
+
+						
+			} else if (sort == "votes") {
+				booruImages = await mongolib.aggregateSchemaDocuments("userBooru", [{
+						$match: {
+							safety: {
+								$in: safety
+							},
+							account_id: {
+								$nin: blockedAccounts
+							}
+						}
+					},
+					{
+						$addFields: {
+							totalVotes: {
+								$subtract: [
+									{ $size: { $ifNull: ["$upvotes", []] } },
+									{ $size: { $ifNull: ["$downvotes", []] } }
+								]
+							},
+						}
+					},
+					{
+						// add a score field which is the totalVotes:
+						$addFields: {
+							score: "$totalVotes"
+						}
+					},
+					{
+						$sort: {
+							score: -1,
 							_id: 1
 						}
 					},
@@ -2145,15 +2431,14 @@ app.get('/booru/', async function(req, res) {
 						$limit: totalPerPage
 					}
 				])
-			} else if (sort == "trending") {
-
-				booruImages = await userBooruSchema.aggregate([{
+			} else if (sort === "trending") {
+				booruImages = await mongolib.aggregateSchemaDocuments("userBooru", [
+					{
 						$match: {
-							safety: {
-								$in: safety
-							}
-						}
-					}, // Only filter by safety
+							safety: { $in: safety },
+							account_id: { $nin: blockedAccounts },
+						},
+					},
 					{
 						$addFields: {
 							recentVoteCount: {
@@ -2161,71 +2446,74 @@ app.get('/booru/', async function(req, res) {
 									{
 										$size: {
 											$filter: {
-												input: "$upvotes",
+												input: { $ifNull: ["$upvotes", []] },
 												as: "vote",
-												cond: {
-													$gt: ["$$vote.timestamp", trendingAgo]
-												}
+												cond: { $gt: ["$$vote.timestamp", trendingAgo] }
 											}
 										}
 									},
 									{
 										$size: {
 											$filter: {
-												input: "$downvotes",
+												input: { $ifNull: ["$downvotes", []] },
 												as: "vote",
-												cond: {
-													$gt: ["$$vote.timestamp", trendingAgo]
-												}
+												cond: { $gt: ["$$vote.timestamp", trendingAgo] }
 											}
 										}
 									}
 								]
 							},
-							votes: {
+							totalVotes: {
 								$subtract: [
-									{
-										$size: {
-											$filter: {
-												input: "$upvotes",
-												as: "vote",
-												cond: {
-													$gt: ["$$vote.timestamp", trendingAgo]
-												}
-											}
-										}
-									},
-									{
-										$size: {
-											$filter: {
-												input: "$downvotes",
-												as: "vote",
-												cond: {
-													$gt: ["$$vote.timestamp", trendingAgo]
-												}
-											}
-										}
+									{ $size: { $ifNull: ["$upvotes", []] } },
+									{ $size: { $ifNull: ["$downvotes", []] } }
+								]
+							},
+							commentCount: {
+								$size: { $ifNull: ["$comments", []] }
+							},
+							recentCommentCount: {
+								$size: {
+									$filter: {
+										input: { $ifNull: ["$comments", []] },
+										as: "comment",
+										// timestamp is string "1730512918671" make it long:
+										cond: { $gt: [{ $toLong: "$$comment.timestamp" }, trendingAgo] }
 									}
+								}
+							}
+						}
+					},
+					{
+						$addFields: {
+							score: {
+								$add: [
+									{ $multiply: ["$recentVoteCount", recentVoteBias] },
+									{ $multiply: ["$totalVotes", voteBias] },
+									{ $multiply: ["$recentCommentCount", recentCommentBias] },
+									{ $multiply: ["$commentCount", commentBias] },
+									{$cond: { if: { $gt: [{ $toLong: "$timestampRated" }, tempBoostTimestamp] }, then: tempBoostBias, else: 0 }},
+									{ $cond: { if: { $and: [ { $eq: [ { $size: { $ifNull: ["$upvotes", []] } }, 0 ] }, { $eq: [ { $size: { $ifNull: ["$downvotes", []] } }, 0 ] } ] }, then: noVoteBoost, else: 0 } }
 								]
 							}
 						}
 					},
 					{
 						$sort: {
-							recentVoteCount: -1,
-							votes: -1,
+							score: -1,
 							_id: 1
 						}
-					}, // Sort by recent votes, then total votes
+					},
 					{
 						$skip: skip
 					},
 					{
 						$limit: totalPerPage
 					}
-				])
-
+				]);
 			}
+
+
 
 
 
@@ -2233,7 +2521,10 @@ app.get('/booru/', async function(req, res) {
 					$match: {
 						safety: {
 							$in: safety
-						}
+						},
+						account_id: { 
+							$nin: blockedAccounts 
+						},
 					}
 				},
 				{
@@ -2314,7 +2605,10 @@ app.get('/booru/', async function(req, res) {
 								},
 								safety: {
 									$in: safety // Include safety filters
-								}
+								},
+								account_id: { 
+									$nin: blockedAccounts 
+								},
 							}
 						},
 						{
@@ -2340,7 +2634,10 @@ app.get('/booru/', async function(req, res) {
 								},
 								safety: {
 									$in: safety // Include safety filters
-								}
+								},
+								account_id: { 
+									$nin: blockedAccounts 
+								},
 							}
 						},
 						{
@@ -2366,22 +2663,31 @@ app.get('/booru/', async function(req, res) {
 							},
 							safety: {
 								$in: safety
-							}
+							},
+							account_id: { 
+								$nin: blockedAccounts 
+							},
 						}
 					}, {
 						$addFields: {
-							votes: {
-								$subtract: [{
-									$size: "$upvotes"
-								}, {
-									$size: "$downvotes"
-								}]
-							}
+							totalVotes: {
+								$subtract: [
+									{ $size: { $ifNull: ["$upvotes", []] } },
+									{ $size: { $ifNull: ["$downvotes", []] } }
+								]
+							},
 						}
-					}, {
+					},
+					{
+						// add a score field which is the totalVotes:
+						$addFields: {
+							score: "$totalVotes"
+						}
+					},
+					{
 						$sort: {
-							votes: -1,
-							timestamp: 1
+							score: -1,
+							_id: 1
 						}
 					}, {
 						$skip: skip
@@ -2396,7 +2702,10 @@ app.get('/booru/', async function(req, res) {
 							},
 							safety: {
 								$in: safety
-							}
+							},
+							account_id: { 
+								$nin: blockedAccounts 
+							},
 						}
 					}, {
 						$addFields: {
@@ -2431,9 +2740,12 @@ app.get('/booru/', async function(req, res) {
 								},
 								safety: {
 									$in: safety
-								}
+								},
+								account_id: { 
+									$nin: blockedAccounts 
+								},
 							}
-						}, // Only filter by safety
+						},
 						{
 							$addFields: {
 								recentVoteCount: {
@@ -2441,62 +2753,63 @@ app.get('/booru/', async function(req, res) {
 										{
 											$size: {
 												$filter: {
-													input: "$upvotes",
+													input: { $ifNull: ["$upvotes", []] },
 													as: "vote",
-													cond: {
-														$gt: ["$$vote.timestamp", trendingAgo]
-													}
+													cond: { $gt: ["$$vote.timestamp", trendingAgo] }
 												}
 											}
 										},
 										{
 											$size: {
 												$filter: {
-													input: "$downvotes",
+													input: { $ifNull: ["$downvotes", []] },
 													as: "vote",
-													cond: {
-														$gt: ["$$vote.timestamp", trendingAgo]
-													}
+													cond: { $gt: ["$$vote.timestamp", trendingAgo] }
 												}
 											}
 										}
 									]
 								},
-								votes: {
+								totalVotes: {
 									$subtract: [
-										{
-											$size: {
-												$filter: {
-													input: "$upvotes",
-													as: "vote",
-													cond: {
-														$gt: ["$$vote.timestamp", trendingAgo]
-													}
-												}
-											}
-										},
-										{
-											$size: {
-												$filter: {
-													input: "$downvotes",
-													as: "vote",
-													cond: {
-														$gt: ["$$vote.timestamp", trendingAgo]
-													}
-												}
-											}
+										{ $size: { $ifNull: ["$upvotes", []] } },
+										{ $size: { $ifNull: ["$downvotes", []] } }
+									]
+								},
+								commentCount: {
+									$size: { $ifNull: ["$comments", []] }
+								},
+								recentCommentCount: {
+									$size: {
+										$filter: {
+											input: { $ifNull: ["$comments", []] },
+											as: "comment",
+											cond: { $gt: [{ $toLong: "$$comment.timestamp" }, trendingAgo] }
 										}
+									}
+								}
+							}
+						},
+						{
+							$addFields: {
+								score: {
+									$add: [
+										{ $multiply: ["$recentVoteCount", recentVoteBias] },
+										{ $multiply: ["$totalVotes", voteBias] },
+										{ $multiply: ["$recentCommentCount", recentCommentBias] },
+										{ $multiply: ["$commentCount", commentBias] },
+										{$cond: { if: { $gt: [{ $toLong: "$timestampRated" }, tempBoostTimestamp] }, then: tempBoostBias, else: 0 }},
+										{ $cond: { if: { $or: [ { $eq: [ { $size: { $ifNull: ["$upvotes", []] } }, 0 ] }, { $eq: [ { $size: { $ifNull: ["$downvotes", []] } }, 0 ] } ] }, then: noVoteBoost, else: 0 } }
 									]
 								}
 							}
 						},
 						{
 							$sort: {
-								recentVoteCount: -1,
-								votes: -1,
+								score: -1,
 								_id: 1
 							}
-						}, // Sort by recent votes, then total votes
+						},
 						{
 							$skip: skip
 						},
@@ -2513,9 +2826,12 @@ app.get('/booru/', async function(req, res) {
 								},
 								safety: {
 									$in: safety
-								}
+								},
+								account_id: { 
+									$nin: blockedAccounts 
+								},
 							}
-						}, // Only filter by safety
+						},
 						{
 							$addFields: {
 								recentVoteCount: {
@@ -2523,62 +2839,63 @@ app.get('/booru/', async function(req, res) {
 										{
 											$size: {
 												$filter: {
-													input: "$upvotes",
+													input: { $ifNull: ["$upvotes", []] },
 													as: "vote",
-													cond: {
-														$gt: ["$$vote.timestamp", trendingAgo]
-													}
+													cond: { $gt: ["$$vote.timestamp", trendingAgo] }
 												}
 											}
 										},
 										{
 											$size: {
 												$filter: {
-													input: "$downvotes",
+													input: { $ifNull: ["$downvotes", []] },
 													as: "vote",
-													cond: {
-														$gt: ["$$vote.timestamp", trendingAgo]
-													}
+													cond: { $gt: ["$$vote.timestamp", trendingAgo] }
 												}
 											}
 										}
 									]
 								},
-								votes: {
+								totalVotes: {
 									$subtract: [
-										{
-											$size: {
-												$filter: {
-													input: "$upvotes",
-													as: "vote",
-													cond: {
-														$gt: ["$$vote.timestamp", trendingAgo]
-													}
-												}
-											}
-										},
-										{
-											$size: {
-												$filter: {
-													input: "$downvotes",
-													as: "vote",
-													cond: {
-														$gt: ["$$vote.timestamp", trendingAgo]
-													}
-												}
-											}
+										{ $size: { $ifNull: ["$upvotes", []] } },
+										{ $size: { $ifNull: ["$downvotes", []] } }
+									]
+								},
+								commentCount: {
+									$size: { $ifNull: ["$comments", []] }
+								},
+								recentCommentCount: {
+									$size: {
+										$filter: {
+											input: { $ifNull: ["$comments", []] },
+											as: "comment",
+											cond: { $gt: ["$$comment.timestamp", trendingAgo] }
 										}
+									}
+								}
+							}
+						},
+						{
+							$addFields: {
+								score: {
+									$add: [
+										{ $multiply: ["$recentVoteCount", recentVoteBias] },
+										{ $multiply: ["$totalVotes", voteBias] },
+										{ $multiply: ["$recentCommentCount", recentCommentBias] },
+										{ $multiply: ["$commentCount", commentBias] },
+										{$cond: { if: { $gt: [{ $toLong: "$timestampRated" }, tempBoostTimestamp] }, then: tempBoostBias, else: 0 }},
+										{ $cond: { if: { $or: [ { $eq: [ { $size: { $ifNull: ["$upvotes", []] } }, 0 ] }, { $eq: [ { $size: { $ifNull: ["$downvotes", []] } }, 0 ] } ] }, then: noVoteBoost, else: 0 } }
 									]
 								}
 							}
 						},
 						{
 							$sort: {
-								recentVoteCount: -1,
-								votes: -1,
+								score: -1,
 								_id: 1
 							}
-						}, // Sort by recent votes, then total votes
+						},
 						{
 							$skip: skip
 						},
@@ -2589,21 +2906,44 @@ app.get('/booru/', async function(req, res) {
 				}
 			}
 
-
-			totalImages = await userBooruSchema.aggregate([{
-					$match: {
-						booru_id: {
-							$in: allBooruIds
-						},
-						safety: {
-							$in: safety
+			if (allBooruIds.length > 0) {
+				totalImages = await userBooruSchema.aggregate([{
+						$match: {
+							booru_id: {
+								$in: allBooruIds,
+								$nin: minusBooruIds
+							},
+							safety: {
+								$in: safety
+							},
+							account_id: {
+								$nin: blockedAccounts
+							},
 						}
+					},
+					{
+						$count: 'count'
 					}
-				},
-				{
-					$count: 'count'
-				}
-			]);
+				]);
+			} else {
+				totalImages = await userBooruSchema.aggregate([{
+						$match: {
+							booru_id: {
+								$nin: minusBooruIds
+							},
+							safety: {
+								$in: safety
+							},
+							account_id: {
+								$nin: blockedAccounts
+							},
+						}
+					},
+					{
+						$count: 'count'
+					}
+				]);
+			}
 
 			if (totalImages.length == 0) {
 				totalImages = 0
@@ -2616,8 +2956,14 @@ app.get('/booru/', async function(req, res) {
 		// get the total count of the pages:
 		totalPages = Math.ceil(totalImages / totalPerPage)
 
-		let userProfile = await userProfileSchema.findOne({
-			accountId: req.session.accountId
+		// make sure the booruAccounts process is finished before the webpage is rendered:
+		// using the booruImages array, get all the account_ids, remove duplicates, then get the userProfiles for each account_id with mongolib:
+		let booruAccounts = Array.from(new Set(booruImages.map(image => image.account_id)))
+
+		booruAccounts = await mongolib.getSchemaDocuments("userProfile", {
+			accountId: {
+				$in: booruAccounts
+			}
 		})
 
 		if (req.session.loggedIn) {
@@ -2626,7 +2972,8 @@ app.get('/booru/', async function(req, res) {
 				booruImages: booruImages,
 				userProfile: userProfile,
 				booruSearchScript: booruSearchScript,
-				totalPages: totalPages
+				totalPages: totalPages,
+				booruAccounts: booruAccounts
 			});
 			return
 		} else {
@@ -2635,7 +2982,8 @@ app.get('/booru/', async function(req, res) {
 				booruImages: booruImages,
 				userProfile: userProfile,
 				booruSearchScript: booruSearchScript,
-				totalPages: totalPages
+				totalPages: totalPages, 
+				booruAccounts: booruAccounts
 			});
 		}
 
@@ -2643,9 +2991,6 @@ app.get('/booru/', async function(req, res) {
 		console.log(`Error loading tags data: ${error}`);
 		res.status(500).send('Error loading booru tags data');
 	}
-
-	
-
 })
 
 app.get('/recounttags', async function(req, res) {
@@ -2754,26 +3099,44 @@ app.post('/create-booru-image', async function(req, res) {
 			return
 		}
 
+		let hoursAgoBooru = Date.now() - (12 * 60 * 60 * 1000)
 
-		// if the user has posted more than 10 images in the last 24 hours, dont allow them to post:
-		let twentyFourHoursAgo = Date.now() - (24 * 60 * 60 * 1000)
+		let imageCountAggregate = await mongolib.aggregateSchemaDocuments("userBooru", [{
+				$match: {
+					account_id: req.session.accountId,
+					timestamp: {
+						$gt: hoursAgoBooru.toString()
+					}
+				}
+			},
+		])
 
-		let twentyFourHourImageCount = await userBooruSchema.countDocuments({
-			account_id: req.session.accountId,
-			timestamp: {
-				$gt: twentyFourHoursAgo
+		imageCount = imageCountAggregate[0]?.count ?? 0
+
+		maxBooruImages = 30
+
+		console.log(`Last 12 hrs: ${imageCount} - ${userProfile.username}`)
+
+		if (imageCount >= maxBooruImages) {
+
+			// time until next post:
+			let timeTillNextPost = Math.ceil(hoursAgoBooru - Date.now())
+			let timeTillNextPostString = ""
+
+			// if there are hours until the next post, show hours + mins, otherwise just show minutes:
+			if (timeTillNextPost > 60 * 60 * 1000) {
+				let hours = Math.floor(timeTillNextPost / (60 * 60 * 1000))
+				let mins = Math.floor((timeTillNextPost % (60 * 60 * 1000)) / (60 * 1000))
+				timeTillNextPostString = `${hours} hours and ${mins} minutes`
+			} else {
+				let mins = Math.floor(timeTillNextPost / (60 * 1000))
+				timeTillNextPostString = `${mins} minutes`
 			}
-		})
 
-		if (twentyFourHourImageCount == null || twentyFourHourImageCount == undefined || twentyFourHourImageCount == NaN) {
-			twentyFourHourImageCount = 0
-		}
-
-		if (twentyFourHourImageCount >= 25) {
 
 			res.send({
 				status: "error",
-				message: "You have posted more than 25 images in the last 24 hours"
+				message: `You have posted more than ${maxBooruImages} images in the last 12 hour, you can post again in ${timeTillNextPostString}`
 			})
 			return
 		}
@@ -2791,6 +3154,7 @@ app.post('/create-booru-image', async function(req, res) {
 		let image_url = data.image_url // the filepath for the png image E:/JSCammie/imagesHistory/
 
 		// replace the http:\\www.jscammie.com\\ at the start:
+		image_url = image_url.replace("https://www.jscammie.com/", "")
 		image_url = image_url.replace("http://www.jscammie.com/", "")
 
 		// load the image from disk:
@@ -2878,9 +3242,10 @@ app.post('/create-booru-image', async function(req, res) {
 			steps: data.steps,
 			cfg: data.cfg,
 			seed: data.seed,
-			content_url: `http://www.jscammie.com/${newImageUrlBase}`,
+			content_url: `https://www.jscammie.com/${newImageUrlBase}`,
 			safety: "na",
 			timestamp: Date.now(),
+			timestampRated: Date.now(),
 		};
 
 
@@ -2904,6 +3269,97 @@ app.post('/create-booru-image', async function(req, res) {
 	} catch (error) {
 		console.log(`Error creating booru image: ${error}`);
 		res.status(500).send('Error creating booru image');
+	}
+})
+
+app.post('/follow-account/', async function(req, res) {
+
+	try {
+
+		let userProfile = await mongolib.getSchemaDocumentOnce("userProfile", {
+			accountId: req.session.accountId
+		})
+
+		let accountToFollow = req.body.accountId
+
+		if (userProfile.followedAccounts.includes(accountToFollow)) {
+			
+			await mongolib.updateSchemaDocumentOnce("userProfile", {
+				accountId: req.session.accountId
+			}, {
+				$pull: {
+					followedAccounts: accountToFollow
+				}
+			})
+
+		} else {
+		
+			await mongolib.updateSchemaDocumentOnce("userProfile", {
+				accountId: req.session.accountId
+			}, {
+				$push: {
+					followedAccounts: accountToFollow
+				}
+			})
+		
+		}
+
+		let userProfileUpdated = await mongolib.getSchemaDocumentOnce("userProfile", {
+			accountId: req.session.accountId
+		})
+
+		res.json({ followedAccounts: userProfileUpdated.followedAccounts });
+	
+	} catch (error) {
+		console.log(`Error following account: ${error}`);
+		res.status(500).send('Error following account');
+	}
+})
+
+app.post('/block-account/', async function(req, res) {
+
+	try {
+
+		let userProfile = await mongolib.getSchemaDocumentOnce("userProfile", {
+			accountId: req.session.accountId
+		})
+
+		let accountToBlock = req.body.accountId
+
+		if (userProfile.blockedAccounts.includes(accountToBlock)) {
+
+			await mongolib.updateSchemaDocumentOnce("userProfile", {
+				accountId: req.session.accountId
+			}, {
+				$pull: {
+					blockedAccounts: accountToBlock
+				}
+			})
+
+		} else {
+
+			await mongolib.updateSchemaDocumentOnce("userProfile", {
+				accountId: req.session.accountId
+			}, {
+				$push: {
+					blockedAccounts: accountToBlock
+				}
+			})
+
+		}
+
+		let userProfileUpdated = await mongolib.getSchemaDocumentOnce("userProfile", {
+			accountId: req.session.accountId
+		})
+
+		//  {blockedAccounts: userProfileUpdated.blockedAccounts}
+		res.json({ blockedAccounts: userProfileUpdated.blockedAccounts });
+
+	} catch (error) {
+
+		console.log(`Error blocking account: ${error}`);
+		res.status(500).send('Error blocking account');
+
 	}
 })
 
@@ -2953,8 +3409,8 @@ app.post('/booru/setRating/', async function(req, res) {
 		}
 
 		if (foundBooruImage.safety == "na") {
-			await mongolib.modifyUserCredits(creatorProfile.accountId, 50, '+', `Your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a> was rated ${rating.toUpperCase()}`)
-			await mongolib.modifyUserExp(creatorProfile.accountId, 50, '+')
+			await mongolib.modifyUserCredits(creatorProfile.accountId, 10, '+', `Your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a> was rated ${rating.toUpperCase()}`)
+			await mongolib.modifyUserExp(creatorProfile.accountId, 10, '+')
 			if (creatorProfile.settings?.notification_booruRating == true || creatorProfile.settings?.notification_booruRating == undefined) {
 				await mongolib.createUserNotification(creatorProfile.accountId, `Your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a> was rated ${rating.toUpperCase()}`, 'booru')
 			}
@@ -2969,6 +3425,13 @@ app.post('/booru/setRating/', async function(req, res) {
 
 			// send the webhook to the bot:
 			await axios.post('http://127.0.0.1:3040/booruRating', webhookData)
+
+			// set the timestamp to be date.time() so the trending algorithm will boost it:
+			await mongolib.updateSchemaDocumentOnce("userBooru", {
+				booru_id: booru_id
+			}, {
+				timestampRated: `${Date.now()}`,
+			})
 
 		}
 
@@ -2990,9 +3453,9 @@ app.post('/booru/setRating/', async function(req, res) {
 
 })
 
-// <a href="/booru/delete/${value.booru_id}">Delete</a>
-app.get('/booru/delete/:booru_id', async function(req, res) {
-	booru_id = req.param('booru_id')
+app.post('/booru/delete', async function(req, res) {
+	booru_id = req.body.booru_id
+	reason = req.body.reason
 
 	let foundBooruImage = await userBooruSchema.findOne({
 		booru_id: booru_id
@@ -3011,7 +3474,7 @@ app.get('/booru/delete/:booru_id', async function(req, res) {
 	}
 
 	// check if the user either owns the image, or has badges.moderator:
-	if (foundBooruImage.account_id !== req.session.accountId && userProfile.badges?.moderator !== true) {
+	if (foundBooruImage.account_id != req.session.accountId && userProfile.badges?.moderator != true) {
 		res.send({
 			status: "error",
 			message: "User does not own the image"
@@ -3019,9 +3482,15 @@ app.get('/booru/delete/:booru_id', async function(req, res) {
 		return
 	}
 
+	let localImage = ""
 
+	// could be https: or http:
+	if (foundBooruImage.content_url.startsWith("https://")) {
+		localImage = foundBooruImage.content_url.replace("https://www.jscammie.com/", "")
+	} else {
+		localImage = foundBooruImage.content_url.replace("http://www.jscammie.com/", "")
+	}
 
-	localImage = foundBooruImage.content_url.replace("http://www.jscammie.com/", "")
 
 	// delete the image from the booruImages folder:
 	// check if it exists first:
@@ -3041,11 +3510,10 @@ app.get('/booru/delete/:booru_id', async function(req, res) {
 		booru_id: booru_id
 	})
 
+	if (reason != "self-delete") {
+		await mongolib.createUserNotification(foundBooruImage.account_id, `Your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a> was deleted, Reason: ${reason}`, 'moderation')
+	}
 	
-	await mongolib.createUserNotification(foundBooruImage.account_id, `Your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a> was deleted`, 'moderation')
-
-	// delete the image from the userBooruTagsSchema:
-	// find every booruTagsSchema where the array booru_ids contains the booru_id:
 	let foundTags = await userBooruTagsSchema.find({
 		booru_ids: booru_id
 	})
@@ -3066,10 +3534,12 @@ app.get('/booru/delete/:booru_id', async function(req, res) {
 				}
 			})
 		}
-
 	}
 
-	res.redirect('back')
+	res.send({
+		status: "success",
+		message: "Booru image deleted"
+	})
 })
 
 app.post('/booru/ban/:accountId', async function(req, res) {
@@ -3180,7 +3650,11 @@ app.post('/booru/vote', async function(req, res) {
 		// votes are stored as an array of objects, each object has a accountId and a timestamp:
 		// check if the user has already voted on the post:
 
-		creditsToGain = 2
+		creatorCreditsToGain = 3
+		creatorExpToGain = 1
+
+		userCreditsToGain = 1
+		userExpToGain = 1
 
 		switch (vote) {
 			case 'upvote':
@@ -3210,12 +3684,12 @@ app.post('/booru/vote', async function(req, res) {
 
 				} else {
 
-					await mongolib.modifyUserCredits(account_id, creditsToGain, '+', `You Upvoted a <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a>`)
-					await mongolib.modifyUserExp(account_id, 1, '+')
+					await mongolib.modifyUserCredits(account_id, userCreditsToGain, '+', `You Upvoted a <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a>`)
+					await mongolib.modifyUserExp(account_id, userExpToGain, '+')
 
 					if (creatorProfile != null) {
-						await mongolib.modifyUserCredits(creatorProfile.accountId, creditsToGain, '+', `Someone upvoted your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a>`)
-						await mongolib.modifyUserExp(creatorProfile.accountId, 1, '+')
+						await mongolib.modifyUserCredits(creatorProfile.accountId, creatorCreditsToGain, '+', `Someone upvoted your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a>`)
+						await mongolib.modifyUserExp(creatorProfile.accountId, creatorExpToGain, '+')
 						if (creatorProfile.settings?.notification_booruVote == true || creatorProfile.settings?.notification_booruVote == undefined) {
 							await mongolib.createUserNotification(creatorProfile.accountId, `Someone upvoted your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a>`, 'booru')
 						}
@@ -3318,13 +3792,25 @@ app.post('/booru/comment/post/:booru_id', async function(req, res) {
 		return
 	}
 
-	await mongolib.createSchemaDocument("userBooruComments", {
-		commentId: `${req.session.accountId}-${Date.now()}-${booru_id}`,
-		booruId: booru_id,
-		accountId: req.session.accountId,
-		comment: comment,
-		timestamp: Date.now()
-	})
+	await mongolib.updateSchemaDocumentOnce(
+		"userBooru",
+		{ booru_id: booru_id }, // Find the document by `booru_id`
+		{
+			$push: {
+				comments: {
+					commentId: `${req.session.accountId}-${Date.now()}-${booru_id}`,
+					booruId: booru_id,
+					accountId: req.session.accountId,
+					comment: comment,
+					timestamp: Date.now(),
+					upvotes: [],
+					downvotes: []
+				}
+			}
+		}
+	);
+
+
 
 	let creatorProfile = await userProfileSchema.findOne({
 		accountId: foundBooruImage.account_id
@@ -3342,236 +3828,236 @@ app.post('/booru/comment/post/:booru_id', async function(req, res) {
 
 
 app.get('/booru/comment/delete/:commentId', async function(req, res) {
-	commentId = req.param('commentId')
 
-	let foundComment = await mongolib.getSchemaDocumentOnce("userBooruComments", {
-		commentId: commentId
-	})
+	try {
 
-	if (foundComment == null) {
+		const commentId = req.param('commentId');
+
+		const foundBooru = await mongolib.getSchemaDocumentOnce("userBooru", {
+			"comments.commentId": commentId
+		});
+
+		if (!foundBooru) {
+			res.send({
+				status: "error",
+				message: "Comment not found"
+			});
+			return;
+		}
+
+		const foundComment = foundBooru.comments.find(comment => comment.commentId === commentId);
+
+		if (!foundComment) {
+			res.send({
+				status: "error",
+				message: "Comment not found"
+			});
+			return;
+		}
+
+		const foundAccount = await mongolib.getSchemaDocumentOnce("userProfile", {
+			accountId: req.session.accountId
+		});
+
+		if (!foundAccount) {
+			res.send({
+				status: "error",
+				message: "Account not found"
+			});
+			return;
+		}
+
+		if (foundComment.accountId !== req.session.accountId) {
+			res.send({
+				status: "error",
+				message: "Account does not own the comment"
+			});
+			return;
+		}
+
+		await mongolib.updateSchemaDocumentOnce(
+			"userBooru",
+			{ booru_id: foundBooru.booru_id },
+			{
+				$pull: { comments: { commentId: commentId } }
+			}
+		);
+
+		await mongolib.createUserNotification(foundComment.accountId, `Your comment was deleted`, 'moderation');
+
 		res.send({
-			status: "error",
-			message: "Comment not found"
-		})
-		return
+			status: "success",
+			message: "Comment deleted"
+		});
+	
+	} catch (error) {
+		console.log(`Error deleting comment: ${error}`);
+		res.status(500).send('Error deleting comment');
 	}
 
-	let foundAccount = await mongolib.getSchemaDocumentOnce("userProfile", {
-		accountId: req.session.accountId
-	})
-
-	if (foundAccount == null) {
-		res.send({
-			status: "error",
-			message: "Account not found"
-		})
-		return
-	}
-
-	if (foundComment.accountId !== req.session.accountId) {
-		res.send({
-			status: "error",
-			message: "Account does not own the comment"
-		})
-		return
-	}
-
-	await mongolib.deleteSchemaDocument("userBooruComments", {
-		commentId: commentId
-	})
-
-	await mongolib.createUserNotification(foundComment.accountId, `Your comment was deleted`, 'moderation')
-
-	res.send({
-		status: "success",
-		message: "Comment deleted"
-	})
 })
 
 
-app.post('/booru/comment/vote', async function(req, res) {
-	let voteType = req.body.vote
-	let commentId = req.body.commentId
-	let accountId = req.session.accountId
+app.post('/booru/comment/vote', async function (req, res) {
+    try {
+        const { vote: voteType, commentId } = req.body;
+        const accountId = req.session.accountId;
 
-	let foundComment = await mongolib.getSchemaDocumentOnce("userBooruComments", {
-		commentId: commentId
-	})
+        if (!["upvote", "downvote"].includes(voteType)) {
+            return res.status(400).send({ status: "error", message: "Invalid vote type" });
+        }
 
-	if (foundComment == null) {
-		res.send({
-			status: "error",
-			message: "Comment not found"
-		})
-		return
-	}
+        // Step 1: Find the booru document containing the comment
+        const foundBooru = await mongolib.getSchemaDocumentOnce("userBooru", {
+            "comments.commentId": commentId
+        });
 
-	let foundAccount = await mongolib.getSchemaDocumentOnce("userProfile", {
-		accountId: accountId
-	})
+        if (!foundBooru) {
+            return res.status(404).send({ status: "error", message: "Comment not found" });
+        }
 
-	if (foundAccount == null) {
-		res.send({
-			status: "error",
-			message: "Account not found"
-		})
-		return
-	}
+        // Step 2: Find the specific comment within the booru document
+        const foundComment = foundBooru.comments.find(comment => comment.commentId === commentId);
 
-	if (voteType == "upvote") {
-		// check if the user has already upvoted:
-		if (foundComment.upvotes.some(vote => vote.accountId == accountId)) {
-			// remove the upvote:
-			await mongolib.updateSchemaDocumentOnce("userBooruComments", {
-				commentId: commentId
-			}, {
-				$pull: {
-					upvotes: {
-						accountId: accountId
-					}
-				}
-			})
-			res.send({
-				status: "success",
-				message: "User has already upvoted",
-				upvotes: foundComment.upvotes.length,
-				downvotes: foundComment.downvotes.length
-			})
-			return
-		}
-		// check if the user has already downvoted:
-		if (foundComment.downvotes.some(vote => vote.accountId == accountId)) {
-			await mongolib.updateSchemaDocumentOnce("userBooruComments", {
-				commentId: commentId
-			}, {
-				$pull: {
-					downvotes: {
-						accountId: accountId
-					}
-				}
-			})
-		}
-		// add the upvote:
-		await mongolib.updateSchemaDocumentOnce("userBooruComments", {
-			commentId: commentId
-		}, {
-			$push: {
-				upvotes: {
-					accountId: accountId,
-					timestamp: Date.now()
-				}
-			}
-		})
-	} else if (voteType == "downvote") {
-		// check if the user has already downvoted:
-		if (foundComment.downvotes.some(vote => vote.accountId == accountId)) {
-			// remove the downvote:
-			await mongolib.updateSchemaDocumentOnce("userBooruComments", {
-				commentId: commentId
-			}, {
-				$pull: {
-					downvotes: {
-						accountId: accountId
-					}
-				}
-			})
-			res.send({
-				status: "success",
-				message: "User has already downvoted",
-				upvotes: foundComment.upvotes.length,
-				downvotes: foundComment.downvotes.length
-			})
-			return
-		}
+        if (!foundComment) {
+            return res.status(404).send({ status: "error", message: "Comment not found" });
+        }
 
-		// check if the user has already upvoted:
-		if (foundComment.upvotes.some(vote => vote.accountId == accountId)) {
-			await mongolib.updateSchemaDocumentOnce("userBooruComments", {
-				commentId: commentId
-			}, {
-				$pull: {
-					upvotes: {
-						accountId: accountId
-					}
-				}
-			})
-		}
-		// add the downvote:
-		await mongolib.updateSchemaDocumentOnce("userBooruComments", {
-			commentId: commentId
-		}, {
-			$push: {
-				downvotes: {
-					accountId: accountId,
-					timestamp: Date.now()
-				}
-			}
-		})
-	}
+        // Step 3: Find the user's profile (optional check for account validity)
+        const foundAccount = await mongolib.getSchemaDocumentOnce("userProfile", { accountId });
+        if (!foundAccount) {
+            return res.status(404).send({ status: "error", message: "Account not found" });
+        }
 
-	let newComment = await mongolib.getSchemaDocumentOnce("userBooruComments", {
-		commentId: commentId
-	})
+        // Step 4: Prepare the update logic
+        const updateQuery = { "comments.commentId": commentId };
+        const updateAction = {};
 
-	res.send({
-		status: "success",
-		message: "Vote added",
-		upvotes: newComment.upvotes.length,
-		downvotes: newComment.downvotes.length
-	})
+        const alreadyUpvoted = foundComment.upvotes.some(vote => vote.accountId === accountId);
+        const alreadyDownvoted = foundComment.downvotes.some(vote => vote.accountId === accountId);
 
-})
+        if (voteType === "upvote") {
+            // Remove upvote if already upvoted
+            if (alreadyUpvoted) {
+                updateAction.$pull = { "comments.$.upvotes": { accountId } };
+            } else {
+                // Remove downvote if exists, then add upvote
+                if (alreadyDownvoted) {
+                    updateAction.$pull = { "comments.$.downvotes": { accountId } };
+                }
+                updateAction.$push = {
+                    "comments.$.upvotes": {
+                        accountId,
+                        timestamp: Date.now()
+                    }
+                };
+            }
+        } else if (voteType === "downvote") {
+            // Remove downvote if already downvoted
+            if (alreadyDownvoted) {
+                updateAction.$pull = { "comments.$.downvotes": { accountId } };
+            } else {
+                // Remove upvote if exists, then add downvote
+                if (alreadyUpvoted) {
+                    updateAction.$pull = { "comments.$.upvotes": { accountId } };
+                }
+                updateAction.$push = {
+                    "comments.$.downvotes": {
+                        accountId,
+                        timestamp: Date.now()
+                    }
+                };
+            }
+        }
+
+        // Apply the update if any action was created
+        if (Object.keys(updateAction).length > 0) {
+            await mongolib.updateSchemaDocumentOnce("userBooru", updateQuery, updateAction);
+        }
+
+        // Step 5: Get updated comment details
+        const updatedBooru = await mongolib.getSchemaDocumentOnce("userBooru", {
+            "comments.commentId": commentId
+        });
+
+        const updatedComment = updatedBooru.comments.find(comment => comment.commentId === commentId);
+
+        return res.send({
+            status: "success",
+            message: "Vote processed successfully",
+            upvotes: updatedComment.upvotes.length,
+            downvotes: updatedComment.downvotes.length
+        });
+    } catch (error) {
+        console.error("Error processing vote:", error);
+        return res.status(500).send({ status: "error", message: "Internal server error" });
+    }
+});
 
 
 app.get('/booru/comment/get/:booru_id', async function(req, res) {
-	booru_id = req.param('booru_id')
 
-	let foundBooruImage = await mongolib.getSchemaDocumentOnce("userBooru", {
-		booru_id: booru_id
-	})
+	try {
 
-	let foundBooruComments = await mongolib.getSchemaDocuments("userBooruComments", {
-		booruId: booru_id
-	})
+		booru_id = req.param('booru_id')
 
-	if (foundBooruImage == null) {
-		res.send({
-			status: "error",
-			message: "Booru image not found"
+		let foundBooruImage = await mongolib.getSchemaDocumentOnce("userBooru", {
+			booru_id: booru_id
 		})
+
+		let foundBooruComments = foundBooruImage.comments
+
+		// ensure that foundBooru comments is an array:
+		if (!Array.isArray(foundBooruComments)) {
+			foundBooruComments = [foundBooruComments]
+		}
+
+		if (foundBooruImage == null) {
+			res.send({
+				status: "error",
+				message: "Booru image not found"
+			})
+			return
+		}
+
+		let comments = []
+
+		let foundAccounts = []
+
+		for (const comment of foundBooruComments) {
+			// found accounts is an array of objects, each object has an accountId, username and profileImg:
+			let foundAccount = foundAccounts.find(account => account.accountId == comment.accountId)
+			if (foundAccount == undefined) {
+				foundAccount = await mongolib.getSchemaDocumentOnce("userProfile", {
+					accountId: comment.accountId
+				})
+				foundAccounts.push(foundAccount)
+			}
+			comments.push({
+				comment: comment.comment,
+				commentId: comment.commentId,
+				timestamp: comment.timestamp,
+				accountId: comment.accountId,
+				upvotes: comment.upvotes.length || "0",
+				downvotes: comment.downvotes.length || "0",
+				username: foundAccount.username,
+				profileImg: foundAccount.profileImg || "https://www.jscammie.com/noimagefound.png"
+			})
+		}
+
+		res.send({
+			status: "success",
+			comments: comments
+		})
+
+	} catch(error) {
+		console.log(`Error getting comments: ${error}`);
 		return
 	}
 
-	let comments = []
-
-	let foundAccounts = []
-
-	for (const comment of foundBooruComments) {
-		// found accounts is an array of objects, each object has an accountId, username and profileImg:
-		let foundAccount = foundAccounts.find(account => account.accountId == comment.accountId)
-		if (foundAccount == undefined) {
-			foundAccount = await mongolib.getSchemaDocumentOnce("userProfile", {
-				accountId: comment.accountId
-			})
-			foundAccounts.push(foundAccount)
-		}
-		comments.push({
-			comment: comment.comment,
-			commentId: comment.commentId,
-			timestamp: comment.timestamp,
-			accountId: comment.accountId,
-			upvotes: comment.upvotes.length || "0",
-			downvotes: comment.downvotes.length || "0",
-			username: foundAccount.username,
-			profileImg: foundAccount.profileImg || "http://www.jscammie.com/noimagefound.png"
-		})
-	}
-
-	res.send({
-		status: "success",
-		comments: comments
-	})
+	
 })
+
 
 app.get('/profile/:account_id', async function(req, res) {
 	account_id = req.param('account_id')
@@ -3596,12 +4082,21 @@ app.get('/profile/:account_id', async function(req, res) {
 		account_id: account_id
 	})
 
+	let booruAccounts = Array.from(new Set(userBooru.map(image => image.account_id)))
+
+	booruAccounts = await mongolib.getSchemaDocuments("userProfile", {
+		accountId: {
+			$in: booruAccounts
+		}
+	})
+
 	res.render('profile', {
 		session: req.session,
 		profileProfile: profileProfile,
 		userProfile: userProfile,
 		userBooru: userBooru,
-		booruSearchScript: booruSearchScript
+		booruSearchScript: booruSearchScript,
+		booruAccounts: booruAccounts
 	});
 })
 
@@ -3849,6 +4344,7 @@ app.post('/settings/avatar', async (req, res) => {
 });
 
 
+
 app.post('/settings/update', async function(req, res) {
 
 	try {
@@ -3992,6 +4488,12 @@ app.post('/modify-user-credits', async function(req, res) {
 
 app.get('/modify-user-credits', async function(req, res) {
 
+	// return res.status(404).send('Page not found')
+
+	if (req.session.accountId != "1039574722163249233") {
+		return res.status(404).send('Page not found')
+	}
+
 	res.render('modifyusercredits', {
 		session: req.session
 	});
@@ -4057,8 +4559,8 @@ app.post('/payment/verify', async (req, res) => {
             order.purchase_units[0].amount.value === selectedOption.price.toFixed(2)
         ) {
             // Add credits to the user's account
-            await mongolib.modifyUserCredits(accountId, selectedOption.credits, '+', `Purchased ${selectedOption.credits} credits for $${selectedOption.price.toFixed(2)}`);
-            await mongolib.createUserNotification(accountId, `You have purchased ${selectedOption.credits} credits for $${selectedOption.price.toFixed(2)}`, 'payment');
+            await mongolib.modifyUserCredits(accountId, selectedOption.credits, '+', `Purchased ${selectedOption.credits} credits for $${selectedOption.price.toFixed(2)}, thank you very much for your support! 🤍`);
+            await mongolib.createUserNotification(accountId, `You have purchased ${selectedOption.credits} credits for $${selectedOption.price.toFixed(2)}, thank you very much for your support! 🤍`, 'payment');
             res.status(200).send('Payment verified and credits added.');
         } else {
             res.status(400).send('Payment verification failed.');
@@ -4084,8 +4586,8 @@ app.post('/payment/webhook', async (req, res) => {
             const credits = parseInt(resource.custom_id.split('-')[1]); // Extract credits from custom_id
 
             // Add credits to the user's account
-            await mongolib.modifyUserCredits(accountId, credits, '+', `Purchased ${credits} credits via PayPal`);
-            await mongolib.createUserNotification(accountId, `You have successfully purchased ${credits} credits.`, 'payment');
+            await mongolib.modifyUserCredits(accountId, credits, '+', `Purchased ${credits} credits via PayPal, thank you very much for your support! 🤍`);
+            await mongolib.createUserNotification(accountId, `You have successfully purchased ${credits} credits, thank you very much for your support! 🤍`, 'payment');
 
             res.status(200).send('Webhook processed.');
         } else {

@@ -17,8 +17,9 @@
     </script>
 </head>
 <body>
-    <%- include('../partials/_navigation') %>
 
+    <%- include('../partials/_navigation') %>
+    
     <div class="center-fully-no-flex" style="margin-bottom: 1rem;">
         <%- include('../partials/_bannerAdvert') %>
     </div>
@@ -36,6 +37,7 @@
 
             #paypal-buttons-container * {
                 color: rgb(0, 0, 0) !important;
+                z-index: 1 !important;
             }
 
             #paypal-buttons-container > div {
@@ -43,7 +45,6 @@
                 border: 4px solid #ccc;
                 border-radius: 5px;
                 background-color: rgba(169, 208, 220, 0.704);
-                mix-blend-mode:screen;
             }
         </style>
 
@@ -51,7 +52,20 @@
             <p>Logged in as: <%= userProfile.username %></p>
             <div id="paypal-buttons-container"></div>
         <% } else { %>
-            <p>Not logged in. You need to be logged in to buy credits</p>
+            <p>Not logged in. You need to be logged in to buy credits!</p>
+            <!-- make sure the user cannot interact with the paypal buttons container -->
+            <div id="paypal-buttons-container"></div>
+
+
+            <style>
+
+
+                #paypal-buttons-container {
+                    pointer-events: none;
+                }
+            
+            </style>
+                
         <% } %>
 
         <script>

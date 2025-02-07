@@ -11,6 +11,7 @@ const userSuggestionSchema = new Schema({
     text: { type: String, default: "No text given" },
     timestamp: { type: String, required: false },
     type: { type: String, default: "lora" },
+    model: { type: String, required: false },
     status: { type: String, default: "Pending" },
     safety: { type: String, default: "sfw" },
     promoted: { type: Boolean, default: false },

@@ -58,6 +58,10 @@ const userProfileSchema = new Schema({
     booruPostBanned: { type: Boolean, default: false },
     booruPostBanReason: { type: String, default: "Breaking Rules" },
     settings: settingsSchema,
+    discordId: { type: String, default: "", required: false },
+    googleId: { type: String, default: "", required: false },
+    followedAccounts: { type: Array, default: [] },
+    blockedAccounts: { type: Array, default: [] },
 })
 
 const name = 'userAccount'

@@ -575,12 +575,12 @@
 
     <!-- if the totalUserImages is more than 15000 display a message that future generated images wont be saved: -->
 
-    <% if (totalUserImages >= 15000) { %>
-        <h2>You have <%= totalUserImages %> / 15000</h2>
+    <% if (totalUserImages >= 5000) { %>
+        <h2>You have <%= totalUserImages %> / 5000</h2>
         <p>Future generated images will not be saved to your history, please delete some images to make room for more.</p>
     <% } else { %>
-        <h2>You have <%= totalUserImages %> / 15000</h2>
-        <p>Once you reach 15000 images, future generated images will not be saved to your history.</p>
+        <h2>You have <%= totalUserImages %> / 5000</h2>
+        <p>Once you reach 5000 images, future generated images will not be saved to your history.</p>
     <% } %>
 
     <div class="generationsGrid">
@@ -677,6 +677,20 @@
 
 
     <style>
+
+        .downloadCurrentPageButton {
+            background-color: #0084ff;
+            color: #fff;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .downloadCurrentPageButton:hover {
+            background-color: #0056b3;
+        }
     
         .deleteAllImagesButton {
             background-color: #ff0000;
@@ -702,9 +716,88 @@
 
         <button class="deleteCurrentPageButton" onclick="deleteCurrentPage()">Delete Current Page</button>
     
+        <button class="downloadCurrentPageButton" onclick="downloadCurrentPage()">Download Current Page</button>
+
     </div>
 
     <script>
+
+        async function downloadCurrentPage() {
+            // Ask for confirmation
+            const options = {
+                message: 'Are you sure you want to download all images on this page?',
+                question: true,
+                options: {
+                    yes: function() {
+                        console.log("Yes clicked");
+                    },
+                    no: function() {
+                        console.log("No clicked");
+                    }
+                }
+            };
+
+            const alertResponse = await globalAlert(options);
+
+            if (alertResponse === 'no') {
+                return;
+            }
+
+            // Gather image IDs
+            const imageIds = Object.values(masterImageData).map(imageData => imageData.image_id);
+
+            if (imageIds.length === 0) {
+                console.log("No images to download");
+                return;
+            }
+
+            // Provide feedback during download
+            const button = document.querySelector('.downloadCurrentPageButton');
+            button.disabled = true;
+            button.textContent = 'Downloading...';
+
+            try {
+                const response = await fetch('/image-history/download-page', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ imageIds })
+                });
+
+                if (response.ok) {
+                    // Extract filename from response headers if possible
+                    const disposition = response.headers.get('Content-Disposition');
+                    const filename = disposition
+                        ? disposition.split('filename=')[1].replace(/"/g, '')
+                        : 'download.zip';
+
+                    // Convert response to blob and create a download link
+                    const blob = await response.blob();
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = URL.createObjectURL(blob);
+                    downloadLink.download = filename;
+                    document.body.appendChild(downloadLink);
+                    downloadLink.click();
+                    document.body.removeChild(downloadLink);
+                    // make sure its https:
+                    const downloadUrl = response.url.replace('http://', 'https://');
+
+                    console.log("Download complete");
+                } else {
+                    console.error("Failed to download:", await response.json());
+                    alert("Failed to download images. Please try again.");
+                }
+            } catch (error) {
+                console.error("Error during download:", error);
+                alert("An error occurred. Please try again.");
+            } finally {
+                // Re-enable button
+                button.disabled = false;
+                button.textContent = 'Download Current Page';
+            }
+        }
+
 
         async function deleteCurrentPage() {
 
@@ -727,27 +820,6 @@
             if (alertResponse == 'no') {
                 return;
             }
-
-            // use masterImageData to get all the image ids on the current page:
-            // <% userHistory.forEach(imageData => { %>
-            //     masterImageData["<%=imageData.image_id%><%=imageData.account_id%>"] = {
-            //         prompt: `<%=imageData.prompt%>`,
-            //         negative_prompt: `<%=imageData.negative_prompt%>`,
-            //         model: "<%=imageData.model%>",
-            //         aspect_ratio: "<%=imageData.aspect_ratio%>",
-            //         loras: "<%=imageData.loras%>",
-            //         lora_strengths: "<%=imageData.lora_strengths%>",
-            //         steps: "<%=imageData.steps%>",
-            //         cfg: "<%=imageData.cfg%>",
-            //         seed: "<%=imageData.seed%>",
-            //         image_url: "<%=imageData.image_url%>",
-            //         image_id: "<%=imageData.image_id%>",
-            //         uploadedToBooru: <%=imageData.uploadedToBooru%>,
-            //         thumbnailMade: <%=imageData.thumbnailMade%>,
-            //     };
-            // <% }); %>
-
-            // send several requests to the server to delete each image from the database:
             
             let promises = [];
 

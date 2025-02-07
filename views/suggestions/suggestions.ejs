@@ -48,38 +48,33 @@
             margin: 10px;
             border-radius: 10px;
         }
+
+        .pendingSuggestion p {
+            color: yellow;
+        }
+        .pendingSuggestion div {
+            background-color: rgba(255, 255, 0, 0.5) !important;
+        }
+
+        .addedSuggestion p {
+            color: rgb(119, 200, 255);
+        }
+        .addedSuggestion div {
+            background-color: rgba(119, 200, 255, 0.5) !important;
+        }
+
+        .rejectedSuggestion p {
+            color: red;
+        }
+        .rejectedSuggestion div {
+            background-color: rgba(255, 0, 0, 0.5) !important;
+        }
+
     </style>
 
     <div class="container round-frosted page-content mw75-dynamic" style="margin-bottom: 12rem; padding: 24px">
         <a class="submitSuggestionHyperlink" href="/submit-suggestion">Submit a Suggestion</a>
         <h1 style="text-align: center;">Suggestions</h1>
-
-
-        <style>
-            .pendingSuggestion p {
-                color: yellow;
-            }
-            .pendingSuggestion div {
-                background-color: rgba(255, 255, 0, 0.5) !important;
-            }
-
-            .addedSuggestion p {
-                color: rgb(119, 200, 255);
-            }
-            .addedSuggestion div {
-                background-color: rgba(119, 200, 255, 0.5) !important;
-            }
-
-            .rejectedSuggestion p {
-                color: red;
-            }
-            .rejectedSuggestion div {
-                background-color: rgba(255, 0, 0, 0.5) !important;
-            }
-
-            /* .promotedSuggestion have a glowing border to the div: */
-
-        </style>
 
         <script>
             // manually animate the .promotedSuggestion class divs:
@@ -124,6 +119,7 @@
                     text: `<%=suggestion.text%>`,
                     accountId: `<%=suggestion.accountId%>`,
                     status: `<%=suggestion.status%>`,
+                    model: `<%=suggestion.model%>`,
                     promoted: <%=suggestion.promoted? suggestion.promoted : false%>
                 }
             <% }) %>
@@ -140,6 +136,7 @@
         </script>
 
         <div id="suggestionsFilters">
+            <label>Type</label>
             <select id="suggestionsTypeSearch">
                 <option value="all">All</option>
                 <option value="lora">Lora</option>
@@ -148,25 +145,37 @@
                 <option value="bug">Bug</option>
             </select>
             <br>
+            <label>Safety</label>
             <select id="suggestionsSafetySearch">
                 <option value="sfw">SFW</option>
                 <option value="nsfw">NSFW</option>
                 <option value="all">All</option>
             </select>
             <br>
+            <label>Status</label>
             <select id="suggestionsStatusSearch">
                 <option value="pending">Pending</option>
                 <option value="added">Added</option>
                 <option value="rejected">Rejected</option>
             </select>
             <br>
+            <label>Sort Order</label>
             <select id="suggestionsSortOrder">
                 <option value="newest">Newest</option>
                 <option value="oldest">Oldest</option>
                 <option value="votesAggregated">Votes</option>
             </select>
             <br>
+            <label id="suggestionsModelFilterLabel">Model Filter</label>
+            <select id="suggestionsModelFilter">
+                <option value="sd1.5">SD 1.5</option>
+                <option value="pdxl">PDXL</option>
+                <option value="illustrious">Illustrious</option>
+                <option value="all">All</option>
+            </select>
+            <br>
             <!-- search box -->
+            <label>Search:</label>
             <input type="text" id="suggestionsSearch" placeholder="Search for a suggestion...">
         </div>
 
@@ -179,6 +188,9 @@
     <script>
         // make any links in the text clickable:
         document.querySelectorAll('a').forEach(a => {
+            if (a.classList.contains('navigationLink')) {
+                return;
+            }
             a.innerHTML = a.innerHTML.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
         });
     </script>
@@ -191,6 +203,7 @@
             const status = document.getElementById('suggestionsStatusSearch').value;
             const sortOrder = document.getElementById('suggestionsSortOrder').value;
             const search = document.getElementById('suggestionsSearch').value;
+            let modelFilter = document.getElementById('suggestionsModelFilter').value;
 
             let suggestions = Object.values(masterSuggestionData);
 
@@ -205,6 +218,20 @@
 
             if (status !== 'all') {
                 suggestions = suggestions.filter(suggestion => suggestion.status.toLowerCase() === status);
+            }
+
+            // if the type isnt lora or model, then hide the modelFilter option and set it to all:
+            if (type !== 'lora' && type !== 'model') {
+                document.getElementById('suggestionsModelFilter').style.display = 'none';
+                document.getElementById('suggestionsModelFilterLabel').style.display = 'none';
+                modelFilter = 'all';
+            } else {
+                document.getElementById('suggestionsModelFilter').style.display = 'block';
+                document.getElementById('suggestionsModelFilterLabel').style.display = 'block';
+            }
+
+            if (modelFilter !== 'all') {
+                suggestions = suggestions.filter(suggestion => suggestion.model === modelFilter);
             }
 
             if (search) {
@@ -237,12 +264,6 @@
 
             document.getElementById('suggestionCount').innerText = `Showing ${suggestions.length} suggestions`;
 
-
-
-            // console.log(suggestions); // Check the filtered and sorted suggestions
-            // console.log(userProfile); // Check the userProfile object
-            // console.log(masterSuggestionData)
-
             // update the suggestions container:
             const suggestionsContainer = document.getElementById('suggestionsContainer');
             suggestionsContainer.innerHTML = '';
@@ -252,6 +273,24 @@
                     suggestionDiv.classList.add('suggestionDiv', 'promotedSuggestion');
                 } else {
                     suggestionDiv.classList.add('suggestionDiv', `${suggestion.status}Suggestion`);
+                }
+
+                let loraModelModelSelection = ``
+
+                if (suggestion.type == 'lora' || suggestion.type == 'model') {
+                
+                    // <option selected="selected">
+                    // 3
+                    // </option>
+
+                    console.log(`suggestion model: ${suggestion.model}`);
+
+                    loraModelModelSelection = `
+                        <option value="sd1.5" ${suggestion.model == 'sd1.5' ? 'selected="selected"' : ''}>SD 1.5</option>
+                        <option value="pdxl" ${suggestion.model == 'pdxl' ? 'selected="selected"' : ''}>PDXL</option>
+                        <option value="illustrious" ${suggestion.model == 'illustrious' ? 'selected="selected"' : ''}>Illustrious</option>
+                    `
+                
                 }
 
                 suggestionDiv.innerHTML = `
@@ -270,6 +309,13 @@
                         ${userProfile.badges?.owner ? '<button id="rejectSuggestion">Reject</button>' : ''}
                         ${userProfile.accountId === suggestion.accountId || userProfile.badges?.owner ? '<button id="toggleSuggestionSafety">NSFW/SFW</button>' : ''}
                         ${userProfile.accountId && suggestion.status.toLowerCase() === 'pending' && !suggestion.promoted ? '<button id="promoteSuggestion">Promote (Costs 1500 Credits)</button>' : ''}
+                        ${userProfile.accountId === suggestion.accountId && suggestion.type == 'lora' || userProfile.accountId === suggestion.accountId && suggestion.type == 'model' || userProfile.badges?.owner && suggestion.type == 'lora' || userProfile.badges?.owner && suggestion.type == 'model' ? `
+                            <select id="model">
+                                ${loraModelModelSelection}
+                                
+                            </select>
+                        ` : ''}
+                        <button id="viewSuggestion">View</button>
                     </a>
                     <p id="${suggestion.suggestionId}-response"></p>
                 `;
@@ -279,7 +325,19 @@
 
             // make any links in the text clickable:
             document.querySelectorAll('a').forEach(a => {
+                if (a.classList.contains('navigationLink')) {
+                    return;
+                }
                 a.innerHTML = a.innerHTML.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
+            });
+
+            // make the view suggestion button work:
+            document.querySelectorAll('#viewSuggestion').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const suggestionId = e.target.parentElement.parentElement.querySelector('#suggestionId').innerText;
+                    // window.location.href = `/suggestion/${suggestionId}`; in new tab:
+                    window.open(`/suggestion/${suggestionId}`, '_blank');
+                });
             });
 
             // apply the voting logic to the new suggestions:
@@ -314,6 +372,36 @@
                     searchSuggestions();
                 });
             });
+
+
+            // model change logic:
+            document.querySelectorAll('#model').forEach(select => {
+                select.addEventListener('change', async (e) => {
+                    const suggestionId = e.target.parentElement.parentElement.querySelector('#suggestionId').innerText;
+                    const model = e.target.value;
+
+                    // set request body:
+                    let requestBody = {
+                        suggestionId: suggestionId,
+                        model: model
+                    };
+
+                    // send the model change to the server:
+                    const response = await fetch(`/update-suggestion-model`, {
+                        method: 'POST',
+                        body: JSON.stringify(requestBody),
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    const data = await response.json();
+                    // console.log(data);
+
+                    masterSuggestionData[suggestionId].model = model;
+                    searchSuggestions();
+                });
+            });
+
 
             // apply the remove suggestion logic to the new suggestions:
             document.querySelectorAll('#removeSuggestion').forEach(button => {
@@ -464,6 +552,7 @@
             document.getElementById('suggestionsStatusSearch').addEventListener('change', searchSuggestions);
             document.getElementById('suggestionsSortOrder').addEventListener('change', searchSuggestions);
             document.getElementById('suggestionsSearch').addEventListener('input', searchSuggestions);
+            document.getElementById('suggestionsModelFilter').addEventListener('change', searchSuggestions);
             searchSuggestions();
         }
 
