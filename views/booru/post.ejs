@@ -69,8 +69,8 @@
             booruImage.content_url = `<%= booruImage.content_url %>`
             booruImage.timestamp = `<%= booruImage.timestamp %>`
             booruImage.safety = `<%= booruImage.safety %>`
-            booruImage.upvotes = <- JSON.stringify(booruImage.upvotes) %>
-            booruImage.downvotes = <- JSON.stringify(booruImage.downvotes) %>
+            booruImage.upvotes = <%- JSON.stringify(booruImage.upvotes) %>
+            booruImage.downvotes = <%- JSON.stringify(booruImage.downvotes) %>
 
             function exportAIData() {
 
@@ -286,6 +286,7 @@
             <br>
             <select id="searchSorting">
                 <option value="trending">🔥 Trending</option>
+                <option value="following">🤍 Following</option>
                 <option value="votes">⬆️ Votes</option>
                 <option value="recent">⏱️ Recent</option>
             </select>

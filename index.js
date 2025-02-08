@@ -2388,9 +2388,7 @@ app.get('/booru/', async function(req, res) {
 					{
 						$limit: totalPerPage
 					}
-				])
-
-						
+				])	
 			} else if (sort == "votes") {
 				booruImages = await mongolib.aggregateSchemaDocuments("userBooru", [{
 						$match: {
@@ -2511,26 +2509,64 @@ app.get('/booru/', async function(req, res) {
 						$limit: totalPerPage
 					}
 				]);
+			} else if (sort === "following") {
+				// Get all images from followed accounts
+				booruImages = await mongolib.aggregateSchemaDocuments("userBooru", [
+					{
+						$match: {
+							account_id: { $in: followedAccounts },
+							safety: { $in: safety }
+						}
+					},
+					{
+						$sort: {
+							timestamp: -1
+						}
+					},
+					{
+						$skip: skip
+					},
+					{
+						$limit: totalPerPage
+					}
+				]);
 			}
 
 
 
 
 
-			totalImages = await userBooruSchema.aggregate([{
-					$match: {
-						safety: {
-							$in: safety
-						},
-						account_id: { 
-							$nin: blockedAccounts 
-						},
+
+			if (sort == "following") {
+
+				totalImages = await userBooruSchema.aggregate([{
+						$match: {
+							account_id: { $in: followedAccounts },
+							safety: { $in: safety }
+						}
+					},
+					{
+						$count: 'count'
 					}
-				},
-				{
-					$count: 'count'
-				}
-			]);
+				]);
+
+			} else {
+				totalImages = await userBooruSchema.aggregate([{
+						$match: {
+							safety: {
+								$in: safety
+							},
+							account_id: { 
+								$nin: blockedAccounts 
+							},
+						}
+					},
+					{
+						$count: 'count'
+					}
+				]);
+			}
+			
 
 
 			if (totalImages.length == 0) {
@@ -2904,29 +2940,110 @@ app.get('/booru/', async function(req, res) {
 						}
 					])
 				}
+			} else if (sort === "following") {
+				if (allBooruIds.length > 0) {
+					booruImages = await mongolib.aggregateSchemaDocuments("userBooru", [
+						{
+							$match: {
+								booru_id: {
+									$in: allBooruIds,
+									$nin: minusBooruIds
+								},
+								safety: {
+									$in: safety
+								},
+								account_id: {
+									$in: followedAccounts
+								}
+							}
+						},
+						{
+							$sort: {
+								timestamp: -1
+							}
+						},
+						{
+							$skip: skip
+						},
+						{
+							$limit: totalPerPage
+						}
+					]);
+				} else {
+					booruImages = await mongolib.aggregateSchemaDocuments("userBooru", [
+						{
+							$match: {
+								booru_id: {
+									$nin: minusBooruIds
+								},
+								safety: {
+									$in: safety
+								},
+								account_id: {
+									$in: followedAccounts
+								}
+							}
+						},
+						{
+							$sort: {
+								timestamp: -1
+							}
+						},
+						{
+							$skip: skip
+						},
+						{
+							$limit: totalPerPage
+						}
+					]);
+				}
 			}
 
+
+
 			if (allBooruIds.length > 0) {
-				totalImages = await userBooruSchema.aggregate([{
-						$match: {
-							booru_id: {
-								$in: allBooruIds,
-								$nin: minusBooruIds
-							},
-							safety: {
-								$in: safety
-							},
-							account_id: {
-								$nin: blockedAccounts
-							},
+				if (sort == "following") {
+						totalImages = await userBooruSchema.aggregate([{
+							$match: {
+								booru_id: {
+									$in: allBooruIds,
+									$nin: minusBooruIds
+								},
+								safety: {
+									$in: safety
+								},
+								account_id: {
+									$in: followedAccounts
+								},
+							}
+						},
+						{
+							$count: 'count'
 						}
-					},
-					{
-						$count: 'count'
-					}
-				]);
+					]);
+				} else {
+					totalImages = await userBooruSchema.aggregate([{
+							$match: {
+								booru_id: {
+									$in: allBooruIds,
+									$nin: minusBooruIds
+								},
+								safety: {
+									$in: safety
+								},
+								account_id: {
+									$nin: blockedAccounts
+								},
+							}
+						},
+						{
+							$count: 'count'
+						}
+					]);
+				}
 			} else {
-				totalImages = await userBooruSchema.aggregate([{
+				if (sort == "following") {
+					totalImages = await userBooruSchema.aggregate([{
 						$match: {
 							booru_id: {
 								$nin: minusBooruIds
@@ -2935,7 +3052,7 @@ app.get('/booru/', async function(req, res) {
 								$in: safety
 							},
 							account_id: {
-								$nin: blockedAccounts
+								$in: followedAccounts
 							},
 						}
 					},
@@ -2943,6 +3060,25 @@ app.get('/booru/', async function(req, res) {
 						$count: 'count'
 					}
 				]);
+				} else {
+					totalImages = await userBooruSchema.aggregate([{
+							$match: {
+								booru_id: {
+									$nin: minusBooruIds
+								},
+								safety: {
+									$in: safety
+								},
+								account_id: {
+									$nin: blockedAccounts
+								},
+							}
+						},
+						{
+							$count: 'count'
+						}
+					]);
+				}
 			}
 
 			if (totalImages.length == 0) {
