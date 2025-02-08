@@ -757,7 +757,7 @@ app.post('/update-suggestion-status', async (req, res) => {
 	console.log(`Suggestion status updated to ${newStatus} from ${suggestion.status}`)
 
 	if (newStatus == 'added') {
-		await mongolib.modifyUserCredits(suggestion.accountId, 50, '+', `Suggestion Accepted: "${suggestion.title}"`)
+		await mongolib.modifyUserCredits(req.session.accountId, 50, '+', `Suggestion Accepted: "${suggestion.title}"`)
 	}
 	
 	res.send({

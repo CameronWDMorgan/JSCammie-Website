@@ -69,8 +69,8 @@
             booruImage.content_url = `<%= booruImage.content_url %>`
             booruImage.timestamp = `<%= booruImage.timestamp %>`
             booruImage.safety = `<%= booruImage.safety %>`
-            booruImage.upvotes = `<%= booruImage.upvotes ? booruImage.upvotes.length : 0 %>`
-            booruImage.downvotes = `<%= booruImage.downvotes ? booruImage.downvotes.length : 0 %>`
+            booruImage.upvotes = <- JSON.stringify(booruImage.upvotes) %>
+            booruImage.downvotes = <- JSON.stringify(booruImage.downvotes) %>
 
             function exportAIData() {
 
@@ -199,8 +199,8 @@
                                      
                     <img class="postImage" src="${booruImage.content_url}" alt="Booru Image" style="max-width: 100%;"/>
                     <div class="postButtons" id="postButtons">
-                        <button id="upvoteButton${booruImage.booru_id}" onclick="votePost('upvote', '${booruImage.booru_id}')">${booruImage.upvotes} ⬆️</button>
-                        <button id="downvoteButton${booruImage.booru_id}" onclick="votePost('downvote', '${booruImage.booru_id}')">${booruImage.downvotes} ⬇️</button>
+                        <button id="upvoteButton${booruImage.booru_id}" onclick="votePost('upvote', '${booruImage.booru_id}')">${booruImage.upvotes.length} ⬆️</button>
+                        <button id="downvoteButton${booruImage.booru_id}" onclick="votePost('downvote', '${booruImage.booru_id}')">${booruImage.downvotes.length} ⬇️</button>
                         ${moderatorButtons}
                         ${postAccountIdButtons}
                         <button onclick="exportAIData()">Export to .AIDATA</button>

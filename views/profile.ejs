@@ -66,8 +66,8 @@
                 thumbnailMade: Boolean(<%=image.thumbnailMade%>),
                 timestamp: `<%=image.timestamp%>`,
                 safety: `<%=image.safety%>`,
-                upvotes: `<%= image.upvotes ? image.upvotes.length : 0 %>`,
-                downvotes: `<%= image.downvotes ? image.downvotes.length : 0 %>`,
+                upvotes: <%- JSON.stringify(image.upvotes) %>,
+                downvotes: <%- JSON.stringify(image.downvotes) %>,
                 comments: `<%=image.comments?.length? image.comments.length : 0%>`
             }
         <% }) %>
@@ -279,6 +279,20 @@
                     <img src="${newContentUrl}" alt="Booru Image" style="max-width: 100%;" loading="lazy"/>
                 `
 
+                hasUpvoted = false
+                hasDownvoted = false
+
+                for (let i = 0; i < value.upvotes.length; i++) {
+                    if (value.upvotes[i].accountId == userProfile.accountId) {
+                        hasUpvoted = true
+                    }
+                }
+                for (let i = 0; i < value.downvotes.length; i++) {
+                    if (value.downvotes[i].accountId == userProfile.accountId) {
+                        hasDownvoted = true
+                    }
+                }
+
                 let postDiv = `
                     <div class="booruPost">
                         <div class="abovePost">
@@ -294,9 +308,9 @@
                             ${booruThumbnailHTML}
                         </a>
                         <div class="votesDiv">
-                            <button id="upvoteButton${value.booru_id}" onclick="votePost('upvote', '${value.booru_id}')">${value.upvotes} ⬆️</button>
+                            <button id="upvoteButton${value.booru_id}" onclick="votePost('upvote', '${value.booru_id}')" class="${hasUpvoted ? 'voted' : ''}">${value.upvotes.length} ⬆️</button>
                             <button id="commentButton${value.booru_id}" onclick="window.open('/booru/post/${value.booru_id}', '_blank')">${value.comments} 💬</button>
-                            <button id="downvoteButton${value.booru_id}" onclick="votePost('downvote', '${value.booru_id}')">${value.downvotes} ⬇️</button>
+                            <button id="downvoteButton${value.booru_id}" onclick="votePost('downvote', '${value.booru_id}')" class="${hasDownvoted ? 'voted' : ''}">${value.downvotes.length} ⬇️</button>
                         </div>
                     </div>
                 `

@@ -223,6 +223,18 @@
         <script>
             let masterBooruData = {}
 
+            // class="${value.downvotedOn == true ? 'downvoted' : ''}"
+
+            var masterAccountData = {}
+            <% booruAccounts.forEach(account => { %>
+                masterAccountData[`<%=account.accountId%>`] = {
+                    accountId: `<%=account.accountId%>`,
+                    username: `<%=account.username%>`,
+                    profileImg: `<%=account.profileImg%>`,
+                    level: `<%=account.level%>`,
+                }
+            <% }) %>
+
             <% booruImages.forEach(image => { %>
                 masterBooruData[`<%=image.booru_id%>`] = {
                     booru_id: `<%=image.booru_id%>`,
@@ -242,23 +254,11 @@
                     timestamp: `<%=image.timestamp%>`,
                     safety: `<%=image.safety%>`,
                     score: `<%= image.score %>`,
-                    upvotes: `<%= image.upvotes ? image.upvotes.length : 0 %>`,
-                    downvotes: `<%= image.downvotes ? image.downvotes.length : 0 %>`,
-                    comments: `<%=image.comments?.length? image.comments.length : 0%>`
-
-                }
+                    upvotes: <%- JSON.stringify(image.upvotes) %>,
+                    downvotes: <%- JSON.stringify(image.downvotes) %>,
+                    comments: `<%=image.comments?.length? image.comments.length : 0%>`,
+                    }
             <% }) %>
-
-            var masterAccountData = {}
-            <% booruAccounts.forEach(account => { %>
-                masterAccountData[`<%=account.accountId%>`] = {
-                    accountId: `<%=account.accountId%>`,
-                    username: `<%=account.username%>`,
-                    profileImg: `<%=account.profileImg%>`,
-                    level: `<%=account.level%>`,
-                }
-            <% }) %>
-
 
             var userProfile = {
                 accountId: "<%=userProfile?.accountId? userProfile.accountId : ''%>",
@@ -538,6 +538,20 @@
                     if (value.safety == "na" && userProfile.accountId != value.account_id && value.safety == "na" && !userProfile.badges.moderator) {
                         return
                     } else {
+                        hasUpvoted = false
+                        hasDownvoted = false
+
+                        for (let i = 0; i < value.upvotes.length; i++) {
+                            if (value.upvotes[i].accountId == userProfile.accountId) {
+                                hasUpvoted = true
+                            }
+                        }
+                        for (let i = 0; i < value.downvotes.length; i++) {
+                            if (value.downvotes[i].accountId == userProfile.accountId) {
+                                hasDownvoted = true
+                            }
+                        }
+
                         postDiv = `
                         <div class="booruPost" id="booruPostDiv-${value.booru_id}">
                             <div class="abovePost">
@@ -556,9 +570,9 @@
                                 ${booruThumbnailHTML}
                             </a>
                             <div class="votesDiv">
-                                <button id="upvoteButton${value.booru_id}" onclick="votePost('upvote', '${value.booru_id}')">${value.upvotes} ⬆️</button>
+                                <button id="upvoteButton${value.booru_id}" onclick="votePost('upvote', '${value.booru_id}')" class="${hasUpvoted ? 'voted' : ''}">${value.upvotes.length} ⬆️</button>
                                 <button id="commentButton${value.booru_id}" onclick="window.open('/booru/post/${value.booru_id}', '_blank')">${value.comments} 💬</button>
-                                <button id="downvoteButton${value.booru_id}" onclick="votePost('downvote', '${value.booru_id}')">${value.downvotes} ⬇️</button>
+                                <button id="downvoteButton${value.booru_id}" onclick="votePost('downvote', '${value.booru_id}')" class="${hasDownvoted ? 'voted' : ''}">${value.downvotes.length} ⬇️</button>
                             </div>
                             ${moderatorPrompt}
                                 

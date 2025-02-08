@@ -92,6 +92,12 @@
 	text-decoration: none !important;
 }
 
+.votesDiv button.voted {
+	background-color: rgba(0, 132, 255, 0.25) !important;
+	border: 1px solid rgba(0, 132, 255) !important;
+	color: rgb(255, 255, 255);
+}
+
 /* Position the postButtons container to the top right */
 .postButtons {
 	position: relative;
