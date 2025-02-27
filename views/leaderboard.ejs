@@ -1,0 +1,211 @@
+<!-- setup basic html template with metadata etc: -->
+<html>
+<head>
+    <title><%=type%> Leaderboard | JSCammie.com</title>
+    <link rel='stylesheet' href='/style.css'/>
+    
+    <%- include('../partials/_headerAll') %>
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-K3KJJKS1R4"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-K3KJJKS1R4');
+    </script>
+    
+</head>
+<body>
+
+    <!-- get partials/_navigation: -->
+    <%- include('../partials/_navigation') %>
+
+    <div class="center-fully-no-flex" style="margin-bottom: 1rem;">
+        <%- include('../partials/_bannerAdvert') %>
+    </div>
+
+   <style>
+   
+   
+    /* Leaderboard container */
+    #leaderboard {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+        gap: 20px;
+        padding: 10px;
+        background: #1e1e1e;
+        border-radius: 8px;
+        width: 100%;
+        margin: 0 auto;
+    }
+
+    /* Leaderboard user card */
+    .leaderboard-usercard {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px;
+        background: #2a2a2a;
+        border-radius: 6px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        color: #ffffff;
+        font-family: Arial, sans-serif;
+    }
+
+    /* Rank styling */
+    [class^="leaderboard-rank-"] {
+        font-weight: bold;
+        width: 30px;
+        text-align: center;
+    }
+
+    /* Profile image */
+    .leaderboard-profileImg img {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    /* Username */
+    .leaderboard-username {
+        flex: 1;
+        font-weight: bold;
+    }
+
+    /* Leaderboard-specific styles */
+    .leaderboard-credits,
+    .leaderboard-level,
+    .leaderboard-exp,
+    .leaderboard-score {
+        font-size: 14px;
+        color: #b0b0b0;
+    }
+
+    /* Rank specific colors */
+    .leaderboard-rank-1 { color: gold; font-size-adjust: 1.5; }
+    .leaderboard-rank-2 { color: silver; font-size-adjust: 1.3; }
+    .leaderboard-rank-3 { color: #cd7f32; font-size-adjust: 1.1; }
+
+
+   
+   </style>
+
+    <script>
+    
+        var type = '<%= type %>';
+        var leaderboardInfo = <%- JSON.stringify(leaderboardInfo) %>;
+        var leaderboard = []
+
+        var userHtml = []
+
+        if (type == "credits") {
+        
+            leaderboardInfo.forEach((user, index) => {
+                leaderboard.push({
+                    rank: index + 1,
+                    username: user.username,
+                    credits: user.credits,
+                    profileImg: user.profileImg,
+                    accountId: user.accountId
+                });
+            });
+
+            console.log(leaderboard);
+
+            leaderboard.forEach(user => {
+                userHtml.push(`
+                    <div class="leaderboard-usercard">
+                        <div class="leaderboard-rank-${user.rank}">${user.rank}.</div>
+                        <div class="leaderboard-profileImg"><img src="${user.profileImg || "http://www.jscammie.com/noimagefound.png"}" style="width: 50px; height: 50px; border-radius: 50%;"></div>
+                        <div class="leaderboard-username"><a href="/profile/${user.accountId}">${user.username}</a></div>
+                        <div class="leaderboard-credits">Credits: ${user.credits}</div>
+                    </div>
+                `);
+            })
+
+        } else if (type == "exp") {
+        
+            leaderboardInfo.forEach((user, index) => {
+                leaderboard.push({
+                    rank: index + 1,
+                    username: user.username,
+                    level: user.level,
+                    exp: user.exp,
+                    profileImg: user.profileImg,
+                    accountId: user.accountId
+                });
+            });
+
+            console.log(leaderboard);
+
+            leaderboard.forEach(user => {
+                userHtml.push(`
+                    <div class="leaderboard-usercard">
+                        <div class="leaderboard-rank-${user.rank}">${user.rank}.</div>
+                        <div class="leaderboard-profileImg"><img src="${user.profileImg || "http://www.jscammie.com/noimagefound.png"}" style="width: 50px; height: 50px; border-radius: 50%;"></div>
+                        <div class="leaderboard-username"><a href="/profile/${user.accountId}">${user.username}</a></div>
+                        <div class="leaderboard-level">Level: ${user.level}</div>
+                        <div class="leaderboard-exp">Exp: ${user.exp}</div>
+                    </div>
+                `);
+            })
+
+        } else if (type == "booru") {
+        
+            // let allUserBooruPosts = [] // structure it like { accountId: "", profileImg: "", username: "", score: 0 }
+            // server side code ^
+
+            leaderboardInfo.forEach((user, index) => {
+                leaderboard.push({
+                    rank: index + 1,
+                    username: user.username,
+                    // round to 2 dp:
+                    score: Math.round(user.score * 100) / 100,
+                    profileImg: user.profileImg,
+                    accountId: user.accountId
+                });
+            });
+
+            console.log(leaderboard);
+
+            leaderboard.forEach(user => {
+                userHtml.push(`
+                    <div class="leaderboard-usercard">
+                        <div class="leaderboard-rank-${user.rank}">${user.rank}.</div>
+                        <div class="leaderboard-profileImg"><img src="${user.profileImg || "http://www.jscammie.com/noimagefound.png"}" style="width: 50px; height: 50px; border-radius: 50%;"></div>
+                        <div class="leaderboard-username"><a href="/profile/${user.accountId}">${user.username}</a></div>
+                        <div class="leaderboard-score">Booru Score: ${user.score}</div>
+                    </div>
+                `);
+            })
+
+        }
+        
+        
+    </script>
+
+    <div class="round-frosted page-content mw75-dynamic" style="padding: 20px; justify-content: center;">
+        <h1><%= type.charAt(0).toUpperCase() + type.slice(1) %> Leaderboard</h1>
+        <button onclick="window.location.href = '/leaderboard?type=credits';">Credits Leaderboard</button>
+        <button onclick="window.location.href = '/leaderboard?type=exp';">Exp Leaderboard</button>
+        <button onclick="window.location.href = '/leaderboard?type=booru';">Booru Leaderboard</button>
+        <br><br>
+        <div id="leaderboard" class="leaderboard-container"></div>
+    </div>
+
+    <script>
+
+        let leaderboardDiv = document.getElementById("leaderboard");
+    
+        leaderboardDiv.innerHTML = userHtml.join("");
+    
+    </script>
+
+    <!-- get partials/_footer: -->
+    <%- include('../partials/_footer') %>
+    
+</body>
+</html>

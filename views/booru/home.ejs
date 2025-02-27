@@ -62,12 +62,10 @@
             <h3>Delete Post</h3>
             <p>Are you sure you want to delete this post?</p>
             <label for="deleteReason">Reason for deletion:</label>
-            <textarea style="display: none;" id="deleteReason" rows="4" cols="50" placeholder="Enter the reason..."></textarea> <br> <br>
-            <button onclick="setDeleteReason('Duplicate')">Duplicate</button> <br> <br>
-            <button onclick="setDeleteReason('Spam/Repetitive')">Spam/Repetitive</button> <br> <br>
-            <button onclick="setDeleteReason(`Incorrect Proportions (child proportions on suggestive/nsfw image)`)">Incorrect Proportions (child proportions on suggestive/nsfw image)</button> <br> <br>
-            <button onclick="setDeleteReason(`Inappropriate Content (scat, diaper, etc.)`)">Inappropriate Content (scat, diaper, etc.)</button> <br> <br>
-            <button onclick="setDeleteReason(`Tags don't match content`)">Tags don't match content</button> <br> <br>
+            <textarea id="deleteReason" rows="4" cols="50" placeholder="Enter the reason..."></textarea> <br> 
+
+            <!-- confirm button: -->
+            <button onclick="deletePost()">Delete</button>
 
             <button onclick="closeDeleteModal()">Cancel</button>
         </div>
@@ -118,8 +116,33 @@
 
     <div class="round-frosted page-content" style="padding: 40px; justify-content: center;">
 
+        <style>
+
+        .autoCompleteDropdown {
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(100, 100, 255, 0.3);
+        }
+
+        .autoCompleteDropdown summary {
+            cursor: pointer;
+            background-color: rgba(100, 100, 255, 0.3);
+            border-radius: 10px;
+            padding: 4px
+        }
+
+        .autoCompleteDropdown:hover {
+            border: 1px solid rgba(255, 255, 255, 0.7);
+        }
+
+        </style>
+
         <div class="searchDiv">
-            <div id="searchResultsDiv"></div>
+            <details id="autoCompleteDropdown" class="autoCompleteDropdown">
+                <summary>Auto Complete Results</summary>
+                <div id="searchResultsDiv"></div>
+            </details>
             <input id="searchInput" type="text" placeholder="Search..." style="width: 100%; padding: 10px; border-radius: 10px; margin-bottom: 20px;" />
             <br>
             <select id="searchSorting">
@@ -268,6 +291,28 @@
                     moderator: <%=userProfile?.badges?.moderator? userProfile.badges.moderator : false%>
                 }
             }
+
+            var masterUpvoteAccountData = {}
+            <% upvoteAccounts.forEach(account => { %>
+                masterUpvoteAccountData[`<%=account.accountId%>`] = {
+                    accountId: `<%=account.accountId%>`,
+                    username: `<%=account.username%>`,
+                    profileImg: `<%=account.profileImg%>`,
+                    level: `<%=account.level%>`,
+                }
+            <% }) %>
+
+            var masterDownvoteAccountData = {}
+            <% downvoteAccounts.forEach(account => { %>
+                masterDownvoteAccountData[`<%=account.accountId%>`] = {
+                    accountId: `<%=account.accountId%>`,
+                    username: `<%=account.username%>`,
+                    profileImg: `<%=account.profileImg%>`,
+                    level: `<%=account.level%>`,
+                }
+            <% }) %>
+
+            console.log(`masterDownvoteAccountData: `, masterDownvoteAccountData)
 
             function showBanModal(accountId) {
                 document.getElementById("banModal").style.display = "flex";
@@ -492,21 +537,15 @@
             }
 
             function setupBooruPosts() {
-                let booruPosts = document.getElementById("booruPosts")
-                booruPosts.innerHTML = ""
+                let booruPosts = document.getElementById("booruPosts");
+                booruPosts.innerHTML = "";
 
                 for (const [key, value] of Object.entries(masterBooruData)) {
-                    
-                    let newContentUrl = ""
+                    let newContentUrl = value.thumbnailMade 
+                        ? value.content_url.split(".png")[0] + "-thumb.png"
+                        : value.content_url;
 
-                    if (value.thumbnailMade) {
-                        newContentUrl = value.content_url.split(".png")[0] + "-thumb.png"
-                    } else {
-                        newContentUrl = value.content_url
-                    }
-
-                    let dropdownHTML = ``
-
+                    let dropdownHTML = "";
                     if (userProfile.badges.moderator) {
                         dropdownHTML = `
                             <button class="dropdownButton" onclick="document.getElementById('dropdown${value.booru_id}')?.classList.toggle('show')">ℹ️</button>
@@ -521,68 +560,133 @@
                         `;
                     }
 
-                    let booruThumbnailHTML = `
-                        <img src="${newContentUrl}" alt="Booru Image" style="max-width: 100%;" loading="lazy"/>
-                    `
+                    let onHoverUpvote = "";
+                    let onHoverDownvote = "";
 
-                    let postDiv = ``
-                    let moderatorPrompt = ``
-
-                    if (userProfile?.badges?.moderator) { 
-                        moderatorPrompt = `
-                            <p>SCORE: ${value.score}</p>
-                            <p>Prompt: ${value.prompt}</p>
-                            `
-                    }
-
-
-                    if (value.safety == "na" && userProfile.accountId != value.account_id && value.safety == "na" && !userProfile.badges.moderator) {
-                        return
-                    } else {
-                        hasUpvoted = false
-                        hasDownvoted = false
-
-                        for (let i = 0; i < value.upvotes.length; i++) {
-                            if (value.upvotes[i].accountId == userProfile.accountId) {
-                                hasUpvoted = true
-                            }
-                        }
-                        for (let i = 0; i < value.downvotes.length; i++) {
-                            if (value.downvotes[i].accountId == userProfile.accountId) {
-                                hasDownvoted = true
-                            }
-                        }
-
-                        postDiv = `
-                        <div class="booruPost" id="booruPostDiv-${value.booru_id}">
-                            <div class="abovePost">
-                                <a href="https://www.jscammie.com/profile/${value.account_id}" target="_blank">
-                                    <img src="${masterAccountData[value.account_id].profileImg}" alt="Profile Image" />
-                                </a>
-                                <div class="userDetails">
-                                    <p class="username">${masterAccountData[value.account_id].username}</p>
-                                    <p class="safety">${value.safety.toUpperCase()}</p>
+                    // above doesnt work when the profileImg is undefined, so we need to check if it is undefined first:
+                    if (value.upvotes.length > 0) {
+                        onHoverUpvote = `
+                            <div class="upvoteHover hidden" id="upvoteHover${value.booru_id}">
+                                <p class="upvoteTitle">Upvoters:</p>
+                                <div class="upvoters">
+                                    ${value.upvotes.map(upvote => `
+                                        <a class="upvoteUser" href="https://www.jscammie.com/profile/${upvote.accountId}" target="_blank">
+                                            <img class="postProfileImage" src="${masterUpvoteAccountData[upvote.accountId]?.profileImg ? masterUpvoteAccountData[upvote.accountId].profileImg : 'http://www.jscammie.com/noimagefound.png'}" alt="Upvote Profile Image" />
+                                            <span>${masterUpvoteAccountData[upvote.accountId]?.username}</span>
+                                        </a>
+                                    `).join("")}
                                 </div>
                             </div>
-                            <div class="postButtons">
-                                ${dropdownHTML}
-                            </div>
-                            <a href="/booru/post/${value.booru_id}" target="_blank">
-                                ${booruThumbnailHTML}
-                            </a>
-                            <div class="votesDiv">
-                                <button id="upvoteButton${value.booru_id}" onclick="votePost('upvote', '${value.booru_id}')" class="${hasUpvoted ? 'voted' : ''}">${value.upvotes.length} ⬆️</button>
-                                <button id="commentButton${value.booru_id}" onclick="window.open('/booru/post/${value.booru_id}', '_blank')">${value.comments} 💬</button>
-                                <button id="downvoteButton${value.booru_id}" onclick="votePost('downvote', '${value.booru_id}')" class="${hasDownvoted ? 'voted' : ''}">${value.downvotes.length} ⬇️</button>
-                            </div>
-                            ${moderatorPrompt}
-                                
-                        </div>
-                    `
+                        `;
                     }
-                    // add the post to the grid
-                    booruPosts.innerHTML += postDiv
+
+                    if (value.downvotes.length > 0) {
+                        onHoverDownvote = `
+                            <div class="downvoteHover hidden" id="downvoteHover${value.booru_id}">
+                                <p>Downvoted by:</p>
+                                <div class="downvoters">
+                                    ${value.downvotes.map(downvote => `
+                                        <a href="https://www.jscammie.com/profile/${downvote.accountId}" target="_blank">
+                                            <img class="postProfileImage" src="${masterDownvoteAccountData[downvote.accountId]?.profileImg ? masterDownvoteAccountData[downvote.accountId].profileImg : 'http://www.jscammie.com/noimagefound.png'}" alt="Downvote Profile Image" /> ${masterDownvoteAccountData[downvote.accountId]?.username}
+                                        </a>
+                                    `).join("")}
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    let booruThumbnailHTML = `
+                        <img src="${newContentUrl}" alt="Booru Image" style="max-width: 100%;" loading="lazy"/>
+                    `;
+
+                    let hasUpvoted = value.upvotes.some(upvote => upvote.accountId == userProfile.accountId);
+                    let hasDownvoted = value.downvotes.some(downvote => downvote.accountId == userProfile.accountId);
+
+                    let postDiv = `
+                    <div class="booruPost" id="booruPostDiv-${value.booru_id}">
+                        <div class="abovePost">
+                            <a href="https://www.jscammie.com/profile/${value.account_id}" target="_blank">
+                                <img src="${masterAccountData[value.account_id].profileImg}" alt="Profile Image" />
+                            </a>
+                            <div class="userDetails">
+                                <p class="username">${masterAccountData[value.account_id].username}</p>
+                                <p class="safety">${value.safety.toUpperCase()}</p>
+                            </div>
+                        </div>
+                        <div class="postButtons">
+                            ${dropdownHTML}
+                        </div>
+                        <a href="/booru/post/${value.booru_id}" target="_blank">
+                            ${booruThumbnailHTML}
+                        </a>
+                        <div class="votesDiv">
+                            <button id="upvoteButton${value.booru_id}" onclick="votePost('upvote', '${value.booru_id}')" class="${hasUpvoted ? 'voted' : ''}" data-booru-id="${value.booru_id}">${value.upvotes.length} ⬆️</button>
+                            <button id="commentButton${value.booru_id}" onclick="window.open('/booru/post/${value.booru_id}', '_blank')">${value.comments} 💬</button>
+                            <button id="downvoteButton${value.booru_id}" onclick="votePost('downvote', '${value.booru_id}')" class="${hasDownvoted ? 'voted' : ''}" data-booru-id="${value.booru_id}">${value.downvotes.length} ⬇️</button>
+                            ${onHoverUpvote}
+                        </div>
+                        ${userProfile.badges.moderator ? `<p>Score: ${value.score}</p>` : ""}
+                        ${userProfile.badges.moderator ? `<p>${value.prompt}</p>` : ""}
+                    </div>`;
+
+                    booruPosts.innerHTML += postDiv;
                 }
+
+                document.querySelectorAll(".votesDiv button").forEach(button => {
+                    let timeout;
+                    let booruId = button.getAttribute("data-booru-id");
+                    let hoverDiv = document.getElementById(button.id.includes("upvote") ? `upvoteHover${booruId}` : `downvoteHover${booruId}`);
+
+                    if (!hoverDiv) return;
+
+                    // Show the hover box after a delay
+                    function showHoverBox() {
+                        clearTimeout(timeout);
+                        hoverDiv.classList.remove("hidden");
+
+                        let rect = button.getBoundingClientRect();
+                        let hoverHeight = hoverDiv.offsetHeight;
+
+                        // Position slightly above the button
+                        let topPosition = rect.top + window.scrollY - hoverHeight - 5;
+                        hoverDiv.style.top = `${Math.max(10, topPosition)}px`;
+                        hoverDiv.style.left = `${rect.left}px`;
+
+                        // Get upvoters container
+                        let upvotersDiv = hoverDiv.querySelector(".upvoters");
+
+                        // Adjust columns dynamically based on number of upvoters
+                        let upvoteCount = upvotersDiv.children.length;
+
+                        if (upvoteCount > 15) {
+                            upvotersDiv.style.gridTemplateColumns = "repeat(3, 1fr)"; // 3 columns for large lists
+                        } else if (upvoteCount > 8) {
+                            upvotersDiv.style.gridTemplateColumns = "repeat(2, 1fr)"; // 2 columns for medium lists
+                        } else {
+                            upvotersDiv.style.gridTemplateColumns = "1fr"; // 1 column for small lists
+                        }
+                    }
+
+                    // Hide the hover box with a delay
+                    function hideHoverBox() {
+                        timeout = setTimeout(() => {
+                            if (!button.matches(":hover") && !hoverDiv.matches(":hover")) {
+                                hoverDiv.classList.add("hidden");
+                            }
+                        }, 200); // Small delay to prevent flickering
+                    }
+
+                    button.addEventListener("mouseenter", () => {
+                        timeout = setTimeout(showHoverBox, 1000); // Show after 1 second
+                    });
+
+                    button.addEventListener("mouseleave", hideHoverBox);
+                    hoverDiv.addEventListener("mouseenter", showHoverBox); // Prevent hiding when mouse enters
+                    hoverDiv.addEventListener("mouseleave", hideHoverBox); // Hide when leaving the hover box
+                });
+
+
+
 
                 let pageControls = document.getElementById("pageControls")
 
@@ -686,6 +790,7 @@
                 pageControls.appendChild(paginationDiv)
 
             }
+
 
             window.onload = function() {
                 setupBooruPosts()

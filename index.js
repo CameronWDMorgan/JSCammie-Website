@@ -49,6 +49,8 @@ const moderatePrompt = require('./scripts/moderate-prompt.js')
 
 const cookieSession = require('cookie-session');
 
+console.log(`Environment: ${process.env.NODE_ENV}`);
+
 // Session middleware
 app.use(cookieSession({
 	name: 'session',
@@ -87,6 +89,13 @@ const userSuggestionSchema = require('./schemas/userSuggestionSchema.js');
 const userHistorySchema = require('./schemas/userHistorySchema.js');
 
 const generationLoraSchema = require('./schemas/generationLoraSchema.js');
+
+async function showMessagePage(res, req, message) {
+	res.render('message', {
+		message: message,
+		session: req.session
+	})
+}
 
 // setup views directory:
 app.set('views', './views')
@@ -166,6 +175,14 @@ app.get('/profile', async (req, res) => {
 		accountId: req.session.accountId
 	})
 
+	// if (userProfile.status == 'error') {
+	// 	res.send({
+	// 		status: 'error',
+	// 		message: 'User not found'
+	// 	})
+	// 	return
+	// }
+
 	res.render('profile', {
 		userProfile: userProfile,
 		session: req.session
@@ -188,10 +205,17 @@ app.post('/receive-token', async (req, res) => {
 		}
 		const discordUser = await discordResponse.json();
 
-		if (!discordUser.id) {
+		if (discordUser.username == undefined) {
 			return res.status(400).send({
 				status: 'error',
-				message: 'Account not found'
+				message: 'Username not found'
+			});
+		}
+
+		if (discordUser.id == undefined) {
+			return res.status(400).send({
+				status: 'error',
+				message: 'ID not found'
 			});
 		}
 
@@ -207,15 +231,15 @@ app.post('/receive-token', async (req, res) => {
 			discordId: discordUser.id
 		})
 
-		if (!existingProfile) {
+		if (existingProfile?.status?.toLowerCase() == 'error') {
 			await mongolib.createSchemaDocument("userProfile", newProfile);
 		} else {
-			await mongolib.updateSchemaDocumentOnce("userProfile", {
-				discordId: discordUser.id
-			}, {
-				accountId: discordUser.id,
-				discordId: discordUser.id,
-			});
+		await mongolib.updateSchemaDocumentOnce("userProfile", {
+			discordId: discordUser.id
+		}, {
+			accountId: discordUser.id,
+			discordId: discordUser.id,
+		});
 		}
 		
 		// Store user session information
@@ -371,9 +395,17 @@ app.post('/toggle-suggestion-safety', async (req, res) => {
 		return
 	}
 
-	let currentUser = await userProfileSchema.findOne({
+	let currentUser = await mongolib.getSchemaDocumentOnce("userProfile", {
 		accountId: accountId
 	})
+
+	if (currentUser.status == 'error') {
+		res.send({
+			status: 'error',
+			message: 'User not found'
+		})
+		return
+	}
 
 	// check if the user is the author of the suggestion, or a owner:
 	if (suggestion.accountId !== accountId && currentUser.badges?.owner !== true) {
@@ -426,12 +458,20 @@ app.post('/update-suggestion-model', async (req, res) => {
 		return
 	}
 
-	let currentUser = await mongolib.getSchemaDocumentOnce("userProfile", {
+	let userProfile = await mongolib.getSchemaDocumentOnce("userProfile", {
 		accountId: accountId
 	})
 
+	if (userProfile.status == 'error') {
+		res.send({
+			status: 'error',
+			message: 'User not found'
+		})
+		return
+	}
+
 	// check if the user is the author of the suggestion, or a owner:
-	if (suggestion.accountId !== accountId && currentUser.badges?.owner !== true) {
+	if (suggestion.accountId !== accountId && userProfile.badges?.owner !== true) {
 		res.send({
 			status: 'error',
 			message: 'You are not the author of this suggestion'
@@ -674,9 +714,19 @@ app.post('/remove-suggestion', async (req, res) => {
 	let suggestionId = req.body.suggestionId
 	let accountId = req.session.accountId
 
-	let currentUser = await mongolib.getSchemaDocumentOnce("userProfile", {
+	let userProfile = await mongolib.getSchemaDocumentOnce("userProfile", {
 		accountId: accountId
 	})
+
+	if (userProfile.status == 'error') {
+		res.send({
+			status: 'error',
+			message: 'User not found'
+		})
+		return
+	}
+
+
 	let suggestion = await mongolib.getSchemaDocumentOnce("userSuggestion", {
 		suggestionId: suggestionId
 	})
@@ -701,7 +751,7 @@ app.post('/remove-suggestion', async (req, res) => {
 	await userSuggestionSchema.findOneAndDelete({
 		suggestionId: suggestionId
 	})
-	await mongolib.createUserNotification(req.session.accountId, `Your suggestion titled: "${suggestion.title}" was removed.`, 'moderation')
+	await mongolib.createUserNotification(suggestion.accountId, `Your suggestion titled: "${suggestion.title}" was removed.`, 'moderation')
 
 	res.send({
 		status: 'success',
@@ -727,7 +777,7 @@ app.post('/update-suggestion-status', async (req, res) => {
 		suggestionId: suggestionId
 	})
 
-	if (suggestion === null) {
+	if (suggestion == null) {
 		res.send({
 			status: 'error',
 			message: 'Suggestion not found'
@@ -757,7 +807,8 @@ app.post('/update-suggestion-status', async (req, res) => {
 	console.log(`Suggestion status updated to ${newStatus} from ${suggestion.status}`)
 
 	if (newStatus == 'added') {
-		await mongolib.modifyUserCredits(req.session.accountId, 50, '+', `Suggestion Accepted: "${suggestion.title}"`)
+		await mongolib.modifyUserCredits(suggestion.accountId, 50, '+', `Suggestion Accepted: "${suggestion.title}"`)
+		await mongolib.modifyUserExp(suggestion.accountId, 50, '+')
 	}
 	
 	res.send({
@@ -799,7 +850,7 @@ app.get('/image-history', async (req, res) => {
 		});
 
 		if (!userProfile) {
-			res.send('User not found');
+			showMessagePage(res, req, 'You need to be logged in to view the image history page.');
 			return;
 		}
 
@@ -896,74 +947,80 @@ app.get('/image-history', async (req, res) => {
 const archiver = require('archiver');
 
 app.post('/image-history/download-page', async (req, res) => {
-  try {
-    const accountId = req.session.accountId;
+	try {
+		const accountId = req.session.accountId;
 
-    // Fetch user profile
-    const userProfile = await mongolib.getSchemaDocumentOnce("userProfile", { accountId });
-    if (!userProfile) {
-      return res.status(404).json({ status: 'error', message: 'User not found' });
-    }
+		// Fetch user profile
+		const userProfile = await mongolib.getSchemaDocumentOnce("userProfile", { accountId });
+		
+		if (userProfile.status == 'error') {
+			res.send({
+				status: 'error',
+				message: 'User not found'
+			})
+			return
+		}
 
-    const { imageIds } = req.body;
+		const { imageIds } = req.body;
 
-    // Fetch user history
-    const images = await mongolib.aggregateSchemaDocuments("userHistory", [
-      { $match: { account_id: accountId, image_id: { $in: imageIds } } },
-      { $sort: { timestamp: -1 } }
-    ]);
+		// Fetch user history
+		const images = await mongolib.aggregateSchemaDocuments("userHistory", [
+		{ $match: { account_id: accountId, image_id: { $in: imageIds } } },
+		{ $sort: { timestamp: -1 } }
+		]);
 
-    if (images.length === 0) {
-      return res.status(404).json({ status: 'error', message: 'No images found' });
-    }
+		if (images.length === 0) {
+		return res.status(404).json({ status: 'error', message: 'No images found' });
+		}
 
-    // Extract relative file paths
-    const imagePaths = images.map(image => {
-      const imageUrl = image.image_url;
-      const relativePath = imageUrl.split('.com/')[1];
-      if (!relativePath) throw new Error(`Invalid URL format: ${imageUrl}`);
-      return relativePath;
-    });
+		// Extract relative file paths
+		const imagePaths = images.map(image => {
+		const imageUrl = image.image_url;
+		const relativePath = imageUrl.split('.com/')[1];
+		if (!relativePath) throw new Error(`Invalid URL format: ${imageUrl}`);
+		return relativePath;
+		});
 
-    // Prepare temp directory and zip file
-    const tempFolder = path.join(__dirname, `temp/${accountId}`);
-    const tempFilePath = path.join(tempFolder, `${Date.now()}.zip`);
+		// Prepare temp directory and zip file
+		const tempFolder = path.join(__dirname, `temp/${accountId}`);
+		const tempFilePath = path.join(tempFolder, `${Date.now()}.zip`);
 
-    if (!fs.existsSync(tempFolder)) {
-      fs.mkdirSync(tempFolder, { recursive: true });
-    }
+		if (!fs.existsSync(tempFolder)) {
+		fs.mkdirSync(tempFolder, { recursive: true });
+		}
 
-    const output = fs.createWriteStream(tempFilePath);
-    const zip = archiver('zip', { zlib: { level: 9 } });
+		const output = fs.createWriteStream(tempFilePath);
+		const zip = archiver('zip', { zlib: { level: 9 } });
 
-    output.on('close', () => {
-      console.log(`Zip file created: ${tempFilePath}`);
-      res.download(tempFilePath, `jscammie-images-${Date.now()}.zip`, () => {
-        fs.unlinkSync(tempFilePath); // Clean up temp file
-      });
-    });
+		output.on('close', async () => {
+		console.log(`Zip file created: ${tempFilePath}`);
+		res.setHeader('Content-Disposition', `attachment; filename="jscammie-images-${Date.now()}.zip"`);
+		await res.download(tempFilePath, `jscammie-images-${Date.now()}.zip`, () => {
+			fs.unlinkSync(tempFilePath); // Clean up temp file
+		});
+		});
 
-    zip.on('error', err => {
-      console.error('Archiver error:', err);
-      res.status(500).json({ status: 'error', message: 'Failed to create zip file' });
-    });
+		zip.on('error', err => {
+		console.error('Archiver error:', err);
+		res.status(500).json({ status: 'error', message: 'Failed to create zip file' });
+		});
 
-    zip.pipe(output);
+		zip.pipe(output);
 
-    imagePaths.forEach(imagePath => {
-      const fullPath = path.join(__dirname, imagePath);
-      if (fs.existsSync(fullPath)) {
-        zip.file(fullPath, { name: path.basename(imagePath) });
-      } else {
-        console.warn(`File not found: ${fullPath}`);
-      }
-    });
+		imagePaths.forEach(imagePath => {
+		const fullPath = path.join(__dirname, imagePath);
+		if (fs.existsSync(fullPath)) {
+			zip.file(fullPath, { name: path.basename(imagePath) });
+		} else {
+			console.warn(`File not found: ${fullPath}`);
+		}
+		});
 
-    await zip.finalize();
-  } catch (error) {
-    console.error('Error in download-page route:', error);
-    res.status(500).json({ status: 'error', message: 'Internal server error' });
-  }
+		await zip.finalize();
+	} catch (error) {
+		console.error('Error in download-page route:', error);
+		res.status(500).json({ status: 'error', message: 'Internal server error' });
+	}
 });
 
 	
@@ -1155,7 +1212,9 @@ app.post('/autocomplete', async (req, res) => {
 		const lowercaseQuery = query.toLowerCase();
 
 		// Filter the tags based on both versions
-		tagsThatMatch = allTags.filter(tag => tag.tag.toLowerCase().includes(lowercaseQuery));
+		// tag.toLowerCase is not a function
+		// tagsThatMatch = allTags.filter(tag => tag?.tag.toLowerCase().includes(lowercaseQuery));
+		tagsThatMatch = allTags.filter(tag => tag?.tag?.toLowerCase().includes(lowercaseQuery));
 
 		// Sort the tags by score:
 		tagsThatMatch.sort((a, b) => b.score - a.score);
@@ -1372,7 +1431,7 @@ app.get('/beta/ai', async function(req, res) {
 
 		// Parallelize database calls
 		const [foundAccount, imageHistoryCountRaw] = await Promise.all([
-			userProfileSchema.findOne({
+			userProfile = await mongolib.getSchemaDocumentOnce("userProfile", {
 				accountId: accountId
 			}),
 			userHistorySchema.aggregate([{
@@ -1388,17 +1447,19 @@ app.get('/beta/ai', async function(req, res) {
 
 		let aiSaveSlots = foundAccount?.aiSaveSlots ?? [];
 
-		// If aiSaveSlots is not initialized, update in parallel
-		if (!aiSaveSlots.length) {
-			await userProfileSchema.findOneAndUpdate({
-				accountId: accountId
-			}, {
-				$set: {
-					aiSaveSlots: []
-				}
-			}, {
-				upsert: true
-			});
+		if (!foundAccount.status == 'error') {
+			// If aiSaveSlots is not initialized, update in parallel
+			if (!aiSaveSlots.length) {
+				await userProfileSchema.findOneAndUpdate({
+					accountId: accountId
+				}, {
+					$set: {
+						aiSaveSlots: []
+					}
+				}, {
+					upsert: true
+				});
+			}
 		}
 
 		// Scripts and history count
@@ -1444,12 +1505,11 @@ app.post('/dailies', async (req, res) => {
 		return
 	}
 
-	let userProfile = await userProfileSchema.findOne({
+	let userProfile = await mongolib.getSchemaDocumentOnce("userProfile", {
 		accountId: req.session.accountId
-	});
+	})
 
-	// check if the user exists, its a mongodb document that is returned:
-	if (userProfile == null) {
+	if (userProfile.status == 'error') {
 		res.send({
 			status: 'error',
 			message: 'User not found'
@@ -1554,7 +1614,7 @@ app.get('/', async function(req, res) {
 
 		// Parallelize database calls
 		const [foundAccount, imageHistoryCountRaw] = await Promise.all([
-			userProfileSchema.findOne({
+			userProfile = await mongolib.getSchemaDocumentOnce("userProfile", {
 				accountId: accountId
 			}),
 			userHistorySchema.aggregate([{
@@ -1570,17 +1630,19 @@ app.get('/', async function(req, res) {
 
 		let aiSaveSlots = foundAccount?.aiSaveSlots ?? [];
 
-		// If aiSaveSlots is not initialized, update in parallel
-		if (!aiSaveSlots.length) {
-			await userProfileSchema.findOneAndUpdate({
-				accountId: accountId
-			}, {
-				$set: {
-					aiSaveSlots: []
-				}
-			}, {
-				upsert: true
-			});
+		if (!foundAccount.status == 'error') {
+			// If aiSaveSlots is not initialized, update in parallel
+			if (!aiSaveSlots.length) {
+				await userProfileSchema.findOneAndUpdate({
+					accountId: accountId
+				}, {
+					$set: {
+						aiSaveSlots: []
+					}
+				}, {
+					upsert: true
+				});
+			}
 		}
 
 		// Scripts and history count
@@ -1649,8 +1711,14 @@ app.post('/generate', async function(req, res) {
 			})
 			return
 		}
-
 		if (request.negativeprompt.includes("<SPLIT>")) {
+			res.send({
+				status: "error",
+				message: "BRUH LMAO"
+			})
+			return
+		}
+		if (request.negativeprompt.includes("<rp>") || request.negativeprompt.includes("<RP>")) {
 			res.send({
 				status: "error",
 				message: "BRUH LMAO"
@@ -1668,6 +1736,16 @@ app.post('/generate', async function(req, res) {
 		request.prompt = request.prompt.replace(/<RP>/g, "<rp>")
 
 		moderatedPrompt = await moderatePrompt.positive(request.prompt)
+
+		if (request.model.startsWith('pdxl')) {
+			request.steps = 35
+		} else if (request.model.startsWith('illustrious')) {
+			request.steps = 35
+		} else {
+			request.steps = 50
+		}
+
+
 
 		if (request.model.startsWith('flux')) {
 			request.quantity = 2
@@ -1698,7 +1776,7 @@ app.post('/generate', async function(req, res) {
 				accountId: req.session.accountId
 			})
 
-			if (userProfile == null) {
+			if (userProfile.status == "error") {
 				res.send({
 					status: "error",
 					message: "User not found"
@@ -1884,6 +1962,9 @@ app.get('/result/:request_id', async function(req, res) {
 
 		if (json.historyData.account_id != "0") {
 
+			// give the user exp:
+			await mongolib.modifyUserExp(json.historyData.account_id, 1, '+')
+
 			if (!fs.existsSync(imagesHistorySaveLocation)) {
 				fs.mkdirSync(imagesHistorySaveLocation, {
 					recursive: true
@@ -1982,13 +2063,6 @@ app.get('/result/:request_id', async function(req, res) {
 			}
 
 			creditsRequired = json.creditsRequired
-
-			// set credits to be the default value if it is not found:
-			if (userProfile.credits == null || userProfile.credits == undefined) {
-				creditsCurrent = 500
-			} else {
-				creditsCurrent = userProfile.credits
-			}
 
 			creditsMessage = `Generated images, Using: ${json.historyData.model}`
 
@@ -2238,8 +2312,6 @@ app.get('/booru/post/:booru_id', async function(req, res) {
 	postProfile.ratings = postProfile.ratings.replace(/,/g, '/')
 	postProfile.ratings = `(${postProfile.ratings} Account)`
 
-
-
 	res.render('booru/post', {
 		session: req.session,
 		booruImage: foundBooruImage,
@@ -2303,7 +2375,6 @@ app.get('/booru/', async function(req, res) {
 		page = req.param('page') || 1
 		safety = req.param('safety') || ["sfw"]
 		sort = req.param('sort') || "trending"
-		followedAccountsOnly = req.param('FAO') || false
 
 		totalPerPage = 48
 
@@ -2317,15 +2388,22 @@ app.get('/booru/', async function(req, res) {
 
 		let noVoteBoost = 100; // Additional weight for images with no votes
 
+
+
 		let voteBias = 0.05; // Weight of each upvote
 		let commentBias = 0.5; // Weight of each comment
+
 		let recentVoteBias = 3; // Additional weight for recent votes
 		let recentCommentBias = 6; // Additional weight for recent comments
 
 
+
 		// add the params to the url if they are not already there:
 		if (!req.url.includes('?')) {
-			res.redirect(`/booru/?search=${search}&page=${page}&safety=${safety}`)
+			// INCORRECT: https://www.jscammie.com/booru/?search=&page=1&safety=sfw&sort=trending
+			// CORRECT: https://www.jscammie.com/booru/?page=1&search=&safety=sfw&sort=trending
+
+			res.redirect(`/booru/?page=${page}&search=${search}&safety=${safety}&sort=${sort}`)
 			return
 		}
 
@@ -2335,7 +2413,7 @@ app.get('/booru/', async function(req, res) {
 			safety = safety.split(',')
 		}
 
-		let userProfile = await userProfileSchema.findOne({
+		let userProfile = await mongolib.getSchemaDocumentOnce("userProfile", {
 			accountId: req.session.accountId
 		})
 
@@ -3095,10 +3173,45 @@ app.get('/booru/', async function(req, res) {
 		// make sure the booruAccounts process is finished before the webpage is rendered:
 		// using the booruImages array, get all the account_ids, remove duplicates, then get the userProfiles for each account_id with mongolib:
 		let booruAccounts = Array.from(new Set(booruImages.map(image => image.account_id)))
-
 		booruAccounts = await mongolib.getSchemaDocuments("userProfile", {
 			accountId: {
 				$in: booruAccounts
+			}
+		})
+
+		let upvoteAccounts = []
+		let upvoteAccountsIDs = []
+		for (const image of booruImages) {
+			if (image.upvotes.length > 0) {
+				for (const upvote of image.upvotes) {
+					upvoteAccountsIDs.push(upvote.accountId)
+				}
+			}
+		}
+
+		upvoteAccountsIDs = Array.from(new Set(upvoteAccountsIDs))
+		upvoteAccounts = await mongolib.getSchemaDocuments("userProfile", {
+			accountId: {
+				$in: upvoteAccountsIDs
+			}
+		})
+
+		
+		// returns nothing even where there are downvotes, so use this instead:
+		let downvoteAccounts = []
+		let downvoteAccountsIDs = []
+		for (const image of booruImages) {
+			if (image.downvotes.length > 0) {
+				for (const downvote of image.downvotes) {
+					downvoteAccountsIDs.push(downvote.accountId)
+				}
+			}
+		}
+
+		downvoteAccountsIDs = Array.from(new Set(downvoteAccountsIDs))
+		downvoteAccounts = await mongolib.getSchemaDocuments("userProfile", {
+			accountId: {
+				$in: downvoteAccountsIDs
 			}
 		})
 
@@ -3106,20 +3219,24 @@ app.get('/booru/', async function(req, res) {
 			res.render('booru/home', {
 				session: req.session,
 				booruImages: booruImages,
-				userProfile: userProfile,
+				userProfile: userProfile ? userProfile : {},
 				booruSearchScript: booruSearchScript,
 				totalPages: totalPages,
-				booruAccounts: booruAccounts
+				booruAccounts: booruAccounts,
+				upvoteAccounts: upvoteAccounts,
+				downvoteAccounts: downvoteAccounts
 			});
 			return
 		} else {
 			res.render('booru/home', {
 				session: req.session,
 				booruImages: booruImages,
-				userProfile: userProfile,
+				userProfile: userProfile ? userProfile : {},
 				booruSearchScript: booruSearchScript,
 				totalPages: totalPages, 
-				booruAccounts: booruAccounts
+				booruAccounts: booruAccounts,
+				upvoteAccounts: upvoteAccounts,
+				downvoteAccounts: downvoteAccounts
 			});
 		}
 
@@ -3170,7 +3287,7 @@ app.post('/tags-autocomplete', async function(req, res) {
 					tag: {
 						$regex: lastWord,
 						$options: 'i'
-					} // Filters tags that contain the lastWord (case insensitive)
+					}
 				}
 			},
 			{
@@ -3186,7 +3303,7 @@ app.post('/tags-autocomplete', async function(req, res) {
 				}
 			},
 			{
-				$limit: 10
+				$limit: 23
 			}
 		]);
 
@@ -3247,9 +3364,9 @@ app.post('/create-booru-image', async function(req, res) {
 			},
 		])
 
-		imageCount = imageCountAggregate[0]?.count ?? 0
+		imageCount = imageCountAggregate.length
 
-		maxBooruImages = 30
+		maxBooruImages = 10
 
 		console.log(`Last 12 hrs: ${imageCount} - ${userProfile.username}`)
 
@@ -3332,6 +3449,18 @@ app.post('/create-booru-image', async function(req, res) {
 		} else {
 			tags.push(`${userProfile.username}-username`)
 		}
+
+		scoreTags = "score_10, score_9, score_8, score_7, score_6, score_5, score_4, score_3, score_2, score_1, score_0"
+		scoreUpTags = "score_10_up, score_9_up, score_8_up, score_7_up, score_6_up, score_5_up, score_4_up, score_3_up, score_2_up, score_1_up, score_0_up"
+		scoreUpTags2 = "score_10up, score_9up, score_8up, score_7up, score_6up, score_5up, score_4up, score_3up, score_2up, score_1up, score_0up"
+		qualityTags = "masterpiece, amazing_quality, best_quality, absurdres, very_aesthetic, high_quality, detailed, perfect_quality, high_resolution"
+		qualityTags2 = "8k, ultra-detailed, absurd_res, 4k, high_detail, amazing_lighting, perfect_detail, hi_res, highest_quality_textures"
+		qualityTags3 = "extreme_detail, studio_quality, max_detail, refined_detail, insanely_detailed, highres, highly_detailed_background, quality"
+
+		blockedTags = scoreTags + ", " + scoreUpTags + ", " + scoreUpTags2 + ", " + qualityTags + ", " + qualityTags2 + ", " + qualityTags3
+		blockedTags = blockedTags.split(", ")
+
+		tags = tags.filter(tag => !blockedTags.includes(tag))
 
 		for (const tag of tags) {
 			// check if the tag exists in the userBooruTagsSchema:
@@ -3416,6 +3545,14 @@ app.post('/follow-account/', async function(req, res) {
 			accountId: req.session.accountId
 		})
 
+		if (userProfile.status == 'error') {
+			res.send({
+				status: 'error',
+				message: 'User not found'
+			})
+			return
+		}
+
 		let accountToFollow = req.body.accountId
 
 		if (userProfile.followedAccounts.includes(accountToFollow)) {
@@ -3459,6 +3596,14 @@ app.post('/block-account/', async function(req, res) {
 		let userProfile = await mongolib.getSchemaDocumentOnce("userProfile", {
 			accountId: req.session.accountId
 		})
+
+		if (userProfile.status == 'error') {
+			res.send({
+				status: 'error',
+				message: 'User not found'
+			})
+			return
+		}
 
 		let accountToBlock = req.body.accountId
 
@@ -3545,8 +3690,7 @@ app.post('/booru/setRating/', async function(req, res) {
 		}
 
 		if (foundBooruImage.safety == "na") {
-			await mongolib.modifyUserCredits(creatorProfile.accountId, 10, '+', `Your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a> was rated ${rating.toUpperCase()}`)
-			await mongolib.modifyUserExp(creatorProfile.accountId, 10, '+')
+			await mongolib.modifyUserCredits(creatorProfile.accountId, 1, '+', `Your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a> was rated ${rating.toUpperCase()}`)
 			if (creatorProfile.settings?.notification_booruRating == true || creatorProfile.settings?.notification_booruRating == undefined) {
 				await mongolib.createUserNotification(creatorProfile.accountId, `Your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a> was rated ${rating.toUpperCase()}`, 'booru')
 			}
@@ -3681,14 +3825,14 @@ app.post('/booru/delete', async function(req, res) {
 app.post('/booru/ban/:accountId', async function(req, res) {
 	accountId = req.param('accountId')
 
-	let clientProfile = await mongolib.getSchemaDocumentOnce("userProfile", {
+	let userProfile = await mongolib.getSchemaDocumentOnce("userProfile", {
 		accountId: req.session.accountId
 	})
 
-	if (clientProfile == null) {
+	if (userProfile.status == 'error') {
 		res.send({
-			status: "error",
-			message: "Client not found"
+			status: 'error',
+			message: 'User not found'
 		})
 		return
 	}
@@ -3705,7 +3849,7 @@ app.post('/booru/ban/:accountId', async function(req, res) {
 		accountId: accountId
 	})
 
-	if (targetProfile == null) {
+	if (targetProfile == 'error') {
 		res.send({
 			status: "error",
 			message: "Target not found"
@@ -3787,7 +3931,7 @@ app.post('/booru/vote', async function(req, res) {
 		// check if the user has already voted on the post:
 
 		creatorCreditsToGain = 3
-		creatorExpToGain = 1
+		creatorExpToGain = 3
 
 		userCreditsToGain = 1
 		userExpToGain = 1
@@ -3920,7 +4064,7 @@ app.post('/booru/comment/post/:booru_id', async function(req, res) {
 		accountId: req.session.accountId
 	})
 
-	if (foundAccount == null) {
+	if (foundAccount.status == 'error') {
 		res.send({
 			status: "error",
 			message: "Account not found"
@@ -3995,18 +4139,18 @@ app.get('/booru/comment/delete/:commentId', async function(req, res) {
 			accountId: req.session.accountId
 		});
 
-		if (!foundAccount) {
+		if (foundAccount.status == 'error') {
 			res.send({
-				status: "error",
-				message: "Account not found"
-			});
-			return;
+				status: 'error',
+				message: 'User not found'
+			})
+			return
 		}
 
-		if (foundComment.accountId !== req.session.accountId) {
+		if (foundComment.accountId !== req.session.accountId && foundAccount.badges?.moderator !== true) {
 			res.send({
 				status: "error",
-				message: "Account does not own the comment"
+				message: "Account does not own the comment, or is not moderator"
 			});
 			return;
 		}
@@ -4061,9 +4205,9 @@ app.post('/booru/comment/vote', async function (req, res) {
 
         // Step 3: Find the user's profile (optional check for account validity)
         const foundAccount = await mongolib.getSchemaDocumentOnce("userProfile", { accountId });
-        if (!foundAccount) {
-            return res.status(404).send({ status: "error", message: "Account not found" });
-        }
+        if (foundAccount.status == "error") {
+			return res.status(404).send({ status: "error", message: "Account not found" });
+		}
 
         // Step 4: Prepare the update logic
         const updateQuery = { "comments.commentId": commentId };
@@ -4202,7 +4346,7 @@ app.get('/profile/:account_id', async function(req, res) {
 		accountId: account_id
 	})
 
-	if (profileProfile == null) {
+	if (profileProfile.status == "error") {
 		res.send({
 			status: "error",
 			message: "User not found"
@@ -4276,9 +4420,10 @@ app.get('/credits-history', async function(req, res) {
 
 app.post('/get-notifications', async function(req, res) {
 	let data = req.body
-	// accountId"", notificationsReceived[]
 
-	let userProfile = await mongolib.getSchemaDocumentOnce("userProfile", { accountId: data.accountId })
+	let userProfile = await mongolib.getSchemaDocumentOnce("userProfile", {
+		accountId: req.session.accountId
+	})
 
 	if (userProfile.status == 'error') {
 		res.send({
@@ -4643,14 +4788,6 @@ app.get('/paypal-shop', async function(req, res) {
 		accountId: req.session.accountId
 	})
 
-	if (userProfile.status == 'error') {
-		res.send({
-			status: 'error',
-			message: 'User not found'
-		})
-		return
-	}
-
 	res.render('paypal-shop', {
 		session: req.session,
 		userProfile: userProfile
@@ -4665,9 +4802,9 @@ const PAYPAL_SECRET = process.env.PAYPAL_SECRET;
 const PAYPAL_API = process.env.PAYPAL_API || 'https://api-m.paypal.com'; // Use live API URL
 
 const creditOptions = [
-    { credits: 15000, price: 5 },
-	{ credits: 37500, price: 10 },
-	{ credits: 95000, price: 20 }
+    { credits: 17500, price: 5 },
+	{ credits: 40000, price: 10 },
+	{ credits: 100000, price: 20 }
 ];
 
 // Payment Verification Route (Manually Triggered after capture)
@@ -4984,13 +5121,180 @@ app.post('/create-redeem-code', async function(req, res) {
 	}
 })
 
-
-
 app.get('/download', async function(req, res) {
 	res.render('download', {
 		session: req.session
 	});
 })
+
+
+
+
+app.get('/leaderboard', async function(req, res) {
+
+	try {
+
+
+		let type = req.param('type')
+
+		switch (type) {
+		
+			case 'credits':
+				let leaderboardInfo = await mongolib.aggregateSchemaDocuments("userProfile", [
+					// credits is a string, convert it before sorting:
+					{ $addFields: { credits: { $toLong: "$credits" } } },
+					{ $sort: { credits: -1 } }, 
+					{ $match: { accountId: { $ne: "550239177837379594" } } },
+					{ $project: { credits: 1, username: 1, profileImg: 1, accountId: 1 } },
+					{ $limit: 100 }
+				]);
+
+				res.render('leaderboard', {
+					session: req.session,
+					leaderboardInfo: leaderboardInfo,
+					type: 'credits'
+				});
+				break;
+
+			case 'exp':
+				let leaderboardInfoExp = await mongolib.aggregateSchemaDocuments("userProfile", [
+					{ $sort: { exp: -1 } },
+					{ $project: { exp: 1, username: 1, profileImg: 1, level: 1, accountId: 1 } },
+					{ $limit: 100 }
+				]);
+
+				res.render('leaderboard', {
+					session: req.session,
+					leaderboardInfo: leaderboardInfoExp,
+					type: 'exp'
+				});
+				break;
+
+			case 'booru':
+				// Fetch booru images with only required fields
+				let booruImages = await mongolib.aggregateSchemaDocuments("userBooru", [
+					// make the upvotes, downvotes and comments the length of the array if it exists:
+					{ $addFields: { upvotes: { $size: { $ifNull: ["$upvotes", []] } }, downvotes: { $size: { $ifNull: ["$downvotes", []] } }, comments: { $size: { $ifNull: ["$comments", []] } } } },
+					{ $project: { account_id: 1, upvotes: 1, downvotes: 1, comments: 1 } }
+				]);
+
+				if (!booruImages.length) {
+					console.log("No booru images found.");
+					return res.render('leaderboard', { session: req.session, leaderboardInfo: [], type: 'booru' });
+				}
+
+				// Get unique account IDs
+				let accountIds = [...new Set(booruImages.map(img => img.account_id))];
+
+				// Fetch user profiles
+				let userProfiles = await mongolib.aggregateSchemaDocuments("userProfile", [
+					{ $match: { accountId: { $in: accountIds } } },
+					{ $project: { accountId: 1, username: 1, profileImg: 1 } }
+				]);
+
+				let userProfilesMap = Object.fromEntries(userProfiles.map(user => [user.accountId, user]));
+
+				// Process booru posts
+				let userStats = {};
+				for (const image of booruImages) {
+					let { account_id, upvotes, downvotes, comments } = image;
+					upvotes = upvotes || 0;
+					downvotes = downvotes || 0;
+					comments = comments || 0;
+
+					// Assign different weights
+					let score = (upvotes * 2) - (downvotes * 2.5) + (comments * 3.5);
+
+					if (!userStats[account_id]) {
+						userStats[account_id] = { postCount: 0, totalScore: 0, totalVotes: 0 };
+					}
+
+					userStats[account_id].postCount++;
+					userStats[account_id].totalScore += score;
+					userStats[account_id].totalVotes += upvotes + downvotes + comments;
+				}
+
+				// Construct leaderboard data
+				let allUserBooruAccounts = Object.entries(userStats)
+					.filter(([accountId, stats]) => stats.postCount >= 10)
+					.map(([accountId, stats]) => {
+						let profile = userProfilesMap[accountId] || {};
+						
+						// Engagement-based modifier
+						let engagementRate = stats.totalVotes / stats.postCount;
+						let activityModifier = Math.max(0.3, Math.log10(stats.postCount)) * 100;
+						let engagementBoost = Math.log2(1 + engagementRate) * 10; // Small boost for active users
+						
+						return {
+							accountId,
+							username: profile.username || "Unknown",
+							profileImg: profile.profileImg || "",
+							score: (stats.totalScore / activityModifier) + engagementBoost
+						};
+					})
+					.sort((a, b) => b.score - a.score)
+					.slice(0, 100);
+
+
+				res.render('leaderboard', {
+					session: req.session,
+					leaderboardInfo: allUserBooruAccounts,
+					type: 'booru'
+				});
+				break;
+
+
+			default:
+
+				res.redirect('/leaderboard?type=credits')
+		
+		}
+
+	} catch(error) {
+		console.log(`Error getting leaderboard: ${error}`);
+		res.status(500).send('Error getting leaderboard');
+	}
+
+})
+
+
+
+app.get('/remove-null-booru-votes', async function(req, res) {
+
+	try {
+		// find all the booru images where any upvotes[0].accountId upvotes[1].accountId or downvotes[0].accountId downvotes[1].accountId etc etc is null:
+		let allBooruImages = await mongolib.getSchemaDocuments("userBooru", {
+			$or: [
+				{ upvotes: { $elemMatch: { accountId: null } } },
+				{ downvotes: { $elemMatch: { accountId: null } } }
+			]
+		})
+
+		console.log(allBooruImages.length)
+
+		// remove ONLY the votes where the accountId is null:
+		for (const booruImage of allBooruImages) {
+			// remove the null upvotes:
+			let newUpvotes = booruImage.upvotes.filter(vote => vote.accountId !== null)
+			let newDownvotes = booruImage.downvotes.filter(vote => vote.accountId !== null)
+
+			await mongolib.updateSchemaDocumentOnce("userBooru", {
+				booru_id: booruImage.booru_id
+			}, {
+				upvotes: newUpvotes,
+				downvotes: newDownvotes
+			})
+		}
+
+	} catch(error) {
+		console.log(`Error removing null booru votes: ${error}`);
+		res.status(500).send('Error removing null booru votes');
+	}
+
+})
+
+
+
 
 	
 app.get('/.well-known/pki-validation/BD4ADEC68E8CA80AB663C847A5D5990E.txt', async function(req, res) {

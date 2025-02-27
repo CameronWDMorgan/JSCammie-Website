@@ -36,6 +36,16 @@ function booruSearchInitialize() {
         let searchValue = searchInput.value;
         let lastWord;
 
+        // open the id="autoCompleteDropdown" details element when the search input is focused:
+        let autoCompleteDropdown = document.getElementById("autoCompleteDropdown");
+
+        if (searchValue.length > 1) {
+            autoCompleteDropdown.open = true;
+        } else {
+            autoCompleteDropdown.open = false;
+        }
+
+
         // if there isn't a space, then the last word is the search term:
         if (!searchValue.includes(" ")) {
             lastWord = searchValue;

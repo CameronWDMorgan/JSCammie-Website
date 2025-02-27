@@ -143,7 +143,11 @@ async function getSchemaDocumentOnce(schema, query) {
 				document = await userBooruTagsSchema.findOne(query)
 				break;
 			case 'userProfile':
-				document = await userProfileSchema.findOne(query)
+				if (query.accountId == null) {
+					return {status: 'error', message: 'No account ID provided'}
+				} else {
+					document = await userProfileSchema.findOne(query)
+				}
 				break;
 			case 'userSuggestion':
 				document = await userSuggestionSchema.findOne(query)
@@ -170,7 +174,7 @@ async function getSchemaDocumentOnce(schema, query) {
 				document = null
 		}
 
-		if (document === null) {
+		if (document == null) {
 			return {status: 'error', message: 'Document not found'}
 		}
 
@@ -338,6 +342,9 @@ async function updateSchemaDocumentOnce(schema, query, update) {
 				await userBooruTagsSchema.findOneAndUpdate(query, update)
 				break;
 			case 'userProfile':
+				if (query.accountId == null) {
+					return {status: 'error', message: 'No account ID provided'}
+				}
 				await userProfileSchema.findOneAndUpdate(query, update)
 				break;
 			case 'userSuggestion':
@@ -365,8 +372,6 @@ async function updateSchemaDocumentOnce(schema, query, update) {
 				return {status: 'error', message: 'Invalid schema'}
 		}
 		
-		console.log(`Schema "${schema}" updated`)
-
 		return {status: 'success', message: `Schema "${schema}" updated`}
 
 	} catch (error) {
@@ -386,6 +391,9 @@ async function createSchemaDocument(schema, document) {
 				await userBooruTagsSchema.create(document)
 				break;
 			case 'userProfile':
+				if (query.accountId == null) {
+					return {status: 'error', message: 'No account ID provided'}
+				}
 				await userProfileSchema.create(document)
 				break;
 			case 'userSuggestion':
@@ -413,8 +421,6 @@ async function createSchemaDocument(schema, document) {
 				return {status: 'error', message: 'Invalid schema'}
 		}
 		
-		console.log(`Schema "${schema}" created`)
-
 		return {status: 'success', message: `Schema "${schema}" created`}
 
 	} catch (error) {
@@ -461,8 +467,6 @@ async function deleteSchemaDocument(schema, query) {
 				return {status: 'error', message: 'Invalid schema'}
 		}
 	
-		console.log(`Schema "${schema}" deleted`)
-
 		return {status: 'success', message: `Schema "${schema}" deleted`}
 
 	} catch (error) {

@@ -325,6 +325,7 @@
         <div class="navigationLinksWrapper">
             <a id="navigationLink-generator" class="navigationLink" href="/">AI Generator</a>
             <a id="navigationLink-booru" class="navigationLink" href="/booru">Booru</a>
+            <a id="navigationLink-leaderboard" class="navigationLink" href="/leaderboard?type=booru">Leaderboard</a>
             <a id="navigationLink-download" class="navigationLink" href="/download">Download</a>
             <a id="navigationLink-paypalshop" class="navigationLink" href="/paypal-shop">Buy Credits</a>
             <a id="navigationLink-metadata" class="navigationLink" href="/metadata">Metadata</a> 
@@ -349,6 +350,7 @@
             <a href="/">AI Generator</a>
             <a href="/projects">Projects</a>
             <a href="/booru">Booru</a>
+            <a href="/leaderboard?type=booru">Leaderboard</a>
             <a href="https://discord.gg/AvbQuRmh7t">Discord</a>
             <a href="/download">Download</a>
             <a href="/suggestions">Suggestions</a>
@@ -367,6 +369,11 @@
         </div>
         <div id="notificationsDiv">
             <button id="notificationsNav">🔔</button>
+        </div>
+        
+        <!-- settings button that opens jscammie.com/settings: -->
+        <div id="settingsDiv">
+            <button id="settingsNav" onclick='window.open("/settings/")'>⚙️</button>
         </div>
         
 
@@ -418,6 +425,8 @@
     if (currentPath.includes('booru')) {
         currentPath = currentPath.split('/')
         currentPath = `/${currentPath[1]}`
+    } else if (currentPath.includes('leaderboard')) {
+        currentPath = '/leaderboard'
     }
 
     let accountId = '<%=session.accountId%>'
@@ -426,6 +435,10 @@
     
         case '/metadata':
             document.getElementById('navigationLink-metadata').classList.add('navigationLinkActive');
+            break;
+
+        case '/leaderboard':
+            document.getElementById('navigationLink-leaderboard').classList.add('navigationLinkActive');
             break;
         
         case '/':
@@ -729,6 +742,8 @@
     const MAX_NOTIFICATIONS = 50;
 
     function getNotifications() {
+        // if the user is not logged in, then don't get notifications:
+        
         fetch('/get-notifications', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -776,15 +791,17 @@
         }
     });
 
-    document.getElementById('loadNotificationsButton').addEventListener('click', () => {
-        getNotifications();
-    });
+    <% if (session.loggedIn) { %>
+        document.getElementById('loadNotificationsButton').addEventListener('click', () => {
+            getNotifications();
+        });
 
-    getNotifications();
-
-    setInterval(() => {
         getNotifications();
-    }, 10000);
+
+        setInterval(() => {
+            getNotifications();
+        }, 10000);
+    <% } %>
 
 </script>
 
@@ -1307,6 +1324,31 @@
                     buttons.appendChild(button);
                 });
 
+                // add the ability to use arrow keys and enter key to select the buttons:
+                let buttonIndex = 0;
+                document.addEventListener('keydown', (event) => {
+                    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+                        buttonIndex++;
+                        if (buttonIndex >= buttons.children.length) {
+                            buttonIndex = 0;
+                        }
+                    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+                        buttonIndex--;
+                        if (buttonIndex < 0) {
+                            buttonIndex = buttons.children.length - 1;
+                        }
+                    } else if (event.key === 'Enter') {
+                        buttons.children[buttonIndex].click();
+                    }
+                    buttons.children.forEach((button, index) => {
+                        if (index === buttonIndex) {
+                            button.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                        } else {
+                            button.style.backgroundColor = 'rgba(0, 0, 0, 0.2)';
+                        }
+                    });
+                });
+
                 // Append the buttons div to the globalAlert div:
                 document.getElementById('globalAlert').appendChild(buttons);
 
@@ -1332,10 +1374,13 @@
     }
 
     let intervalIds = [];
-    let notificationsInterval = setInterval(getNotifications, 2000);
-    let profileUpdateInterval = setInterval(updateUserProfile, 1000);
+    <% if (session.loggedIn) { %> 
+        // Check for new notifications and update the user profile every 2 seconds
+        let notificationsInterval = setInterval(getNotifications, 2000);
+        let profileUpdateInterval = setInterval(updateUserProfile, 1000);
 
-    intervalIds.push(notificationsInterval, profileUpdateInterval);
+        intervalIds.push(notificationsInterval, profileUpdateInterval);
+    <% } %>
 
     // Add cleanup function to be called when page unloads
     function cleanupIntervals() {

@@ -44,8 +44,8 @@
 
         var userProfile = {
             accountId: `<%= userProfile?.accountId %>`,
-            followedAccounts: <%- JSON.stringify(userProfile?.followedAccounts) %>,
-            blockedAccounts: <%- JSON.stringify(userProfile?.blockedAccounts) %>,
+            followedAccounts: <%- JSON.stringify(userProfile?.followedAccounts? userProfile.followedAccounts : []) %>,
+            blockedAccounts: <%- JSON.stringify(userProfile?.blockedAccounts? userProfile.blockedAccounts : []) %>,
             }
 
         <% userBooru.forEach(image => { %>
@@ -88,7 +88,10 @@
     </script>
 
         <div class="searchDiv">
-            <div id="searchResultsDiv"></div>
+            <details id="autoCompleteDropdown" class="autoCompleteDropdown">
+                <summary>Auto Complete Results</summary>
+                <div id="searchResultsDiv"></div>
+            </details>
             <input id="searchInput" type="text" placeholder="Search..." style="width: 100%; padding: 10px; border-radius: 10px; margin-bottom: 20px;" />
             <br>
             <select id="searchSorting">
@@ -264,9 +267,12 @@
 
             for (const [key, value] of Object.entries(masterBooruData)) {
 
-                // if (value.safety === "na") {
-                //     continue
-                // }
+                if (value.safety == "na" && userProfile.accountId !== profileProfile.accountId) {
+                    console.log("skipping")
+                    continue
+                } else {
+                    console.log(`userProfile.accountId: ${userProfile.accountId}, profileProfile.accountId: ${profileProfile.accountId}`)
+                }
 
                 let newContentUrl = ""
 

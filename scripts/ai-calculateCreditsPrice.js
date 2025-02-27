@@ -69,12 +69,12 @@ function getExtrasPrice(extras, model='') {
 	}
 
 	if (extras.upscale) {
-		extrasPrice.upscale += 150
+		extrasPrice.upscale += 50
 		if (model.startsWith('sdxl')) {
-			extrasPrice.upscale += 400
+			extrasPrice.upscale = Math.round(extrasPrice.upscale * 2.5)
 		}
 		if (model.startsWith('illustrious')) {
-			extrasPrice.upscale += 400
+			extrasPrice.upscale = Math.round(extrasPrice.upscale * 2.5)
 		}
 	}
 

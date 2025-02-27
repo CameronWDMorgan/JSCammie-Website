@@ -20,6 +20,9 @@ let requestId = null
 let cancelledGeneration = false
 let uploadsToBooru = 0
 
+let timeForNextPositionLower = []
+let lastLowestPosition = 9999
+
 // State management
 const UIState = {
     generateButton: funcElementById('generateButton'),
@@ -47,7 +50,34 @@ const UIState = {
 
     updateQueuePosition(position, queueLength) {
         this.queuePosition.style.display = 'block';
-        this.positionNumber.innerText = `${position}/${queueLength}`;
+        let currentTime = new Date().getTime();
+
+        // Only store timestamps when the position decreases
+        if (position < lastLowestPosition) {
+            timeForNextPositionLower.push(currentTime);
+            lastLowestPosition = position;
+        }
+
+        // Maintain a history limit of 100 timestamps
+        if (timeForNextPositionLower.length > 100) {
+            timeForNextPositionLower.shift();
+        }
+
+        // Calculate ETA based on average time per position decrease
+        let etaString = "Calculating...";
+        if (timeForNextPositionLower.length > 1) {
+            let totalTime = 0;
+            for (let i = 1; i < timeForNextPositionLower.length; i++) {
+                totalTime += timeForNextPositionLower[i] - timeForNextPositionLower[i - 1];
+            }
+            let averageTimePerPosition = totalTime / (timeForNextPositionLower.length - 1);
+            let estimatedTimeRemaining = averageTimePerPosition * (position - 1);
+            let etaMinutes = Math.floor(estimatedTimeRemaining / 60000);
+            let etaSeconds = Math.floor((estimatedTimeRemaining % 60000) / 1000);
+            etaString = `${etaMinutes}m ${etaSeconds}s`;
+        }
+
+        this.positionNumber.innerText = `${position}/${queueLength} - ETA: ${etaString}`;
     },
 
     hideQueuePosition() {
@@ -253,17 +283,6 @@ const displayResults = async (results) => {
         audio.play().catch(error => console.log('Audio playback failed:', error));
     }
 
-    // Check for booru spam flag
-    const notAllowedBooruImageSpam = ["416790733031211009", "774138250179772437"];
-    const accountId = getValue('user-session');
-    
-    if (notAllowedBooruImageSpam.includes(accountId)) {
-        const warning = document.createElement('p');
-        warning.innerText = "You've been flagged for spamming images to the booru, DO NOT upload images IF they are low quality / do not match the prompt used OR in general have alot of errors!";
-        warning.style.color = 'rgb(255, 200, 200)';
-        UIState.imagesContainer.parentNode.insertBefore(warning, UIState.imagesContainer);
-    }
-
     // Display images
     results.images.forEach((image, index) => {
         const container = document.createElement('div');
@@ -455,11 +474,11 @@ const uploadToBooru = async (booruData) => {
         const result = await response.json();
 
         uploadsToBooru += 1;
+        let uploadCapHit = false;
 
         // if uploadsToBooru is 2, then remove the upload to booru buttons off all images:
         if (uploadsToBooru >= 2) {
-            const buttons = document.querySelectorAll('button[id^="booruButton-"]');
-            buttons.forEach(button => button.remove());
+            uploadCapHit = true
         }
         
         if (result.status == "success") {
@@ -473,8 +492,17 @@ const uploadToBooru = async (booruData) => {
             await globalAlert(options);
             closeBooruPopup();
             // remove the button:
+            // first deselect the button so the enter key doesn't trigger it again:
+            booruData.selected = false;
+            // then remove the button:
             const button = funcElementById('booruButton-' + booruData.index);
             button.parentNode.removeChild(button);
+
+            if (uploadCapHit) {
+                const buttons = document.querySelectorAll('button[id^="booruButton-"]');
+                buttons.forEach(button => button.remove());
+            }
+
         } else if (result.status == "error") {
             await globalAlert({ message: result.message, question: true, options: { okay: function() {} } });
         } else {
@@ -482,7 +510,7 @@ const uploadToBooru = async (booruData) => {
         }
     } catch (error) {
         console.error('Booru upload error:', error);
-        alert('Failed to upload image to Booru.');
+        globalAlert({ message: `Failed to upload image to Booru. ${error}`, question: true, options: { okay: function() {} } });
     }
 };
 
@@ -513,10 +541,10 @@ const handleQueueAndGeneration = async (jsonResponse) => {
     let retryCount = 0;
     let queueLoops = 0;
     let nextCheckMS = 1250;
+    let connectionActive = true;
 
     while (!isCompleted && retryCount < 5) {
         try {
-
             if (cancelledGeneration) return;
 
             requestId = jsonResponse.request_id;
@@ -531,7 +559,8 @@ const handleQueueAndGeneration = async (jsonResponse) => {
                 await handleCompletedGeneration();
                 isCompleted = true;
             } else if (positionData.status === "waiting") {
-                retryCount = 0;
+                retryCount = 0; // Reset retry count on successful connection
+                connectionActive = true;
                 UIState.updateQueuePosition(positionData.position, positionData.queue_length);
                 await new Promise(resolve => setTimeout(resolve, nextCheckMS));
             }
@@ -542,7 +571,15 @@ const handleQueueAndGeneration = async (jsonResponse) => {
             retryCount++;
             if (cancelledGeneration) return;
             console.error('Queue check error:', error);
-            UIState.response.innerText = `Temporary error, retrying... (${retryCount}/5)`;
+            
+            // Only show the temporary error message if we haven't established a connection yet
+            if (!connectionActive) {
+                UIState.response.innerText = `Temporary error, retrying... (${retryCount}/5)`;
+            } else {
+                // If we had a connection before, maintain the current UI state without error message
+                console.log(`Temporary network hiccup, silently retrying... (${retryCount}/5)`);
+            }
+            
             await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
         }
     }
@@ -555,7 +592,6 @@ const handleQueueAndGeneration = async (jsonResponse) => {
     UIState.response.innerText = '';
     UIState.cancelButton.style.display = 'none';
 };
-
 
 
 const handlePositionResponse = (positionData, queueLoops) => {

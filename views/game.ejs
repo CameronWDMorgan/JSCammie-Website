@@ -34,324 +34,92 @@
 
         <script>
 
-            // get the canvas element:
-            var canvas = document.getElementById("gameCanvas");
-            var ctx = canvas.getContext("2d");
-            // set width and height of canvas:
+            const canvas = document.getElementById("gameCanvas");
+            const ctx = canvas.getContext("2d");
             canvas.width = 720;
-            canvas.height = 720
+            canvas.height = 720;
 
-            let targetFps = 200;
-            let physicsFps = 200;
+            const targetFps = 200;
+            const physicsFps = 200;
+            const gravity = 0.5;
+            const keys = {};
 
-            var gravity = 0.5;
+            window.addEventListener("keydown", (e) => (keys[e.key] = true));
+            window.addEventListener("keyup", (e) => (keys[e.key] = false));
 
-            function drawRotateObject(object, angle) {
-                ctx.save();
-                ctx.translate(object.x + object.width / 2, object.y + object.height / 2);
-                ctx.rotate(angle);
-                ctx.fillRect(-object.width / 2, -object.height / 2, object.width, object.height);
-                // have the top edge be a different color to show rotation:
-                ctx.fillStyle = 'blue';
-                ctx.fillRect(-object.width / 2, -object.height / 2, object.width, 2);
-                ctx.restore();
-            }
-
-            class Object {
-                constructor(objectId, x, y, rotation) {
-                    this.objectId = objectId;
+            class GameObject {
+                constructor(id, x, y, width, height, textureSrc = null) {
+                    this.id = id;
                     this.x = x;
                     this.y = y;
-                    this.rotation = rotation;
-                }
-            }
-
-            // create an object to store the keys:
-            var keys = {};
-
-            // add an event listener to the window to listen for keydown events:
-            window.addEventListener('keydown', function(e) {
-                keys[e.key] = true;
-            });
-
-            // add an event listener to the window to listen for keyup events:
-            window.addEventListener('keyup', function(e) {
-                keys[e.key] = false;
-            });
-
-            class Player extends Object {
-                constructor(objectId, x, y, rotation, width, height, color, xVelocity, yVelocity) {
-                    super(objectId, x, y, rotation);
                     this.width = width;
                     this.height = height;
-                    this.color = color;
-                    this.xVelocity = xVelocity;
-                    this.yVelocity = yVelocity;
-                    this.calcXVelocity = 0;
-                    this.calcYVelocity = 0;
-                }
-
-                draw() {
-                    ctx.fillStyle = this.color;
-                    // rotate the player around their center before drawing:
-                    // ctx.fillRect(this.x, this.y, this.width, this.height);
-                    drawRotateObject(this, this.rotation);
-                }
-
-                update() {
-                    this.draw();
-                    playerLogic(this);
-                }
-            }
-
-
-            class rectangle extends Object {
-                constructor(objectId, x, y, rotation, width, height, color, hasCollision) {
-                    super(objectId, x, y, rotation);
-                    this.hasCollision = hasCollision;
-                    this.width = width;
-                    this.height = height;
-                    this.color = color;
+                    textureSrc = `https://www.jscammie.com/gameFiles/${textureSrc}`
+                    console.log(textureSrc);
+                    this.texture = textureSrc ? new Image() : null;
+                    if (this.texture) this.texture.src = textureSrc;
                 }
                 draw() {
-                    ctx.fillStyle = this.color;
-                    drawRotateObject(this, this.rotation);
-                }
-                update() {
-                    this.draw();
-                }
-            }
-
-            class MultilineTextElement extends Object {
-                constructor(objectId, x, y, rotation, width, height, color, text) {
-                    super(objectId, x, y, rotation);
-                    this.width = width;
-                    this.height = height;
-                    this.color = color;
-                    this.text = text;
-                }
-                draw() {
-                    ctx.fillStyle = this.color;
-                    ctx.font = "20px Arial";
-                    // console.log(this.text);
-                    // loop through the text object and draw each line:
-                    var i = 0;
-                    for (var key in this.text) {
-                        ctx.fillText(key + ': ' + this.text[key], this.x, this.y + (i * 20));
-                        i++;
+                    if (this.texture && this.texture.complete) {
+                        ctx.drawImage(this.texture, this.x, this.y, this.width, this.height);
+                    } else {
+                        ctx.fillStyle = "gray";
+                        ctx.fillRect(this.x, this.y, this.width, this.height);
                     }
-                    // rotate the text only:
+                }
+            }
+
+            class Player extends GameObject {
+                constructor(x, y) {
+                    super("player", x, y, 50, 50, "player.png");
+                    this.xVelocity = 0;
+                    this.yVelocity = 0;
+                    this.rotation = 0;
+                }
+                update(delta) {
+                    this.handleInput();
+                    this.x += this.xVelocity * delta;
+                    this.y += this.yVelocity * delta;
+                    this.applyFriction();
+                    this.drawRotated();
+                }
+                handleInput() {
+                    const accel = 5, drag = 2, speedCap = 20;
+                    if (keys["w"]) this.yVelocity = Math.max(this.yVelocity - accel, -speedCap);
+                    if (keys["s"]) this.yVelocity = Math.min(this.yVelocity + accel, speedCap);
+                    if (keys["a"]) this.xVelocity = Math.max(this.xVelocity - accel, -speedCap);
+                    if (keys["d"]) this.xVelocity = Math.min(this.xVelocity + accel, speedCap);
+                }
+                applyFriction() {
+                    this.xVelocity *= 0.9;
+                    this.yVelocity *= 0.9;
+                }
+                drawRotated() {
+                    ctx.save();
+                    ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
                     ctx.rotate(this.rotation);
-                }
-                update() {
-                    this.draw();
-                }
-            }
-
-            var objects = [];
-
-            var player = new Player('player', 150, 150, 0, 50, 50, 'red', 0, 0);
-            objects.push(player);
-
-            var floor = new rectangle('floor', -200, 500, 0, 1000, 400, 'green', true);
-            objects.push(floor);
-
-            
-            // add fps logic:
-            var lastCalledTime;
-            var fps;
-            let fpsLast10s = [];
-            var avgFps = 0;
-            var delta
-            function updateDebugInfo() {
-                if (!lastCalledTime) {
-                    lastCalledTime = Date.now();
-                    fps = 0;
-                    return;
-                }
-                fpsdelta = (Date.now() - lastCalledTime) / 1000;
-                lastCalledTime = Date.now();
-                fps = 1 / fpsdelta;
-                fpsLast10s.push(fps);
-                if (fpsLast10s.length > 100) {
-                    fpsLast10s.shift();
-                }
-                let sum = 0;
-                for (var i = 0; i < fpsLast10s.length; i++) {
-                    sum += fpsLast10s[i];
-                }
-                avgFps = sum / fpsLast10s.length;
-
-                // update the debugInfo object:
-                for (var i = 0; i < objects.length; i++) {
-                    if (objects[i].objectId === 'debugInfo') {
-                        objects[i].text = {
-                            'fps': avgFps,
-                            'player.x': player.x,
-                            'player.y': player.y,
-                            'player.xVelocity': player.xVelocity,
-                            'player.yVelocity': player.yVelocity,
-                            'player.rotation': player.rotation,
-                            'delta': delta,
-                            'calcXVelocity': player.calcXVelocity,
-                            'calcYVelocity': player.calcYVelocity,
-                        }
+                    if (this.texture && this.texture.complete) ctx.drawImage(this.texture, -this.width / 2, -this.height / 2, this.width, this.height);
+                    else {
+                        ctx.fillStyle = "gray";
+                        ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
                     }
-                }
-
-            }
-
-            var debugInfo = new MultilineTextElement('debugInfo', 10, 20, 0, 200, 200, 'black', {
-                'fps': avgFps,
-                'player.x': player.x,
-                'player.y': player.y,
-                'player.xVelocity': player.xVelocity,
-                'player.yVelocity': player.yVelocity,
-                'player.rotation': player.rotation,
-                'delta': delta,
-                'calcXVelocity': player.calcXVelocity,
-                'calcYVelocity': player.calcYVelocity,
-            });
-            objects.push(debugInfo);
-
-            function gameLoop() {
-                setTimeout(function() {
-
-                    delta = 1 / (avgFps / physicsFps);
-
-                    if (delta > 2) {
-                        delta = 2;
-                    } else if (delta < 0.1) {
-                        delta = 0.1;
-                    }
-
-                    // make the borders of the screen loop the player:
-                    if (player.x > canvas.width) {
-                        player.x = 0;
-                    }
-                    if (player.x < 0) {
-                        player.x = canvas.width;
-                    }
-                    if (player.y > canvas.height) {
-                        player.y = 0;
-                    }
-                    if (player.y < 0) {
-                        player.y = canvas.height;
-                    }
-
-                    requestAnimationFrame(gameLoop);
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    // check if objects have update function, for all possible objects:
-                    updateDebugInfo();
-
-                    // framerate independent value, targetFps ISNT the actual framerate:
-                    
-
-                    for (var i = 0; i < objects.length; i++) {
-                        if (objects[i].update) {
-                            objects[i].update();
-                        }
-                    }
-                }, 1000 / targetFps);
-            }
-
-            gameLoop();
-
-            function playerLogic(player) {
-                let playerInput = false;
-                for (var key in keys) {
-                    if (keys[key]) {
-                        playerInput = true;
-                    }
-                }
-
-                Accel = 5
-                enhancedAccel = 50
-                drag = 2
-
-                speedCap = 20
-
-                // cap player.yVelocity and player.xVelocity to the speedCap:
-                if (player.yVelocity > speedCap) {
-                    player.yVelocity = speedCap - 1;
-                }
-                if (player.yVelocity < -speedCap) {
-                    player.yVelocity = -speedCap + 1;
-                }
-                if (player.xVelocity > speedCap) {
-                    player.xVelocity = speedCap - 1;
-                }
-                if (player.xVelocity < -speedCap) {
-                    player.xVelocity = -speedCap + 1;
-                }
-
-                // apply drag to the player if they are not pressing any keys, making sure to corrent it to 0 if it goes past 0:
-                if (keys.a == false && player.xVelocity < 0) {
-                    player.xVelocity += drag;
-                    if (player.xVelocity > 0) {
-                        player.xVelocity = 0;
-                    }
-                    // console.log('A drag applied');
-                }
-                if (keys.d == false && player.xVelocity > 0) {
-                    player.xVelocity -= drag;
-                    if (player.xVelocity < 0) {
-                        player.xVelocity = 0;
-                    }
-                    // console.log('D drag applied');
-                }
-
-                if (keys.w == false && player.yVelocity < 0) {
-                    player.yVelocity += drag;
-                    if (player.yVelocity > 0) {
-                        player.yVelocity = 0;
-                    }
-                    // console.log('W drag applied');
-                }
-
-                if (keys.s == false && player.yVelocity > 0) {
-                    player.yVelocity -= drag;
-                    if (player.yVelocity < 0) {
-                        player.yVelocity = 0;
-                    }
-                    // console.log('S drag applied');
-                }
-                
-                player.calcYVelocity = player.yVelocity / delta
-                player.calcXVelocity = player.xVelocity / delta
-
-                // potential next position:
-                potentialY = player.y + player.calcYVelocity
-                potentialX = player.x + player.calcXVelocity
-
-                player.y -= player.calcYVelocity
-                player.x += player.calcXVelocity
-
-                if (playerInput) {
-                    // check for the arrow keys:
-                    // console.log("x: " + player.x + " y: " + player.y);
-
-                    // console.log(keys)
-
-                    // check wasd
-                    if (keys.s == true) {
-                        // console.log('s is true');
-                        player.yVelocity -= Accel;
-                    }
-                    if (keys.w == true) {
-                        // console.log('w is true');
-                        player.yVelocity += Accel;
-                    }
-                    if (keys.a == true) {
-                        // console.log('a is true');
-                        player.xVelocity -= Accel;
-                    }
-                    if (keys.d == true) {
-                        // console.log('d is true');
-                        player.xVelocity += Accel;
-                    }
+                    ctx.restore();
                 }
             }
+
+            const objects = [new Player(150, 150), new GameObject("floor", -200, 500, 1000, 400, "floor.png")];
+            let lastTime = performance.now();
+
+            function gameLoop(timestamp) {
+                const delta = (timestamp - lastTime) / (1000 / physicsFps);
+                lastTime = timestamp;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                objects.forEach(obj => obj.update?.(delta) || obj.draw());
+                requestAnimationFrame(gameLoop);
+            }
+
+            gameLoop(lastTime);
+
 
 
         </script>

@@ -682,7 +682,7 @@
                 card.dataset.modelId = model.id;
                 
                 card.innerHTML = `
-                    <img src="${model.image}" alt="${model.name}">
+                    <img src="${model.image}" alt="${model.name}" loading="lazy"> 
                     <div class="modelSelectionContainer">
                         <h4><b>${model.name}</b></h4>
                         <p>${model.description}</p>
@@ -1703,12 +1703,13 @@
 
                     
                 </div>
-            </details>
+                <a>Save Slots Help:</a>
+                <a class="tooltip" onclick="showTooltip(this)">❓</a>
+                <div class="tooltiptext">
+                    Save-Slots are a way of saving and loading the current settings, very good for saving templates to generate the best images for later use, this requires you to be logged in to use.<br><br>If you'd like to save your settings without logging in then you can use the "Export/Import .AIDATA" buttons beneath this text to save your settings to a file on your computer/phone!
+                </div>
 
-            <a class="tooltip" onclick="showTooltip(this)">❓</a>
-            <div class="tooltiptext">
-                Save-Slots are a way of saving and loading the current settings, very good for saving templates to generate the best images for later use, this requires you to be logged in to use.<br><br>If you'd like to save your settings without logging in then you can use the "Export/Import .AIDATA" buttons beneath this text to save your settings to a file on your computer/phone!
-            </div>
+            </details>
             
 
             <style>
@@ -1789,23 +1790,27 @@
             }
             </script>
 
-            <div style="flex: auto;">
-                <button class="button exportaidatabutton" type="button" onclick="exportAIData()">Export .AIDATA</button>
-                <label for="importAiData" class="button importaidatalabel">Import .AIDATA</label>
-                <input id="importAiData" class="importaidatainput" type="file" accept=".aidata">
-                <span class="tooltip" onclick="showTooltip(this)">❓</span>
-                <div class="tooltiptext">Import .AIDATA:<br>
-                Allows the user to import a .AIDATA file to load the settings into the AI Image Generator, this can be used to load settings like the loras used, the prompt, model, etc etc; to copy settings from booru posts and to use settings from other users.<br>
-                <br>Export .AIDATA:<br>
-                Allows the user to export the current settings to a .AIDATA file, this can be used to save settings for later use and share settings with other users.
-                </div>
+            <details>
+            
+                <summary>Export / Import AI Settings</summary>
 
-                <div>
+                <div style="flex: auto;">
+                    <button class="button exportaidatabutton" type="button" onclick="exportAIData()">Export .AIDATA</button>
+                    <label for="importAiData" class="button importaidatalabel">Import .AIDATA</label>
+                    <input id="importAiData" class="importaidatainput" type="file" accept=".aidata">
+                    <span class="tooltip" onclick="showTooltip(this)">❓</span>
+                    <div class="tooltiptext">Import .AIDATA:<br>
+                    Allows the user to import a .AIDATA file to load the settings into the AI Image Generator, this can be used to load settings like the loras used, the prompt, model, etc etc; to copy settings from booru posts and to use settings from other users.<br>
+                    <br>Export .AIDATA:<br>
+                    Allows the user to export the current settings to a .AIDATA file, this can be used to save settings for later use and share settings with other users.
+                    </div>
                     <button onclick="copyGeneratorLink()">Copy Generator Link</button>
                     <div class="tooltip" onclick="showTooltip(this)">❓</div>
                     <div class="tooltiptext">Copy the current settings to the clipboard as a link to the generator, this can be used to share settings with other users and to save settings for later use.</div>
                 </div>
-            </div>
+            
+            </details>
+            
             
             <script>
                 // get the user to upload a yaml file and then import it:
@@ -3468,8 +3473,8 @@
             </style>
 
                 <details open class="advancedElement">
-                    <summary>Settings (Steps, Quanitity & more)</summary>
-                    <label for="steps">
+                    <summary>Settings (CFG)</summary>
+                    <label style="display: none;" for="steps">
                         Steps:
                         <span class="tooltip" onclick="showTooltip(this)">❓</span>
                             <div class="tooltiptext">
@@ -3477,7 +3482,7 @@
                                 Higher values will make the image more detailed, but will take longer to generate
                             </div>
                     </label>
-                    <div class="form-control inline-slider">
+                    <div style="display: none;" class="form-control inline-slider">
                         <input form="generatorForm" type="range" id="steps" name="steps" min="5" max="75" step="1" value="20">
                         <!-- <span id="stepsValue" class="range-value">15</span> -->
                         <input form="generatorForm" type="number" class="sliderInputBox" id="stepsInput" name="stepsInput" value="15"><a id="stepsMax"></a>
@@ -3559,16 +3564,12 @@
                     }
                         
                     if (model.value.includes('pdxl')) {
-                        setSteps(20, 30);
                         setCfguidance(2, 5)
                     } else if (model.value.startsWith('illustrious-')) {
-                        setSteps(20, 35);
                         setCfguidance(3, 6);
                     } else if (model.value.includes('flux')) {
-                        setSteps(4, 24);
                         setCfguidance(1, 1);
                     } else if (!model.value.includes('pdxl') && !model.value.includes('flux') && !model.value.includes('illustrious')) {
-                        setSteps(20, 40);
                         setCfguidance(3, 10);
                     }
                         

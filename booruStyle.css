@@ -2,7 +2,7 @@
 	background-color: rgba(255, 255, 255, 0.1);
 	border: 1px solid rgba(0, 0, 0, 0.5);
 	border-radius: 5px;
-	padding: 5px;
+	padding: 2px;
 	font-size: 1rem;
 	font-weight: bold;
 	color: rgb(255, 255, 255);
@@ -261,4 +261,64 @@
     color: #b4b4b4; /* Lighter color for safety level */
     margin: 0;
     text-transform: uppercase; /* Already uppercase for consistency */
+}
+
+
+.hidden {
+    display: none;
+}
+
+.upvoteHover {
+    position: absolute;
+    background: rgba(20, 20, 20, 0.85);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);
+    z-index: 10;
+    transition: opacity 0.5s ease-in-out;
+}
+
+.upvoteTitle {
+    font-weight: bold;
+    color: #ffffff;
+    margin-bottom: 4px;
+    font-size: 14px;
+    text-transform: uppercase;
+}
+
+.upvoters {
+    display: grid;
+    grid-template-columns: 1fr; /* Start with 1 column */
+    gap: 6px;
+    max-height: 300px; /* Prevent it from getting too tall */
+    overflow-y: auto;
+    transition: grid-template-columns 0.2s ease-in-out;
+}
+
+.upvoteUser {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: #ddd;
+    font-size: 13px;
+    transition: color 0.2s ease-in-out;
+}
+
+.upvoteUser:hover {
+    color: #fff;
+}
+
+.postProfileImage {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    margin-right: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    transition: transform 0.2s ease-in-out;
+}
+
+.upvoteUser:hover .postProfileImage {
+    transform: scale(1.1);
 }
