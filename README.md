@@ -47,12 +47,10 @@ To get started with the repo, do the following;
 
 ## Roadmap
 
-- [ ] Upload the character prompt used for generating LORA preview images.
 - [ ] Preview images for the LORAs.
   - [ ] SD 1.5 based LORAs.
-  - [ ] SD XL based LORAs.
-- [ ] Work on redesigned Frontend (views/beta/ai.ejs) (LOW PRIORITY)
-- [ ] Fix bugs as and when they appear.
+  - [ ] PDXL based LORAs.
+  - [ ] Illustrious based LORAs.
 
 ## Contributing
 
