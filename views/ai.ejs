@@ -7,6 +7,8 @@
     <meta name="keywords" content="mobians.ai, illustrious, illustrious wai, illustrious loras, no sign up, no restrictions, regional prompt, regional prompter, regional prompting, comfyui, nsfw, uncensored, free, online, inpainting, img2img, txt2img, stable diffusion, ai image generator, pdxl ai image generator, ai free online, sfw, nsfw, pdxl, sd1.5, loras, lora, embeddings, pdxl, pony diffusion">
     <meta name="author" content="JSCammie">
 
+    <link rel="canonical" href="https://www.jscammie.com/">
+
     <%- include('../partials/_headerAll') %>
 
     <!-- Google tag (gtag.js) -->
@@ -413,6 +415,10 @@
 <body>
 
     <script>
+
+        var userProfile = {
+            favoriteLoras: <%- JSON.stringify(userProfile?.favoriteLoras || []) %>,
+        }
     
         function observeChildChanges(targetNode, callback, customEventName = null) {
             if (!targetNode) {
@@ -627,7 +633,19 @@
                 author: "Crody",
                 authorLink: 'https://civitai.com/models/503815/nova-furry-xl',
                 image: 'https://www.jscammie.com/modelImages/illustrious-novafurry.png'
+            },
+
+
+            {
+                id: 'illustrious-novaanimal',
+                name: 'ILLUSTRIOUS | NovaAnimal',
+                description: 'NovaAnimal is a model that is based on 3d, Realistic, images of furries.',
+                author: "Crody",
+                authorLink: 'https://civitai.com/models/784543/nova-animal-xl',
+                image: 'https://www.jscammie.com/modelImages/illustrious-novaanimal.png'
             }
+
+
         ];
 
         // Get DOM elements
@@ -861,7 +879,7 @@
         <%- include('../partials/_bannerAdvert') %>
     </div>
 
-    <div class="container round-frosted page-content mw75-dynamic" style="margin-bottom: 12rem;">
+    <div class="container rounded page-content mw75-dynamic" style="margin-bottom: 12rem;">
         
         <div class="flex-div" style="padding-left: 20px; padding-bottom: 0px; justify-content: center;">
 
@@ -1180,10 +1198,9 @@
                                 question: true,
                                 options: {
                                     yes: function() {
-                                        // console.log('yes clicked')
                                     },
                                     no: function() {
-                                        // console.log('no clicked')
+                                        return "no"
                                     }
                                 }
                             }
@@ -1245,10 +1262,8 @@
                                 question: true,
                                 options: {
                                     yes: function() {
-                                        // console.log('yes clicked')
                                     },
                                     no: function() {
-                                        // console.log('no clicked')
                                     }
                                 }
                             }
@@ -1315,10 +1330,8 @@
                                 question: true,
                                 options: {
                                     yes: function() {
-                                        // console.log('yes clicked')
                                     },
                                     no: function() {
-                                        // console.log('no clicked')
                                     }
                                 }
                             }
@@ -1386,7 +1399,6 @@
                             // convert the loras string into an array:
                             saveSlotLorasArray = saveSlotLoras.split(',');
 
-                            // console.log(`saveSlotLorasArray:\n${saveSlotLorasArray}\n\nsaveSlotLoraStrengths:\n${saveSlotLoraStrengths}`)
 
                             document.querySelectorAll('.loraGridContainer input[type="checkbox"]:checked').forEach(checkbox => {
                                 checkbox.checked = false;
@@ -1405,7 +1417,6 @@
                                     let loraId = saveSlotLorasArray[i];
                                     let loraStrength = saveSlotLoraStrengths[i];
 
-                                    // console.log(`loraId: ${loraId}\nloraStrength: ${loraStrength}`)
 
                                     masterLoraData[loraId].selected = true;
                                     masterLoraData[loraId].strength = Number(loraStrength);
@@ -1448,10 +1459,8 @@
                                 question: true,
                                 options: {
                                     yes: function() {
-                                        // console.log('yes clicked')
                                     },
                                     no: function() {
-                                        // console.log('no clicked')
                                     }
                                 }
                             }
@@ -1547,10 +1556,8 @@
                                 question: true,
                                 options: {
                                     yes: function() {
-                                        // console.log('yes clicked')
                                     },
                                     no: function() {
-                                        // console.log('no clicked')
                                     }
                                 }
                             }
@@ -1682,8 +1689,6 @@
                                         continue;
                                     }
 
-                                    // console.log(`loraId: ${loraId}\nloraStrength: ${loraStrength}`)
-
                                     masterLoraData[loraId].selected = true;
                                     masterLoraData[loraId].strength = Number(loraStrength);
                                 
@@ -1783,9 +1788,7 @@
 
                 // copy the link to the clipboard:
                 navigator.clipboard.writeText(link).then(function() {
-                    // console.log('Link copied to clipboard');
                 }, function(err) {
-                    // console.log('Could not copy text: ', err);
                 });
             }
             </script>
@@ -1854,24 +1857,43 @@
 
                         <style>
                             #autocomplete-div {
-                                display: block;
+                                display: none; /* Hidden by default */
                                 z-index: 1000;
                                 background-color: rgba(0, 0, 0, 0.2);
                                 border: 1px solid black;
                                 width: 100%;
-                                max-height: 100px; /* Limit height */
-                                height: 100px;
+                                max-height: 150px; /* Limit height */
+                                height: auto;
                                 overflow-y: auto; /* Add vertical scroll if items exceed height */
                             }
 
+                            #autocomplete-div:empty {
+                                display: none; /* Hide when empty */
+                            }
+
+                            #autocomplete-div.loading {
+                                display: none; /* Hide when loading */
+                            }
+
                             .autocomplete-item {
-                                padding: 4px;
+                                padding: 8px;
                                 background-color: rgba(103, 131, 255, 0.3);
                                 border: 1px solid black;
-                                width: fit-content;
+                                width: 100%;
                                 cursor: pointer;
                                 position: relative;
-                                font-size: 20px
+                                font-size: 16px;
+                                text-align: left;
+                                transition: background-color 0.2s ease;
+                            }
+
+                            .autocomplete-item.selected {
+                                background-color: rgba(165, 68, 255, 0.5) !important;
+                                border-color: rgba(165, 68, 255, 0.8);
+                            }
+
+                            .autocomplete-item:hover {
+                                background-color: rgba(165, 68, 255, 0.3);
                             }
 
                             .autocomplete-item-1 {
@@ -1884,6 +1906,27 @@
 
                             .autocomplete-item-10 {
                                 background-color: rgba(0, 255, 0, 0.3) !important;
+                            }
+
+                            .autocomplete-loading {
+                                padding: 10px;
+                                text-align: center;
+                                color: #fff;
+                                font-style: italic;
+                            }
+
+                            .autocomplete-error {
+                                padding: 10px;
+                                text-align: center;
+                                color: #ff6b6b;
+                                font-style: italic;
+                            }
+
+                            .no-results {
+                                padding: 10px;
+                                text-align: center;
+                                color: #aaa;
+                                font-style: italic;
                             }
 
                             .regionalPromptDisplayText {
@@ -1900,7 +1943,7 @@
 
                         
 
-                        <div class="frosted" style="position: relative;" id="autocomplete-div"></div>
+                        <div style="position: relative;" id="autocomplete-div"></div>
 
                         <div class="form-control" id="prompt-div">
                             <label for="prompt">
@@ -2022,7 +2065,8 @@
                             <option value="pdxl-ponyrealism">(PDXL) Pony Realism (Realistic)</option>
                             <option value="pdxl-fluffysonic">(PDXL) FluffySonic (Sonic the Hedgehog)</option>
                             <option value="illustrious-wai">BEST (ILLUSTRIOUS) WAI (2d, Anime, Human)</option>
-                            <option value="illustrious-novafurry" selected>(ILLUSTRIOUS) NovaFurry (2d, 3d, Furry)</option>
+                            <option value="illustrious-novafurry" selected>(ILLUSTRIOUS) Nova Furry (2d, 3d, Furry)</option>
+                            <option value="illustrious-novaanimal">(ILLUSTRIOUS) Nova Animal (Realistic, 3d, Animal)</option>
                         </select>
 
                         <button onclick="openModelSelectionPopup()" class="model-select-button">Open Model Selection</button>
@@ -2072,14 +2116,16 @@
                         }
                       
                         .favorite-btn {
-                          background: none;
-                          border: none !important;
-                          color: #ccc;
-                          cursor: pointer;
-                          padding: 0; /* Removes extra space around the button */
-                          margin-right: 8px; /* Space between label and favorite button */
-                          transition: color 0.7s; /* Smooth transition for color change */
-                          width: 30px !important;
+                            background: none;
+                            border: none !important;
+                            color: #ccc;
+                            cursor: pointer;
+                            padding: 0; /* Removes extra space around the button */
+                            margin-right: 8px; /* Space between label and favorite button */
+                            transition: color 0.7s; /* Smooth transition for color change */
+                            width: 30px !important;
+                            font-size: 30px;  
+                            margin-bottom: 2px;
                         }
                       
                         .favorite-btn:hover {
@@ -2343,6 +2389,10 @@
 
                             let savedFavoritedIds = lastRequestSD.favoriteLoras || [];
 
+                            if (userProfile?.favoriteLoras? userProfile.favoriteLoras : false) {
+                                savedFavoritedIds = userProfile.favoriteLoras;
+                            }
+
                             // replace any -sdxl with -pdxl in the savedFavoritedIds:
                             savedFavoritedIds = savedFavoritedIds.map(id => {
                                 if (id.includes('-sdxl')) {
@@ -2351,8 +2401,6 @@
                                     return id;
                                 }
                             })
-
-                            // console.log(`${savedFavoritedIds} are the saved favorited ids`)
 
                             // Load the favorites from the last request
                             savedFavoritedIds.forEach(id => {
@@ -2363,7 +2411,6 @@
 
                             <% loraDataKeys.forEach(category => { %>
                                 <% if (lora_data[category]) { %>
-                                    // console.log the lora_data structure:
                                     <% Object.entries(lora_data[category]).forEach(([key, value]) => { %>
                                         masterLoraData['<%= key %>'] = {
                                             strength: <%= value.strength || 'Null' %>,
@@ -2385,17 +2432,30 @@
 
                             var lastSelectedCategory = 'style';
 
-                            // console.log(masterLoraData)
-
                             function toggleFavorite(loraId) {
                                 favorites[loraId] = !favorites[loraId];
+                                // remove the loraId from the favorites if it is false:
+                                if (!favorites[loraId]) {
+                                    delete favorites[loraId];
+                                }
+
+                                // do a post request to generator-set-favorite-loras with body.favoriteLoras = Object.keys(favorites) to save the favorites to the session:
+                                fetch('/generator-set-favorite-loras', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({
+                                        favoriteLoras: Object.keys(favorites)
+                                    })
+                                })
+
                                 loadLoras();
                             }
 
                             function loraChecks(key, value, model, showSafe, showSuggestive, showNSFW, showNA, loraSearch, name) {
                                 // Model is PDXL and lora isnt PDXL
                                 if (model.startsWith("pdxl") && !key.includes("-pdxl")) {
-                                    // console.log(`${name} is not compatible with ${model}`)
                                     masterLoraData[key].selected = false;
                                     return false;
                                 } 
@@ -2524,11 +2584,11 @@
                                     let loraElement = document.createElement('div');
                                     loraElement.classList.add('lorabox');
                                     loraElement.innerHTML = `
-                                        <div class="checkbox-container">
+                                        <div class="checkbox-container" ${favorites[key] ? 'style="border: 2px solid rgba(255, 255, 0, 0.7);"' : ''}>
                                             <input class="loraCheckboxDirect" type="checkbox" id="${key}" name="${key.split('-')[0]}" value="${key}" ${value.selected ? 'checked' : ''}>
                                             <label id="label-rating-${key}" for="${key}" style="color: ${value.rating === 'safe' ? 'green' : value.rating === 'suggestive' ? 'yellow' : value.rating === 'nsfw' ? 'red' : 'white'};">${value.rating.toUpperCase()}</label>
-                                            <label id="label-${key}" for="${key}">${value.name}</label>
-                                            <button type="button" class="favorite-btn" onclick="toggleFavorite('${key}')">${favorites[key] ? '★' : '☆'}</button>
+                                            <label ${favorites[key] ? 'style="color: yellow; font-weight: bold;"' : ''} for="${key}">${value.name}</label>
+                                            <button type="button" style="z-index: 123" class="favorite-btn ${favorites[key] ? 'favorite' : ''}" onclick="toggleFavorite('${key}')">${favorites[key] ? '★' : '☆'}</button>
                                         </div>
                                         <img loading="lazy" id="${key}-image" width="256" height="384" src="${value.image || 'default-image.jpg'}" onclick="document.getElementById('${key}').checked = !document.getElementById('${key}').checked; document.getElementById('${key}').dispatchEvent(new Event('change'));">
                                     `;
@@ -2701,20 +2761,6 @@
                                         urlParams.get('seed'),
                                     ]
 
-                                    // data = [
-                                    //     urlParams.get('prompt'),
-                                    //     urlParams.get('negativeprompt'),
-                                    //     urlParams.get('aspectRatio'),
-                                    //     urlParams.get('model'),
-                                    //     urlParams.get('loras'),
-                                    //     urlParams.get('lora_strengths'),
-                                    //     urlParams.get('steps'),
-                                    //     urlParams.get('cfguidance'),
-                                    //     urlParams.get('seed'),                                        
-                                    // ]
-
-                                    // console.log(data);
-
                                     importAiData(data)
 
                                 }
@@ -2792,6 +2838,17 @@
                                     loraSummary.classList.add('lora-details');
 
                                     let wordsFormatted = ""
+
+                                    console.log(value.words)
+
+                                    // format any unicode ' to normal ':
+                                    value.words = value.words.replace(/&#39;/g, "'");
+                                    value.words = value.words.replace(/&quot;/g, '"');
+                                    value.words = value.words.replace(/&lt;/g, '<');
+                                    value.words = value.words.replace(/&gt;/g, '>');
+                                    value.words = value.words.replace(/&amp;/g, '&');
+
+                                    console.log(value.words)
 
                                     value.words.split(';').map((word, index) => {
                                         noWhitespaceWord = word.trim()
@@ -2880,7 +2937,6 @@
                                 // Attempt to copy the words to the clipboard
                                 navigator.clipboard.writeText(words).then(
                                     function() {
-                                        // console.log('Words copied to clipboard:', words);
                                     },
                                     function(err) {
                                         console.error('Async: Could not copy text: ', err);
@@ -3388,8 +3444,6 @@
                     extrasDetails = document.getElementById('extrasDetails');
                     extrasDetails.open = true;
 
-                    console.log("disableCheckboxes called")
-
                     switch(target) {
                         case "inpaintingCheckbox":
                             inpaintingCheckbox.checked = true;
@@ -3411,8 +3465,6 @@
                             regionalPromptControls.style.display = 'none';
                             break;
                         case "regionalPromptCheckbox":
-
-                            console.log("regionalPromptCheckbox checked")
 
                             regionalPromptCheckbox.checked = true;
                             regionalPromptControls.style.display = 'block';
@@ -3566,7 +3618,7 @@
                     if (model.value.includes('pdxl')) {
                         setCfguidance(2, 5)
                     } else if (model.value.startsWith('illustrious-')) {
-                        setCfguidance(3, 6);
+                        setCfguidance(2, 5);
                     } else if (model.value.includes('flux')) {
                         setCfguidance(1, 1);
                     } else if (!model.value.includes('pdxl') && !model.value.includes('flux') && !model.value.includes('illustrious')) {
@@ -3614,7 +3666,7 @@
                         <div class="tooltiptext">
                             Use the credits shop to purchase additional temporary features for the AI Image Generator<br>
                             You can remove the watermark, upscale the image, and apply the fast queue for your generation<br><br>
-                            You can earn credits for free by participating in the community, posting on the booru, liking booru posts, suggesting suggestions, and more!
+                            You can earn credits for free by participating in the community, posting on the booru, liking booru posts, posting suggestions, and more!
                         </div>
                 </label>
                 <details class="loggedOutCreditsShop" id="creditsShop">
@@ -3785,6 +3837,8 @@
                 </label>
                 <button form="generatorForm" type="submit" id="generateButton">Generate Image</button>
                 <button style="display: none;" id="cancelButton">Cancel Request</button>
+
+                <span id="queueGeneralInformation"></span>
             </div>
 
             <style>
@@ -3857,7 +3911,6 @@
                     if (imagesContainer.children.length > 0) {
                         outputDetails.open = true;
                         outputDetails.style.display = 'block';
-                        console.log('Child change detected or event triggered:', mutation);
                     }
                 }
 
@@ -4416,8 +4469,6 @@
 
         function checkRpCount(textarea) {
             rpCount = (textarea.value.toLowerCase().match(/<rp>/g) || []).length;
-
-            // console.log(`RP Count: ${rpCount}`);
 
             if (rpCount >= 2) {
                 if (!document.getElementById('regionalPromptCheckbox').checked) {

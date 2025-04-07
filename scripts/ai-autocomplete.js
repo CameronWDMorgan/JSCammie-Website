@@ -6,7 +6,10 @@ function getPhraseAtCursor(textarea) {
     let leftText = text.slice(0, cursorPos);
 
     // Split by commas, trim, and get the last part
+    // let phrases = leftText.split(',').map(phrase => phrase.trim());
+    // ensure it splits on <rp> tags aswell as commas:
     let phrases = leftText.split(',').map(phrase => phrase.trim());
+    phrases = phrases.map(phrase => phrase.split('<rp>').map(phrase => phrase.trim())).flat();
     let currentPhrase = phrases[phrases.length - 1];
 
     // Return both the phrase and its position for replacement purposes
@@ -26,15 +29,11 @@ function escapeBrackets(tag) {
 }
 
 function fetchTagsDataForPrompt(term) {
-    // Replace spaces with underscores to match the format
-    // term = term.replace(/ /g, '_');
-    // console.log(`fetchTagsData: "${term}"`);
-    if (!term) {
-        return;
+
+    if (!term || term.length < 2) {
+        return Promise.resolve([]);
     }
-    if (term.length < 2) {
-        return;
-    }
+
     return $.ajax({
         url: '/autocomplete',
         method: 'POST',
@@ -42,99 +41,182 @@ function fetchTagsDataForPrompt(term) {
         contentType: 'application/json',
         dataType: 'json'
     });
+    
+}
+
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
 }
 
 function initializePromptAutocomplete() {
     let promptTextarea = document.getElementById("prompt");
     let negativePromptTextarea = document.getElementById("negativeprompt");
+    let selectedIndex = -1;
+    const MAX_RESULTS = 25;
+
+    function handleKeyboardNavigation(e, searchResultsDiv) {
+        const results = searchResultsDiv.getElementsByClassName('autocomplete-item');
+        if (!results.length) return;
+
+        // Remove highlight from current selection
+        if (selectedIndex >= 0 && selectedIndex < results.length) {
+            results[selectedIndex].classList.remove('selected');
+        }
+
+        switch(e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                selectedIndex = (selectedIndex + 1) % results.length;
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                selectedIndex = selectedIndex <= 0 ? results.length - 1 : selectedIndex - 1;
+                break;
+            case 'Enter':
+                if (selectedIndex >= 0 && selectedIndex < results.length) {
+                    e.preventDefault();
+                    results[selectedIndex].click();
+                    selectedIndex = -1;
+                    return;
+                }
+                break;
+            case 'Escape':
+                searchResultsDiv.style.display = 'none';
+                selectedIndex = -1;
+                return;
+            default:
+                return;
+        }
+
+        // Add highlight to new selection
+        if (selectedIndex >= 0 && selectedIndex < results.length) {
+            results[selectedIndex].classList.add('selected');
+            results[selectedIndex].scrollIntoView({ block: 'nearest' });
+        }
+    }
+
+    const debouncedSearch = debounce(async (textarea, phraseAtCursor, start, end) => {
+        let searchResultsDiv = document.getElementById("autocomplete-div");
+        
+        if (!phraseAtCursor || phraseAtCursor.trim() === "") {
+            searchResultsDiv.innerHTML = "";
+            searchResultsDiv.style.display = "none";
+            return;
+        }
+
+        // make it a grid of 2 columns
+        if (searchResultsDiv.style.display !== "grid") {
+            searchResultsDiv.style.display = "grid";
+            searchResultsDiv.style.gridTemplateColumns = "1fr 1fr";
+        }
+        
+        // Add loading indicator at the top without clearing existing results
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'autocomplete-loading';
+        loadingDiv.innerHTML = 'Loading...';
+        searchResultsDiv.insertBefore(loadingDiv, searchResultsDiv.firstChild);
+        searchResultsDiv.classList.add("loading");
+
+        try {
+            const data = await fetchTagsDataForPrompt(phraseAtCursor);
+            searchResultsDiv.classList.remove("loading");
+            
+            // Remove the loading indicator
+            if (searchResultsDiv.firstChild && searchResultsDiv.firstChild.classList.contains('autocomplete-loading')) {
+                searchResultsDiv.removeChild(searchResultsDiv.firstChild);
+            }
+
+            let searchTags = [];
+            data.forEach(tag => {
+                if (!searchTags.includes(tag) && tag.tag.toLowerCase().includes(phraseAtCursor.toLowerCase())) {
+                    searchTags.push(tag);
+                }
+            });
+
+            searchTags = searchTags.filter(tag => tag.tag !== "").slice(0, MAX_RESULTS);
+
+            // Now clear the results and show new ones
+            searchResultsDiv.innerHTML = "";
+
+            if (searchTags.length === 0) {
+                searchResultsDiv.innerHTML = `<div class="no-results">No results found for "${phraseAtCursor}"</div>`;
+                return;
+            }
+
+            searchTags.forEach((result, index) => {
+                let resultDiv = document.createElement('button');
+                resultDiv.classList.add("autocomplete-item");
+                if (index === 0) {
+                    resultDiv.classList.add("autocomplete-item-1");
+                } else if (index < 5) {
+                    resultDiv.classList.add("autocomplete-item-5");
+                } else if (index < 10) {
+                    resultDiv.classList.add("autocomplete-item-10");
+                }
+
+                let cleanedTag = result.tag.replace(/\(\d+\)\s*/, '').toLowerCase();
+                cleanedTag = cleanedTag.replace(/_/g, ' ');
+                let tagWithScore = `(${result.score}) ${cleanedTag}`;
+
+                resultDiv.innerText = tagWithScore;
+
+                resultDiv.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    let searchValue = textarea.value;
+                    let escapedTag = escapeBrackets(cleanedTag);
+                    textarea.value = searchValue.slice(0, start) + `${escapedTag}, ` + searchValue.slice(end);
+                    textarea.focus();
+                    textarea.selectionStart = start + escapedTag.length + 2;
+                    textarea.selectionEnd = start + escapedTag.length + 2;
+                    textarea.dispatchEvent(new Event('input'));
+                    searchResultsDiv.style.display = "none";
+                    selectedIndex = -1;
+                });
+
+                searchResultsDiv.appendChild(resultDiv);
+            });
+        } catch (error) {
+            console.error('Error fetching tags:', error);
+            // Only show error if there are no existing results
+            if (!searchResultsDiv.querySelector('.autocomplete-item')) {
+                searchResultsDiv.innerHTML = '<div class="autocomplete-error">Error fetching results</div>';
+            } else {
+                // Remove just the loading indicator if there are existing results
+                if (searchResultsDiv.firstChild && searchResultsDiv.firstChild.classList.contains('autocomplete-loading')) {
+                    searchResultsDiv.removeChild(searchResultsDiv.firstChild);
+                }
+            }
+        }
+    }, 300);
 
     [promptTextarea, negativePromptTextarea].forEach(textarea => {
         textarea.addEventListener("input", function () {
             let { phrase: phraseAtCursor, start, end } = getPhraseAtCursor(textarea);
+            debouncedSearch(textarea, phraseAtCursor, start, end);
+        });
 
-            if (!phraseAtCursor || phraseAtCursor.trim() === "") {
-                // clear the autocomplete div if the phrase is empty
-                let searchResultsDiv = document.getElementById("autocomplete-div");
-                searchResultsDiv.innerHTML = "";
-                return;
+        textarea.addEventListener("keydown", function(e) {
+            const searchResultsDiv = document.getElementById("autocomplete-div");
+            if (searchResultsDiv.style.display === "block") {
+                handleKeyboardNavigation(e, searchResultsDiv);
             }
+        });
 
-            console.log("Phrase at cursor:", phraseAtCursor);
-
-            index = 0
-
-            // Perform a search for the full phrase at the cursor
-            fetchTagsDataForPrompt(phraseAtCursor)
-                .then(data => {
-                    let searchResultsDiv = document.getElementById("autocomplete-div");
-                    searchResultsDiv.innerHTML = ""; // Clear previous results
-
-                    let searchTags = [];
-
-                    data.forEach(tag => {
-                        // Only add tags that match the phrase and don't already exist in the results
-                        if (!searchTags.includes(tag) && tag.tag.toLowerCase().includes(phraseAtCursor.toLowerCase())) {
-                            searchTags.push(tag);
-                        }
-                    });
-
-                    // remove any empty tags:
-                    searchTags = searchTags.filter(tag => tag.tag !== "");
-
-                    index = 0
-
-                    // Display the tag along with its score, but only paste the tag
-                    searchTags.forEach(result => {
-                        index = index + 1
-                        let resultDiv = document.createElement('button');
-
-                        // set the autocomplete-item class to be autocomplete-item-1 for the 1st item, autocomplete-item-5 for the top 5 items, etc.
-                        resultDiv.classList.add("autocomplete-item")
-                        if (index == 1) {
-                            resultDiv.classList.add("autocomplete-item-1")
-                        } else if (index <= 5) {
-                            resultDiv.classList.add("autocomplete-item-5")
-                        } else if (index <= 10) {
-                            resultDiv.classList.add("autocomplete-item-10")
-                        }
-
-                        // Extract tag and score, replace underscores with spaces for display
-                        let cleanedTag = result.tag.replace(/\(\d+\)\s*/, '').toLowerCase();
-                        cleanedTag = cleanedTag.replace(/_/g, ' '); // Unescaped for display
-                        let tagWithScore = `(${result.score}) ${cleanedTag}`; // Show score in the button
-
-                        // Display the tag with score
-                        resultDiv.innerText = tagWithScore;
-
-                        resultDiv.addEventListener('click', function (e) {
-                            e.preventDefault();
-
-                            let searchValue = textarea.value;
-
-                            // Escape brackets in the tag for insertion, keep spaces as is
-                            let escapedTag = escapeBrackets(cleanedTag);
-
-                            // Replace the exact phrase at the cursor with the cleaned & escaped tag, keeping text before and after the cursor intact
-                            textarea.value = searchValue.slice(0, start) + `${escapedTag}, ` + searchValue.slice(end);
-
-                            // set the cursor position to the end of the tag:
-                            textarea.focus()
-                            textarea.selectionStart = start + escapedTag.length + 2
-                            textarea.selectionEnd = start + escapedTag.length + 2
-
-
-                            // Trigger an input event to update the textarea:
-                            textarea.dispatchEvent(new Event('input'));
-                        });
-
-                        searchResultsDiv.appendChild(resultDiv);
-                    });
-
-                    if (searchTags.length === 0) {
-                        searchResultsDiv.innerHTML = `<div>No results found for "${phraseAtCursor}"</div>`;
-                    }
-                })
-                .catch(error => console.error('Error fetching tags:', error)); // Handle fetch error
+        // Hide autocomplete when clicking outside
+        document.addEventListener('click', function(e) {
+            const searchResultsDiv = document.getElementById("autocomplete-div");
+            if (!textarea.contains(e.target) && !searchResultsDiv.contains(e.target)) {
+                searchResultsDiv.style.display = 'none';
+                selectedIndex = -1;
+            }
         });
     });
 }

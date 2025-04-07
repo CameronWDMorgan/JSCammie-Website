@@ -1,5 +1,6 @@
 const mongoose = require ("mongoose");
 const { Schema } = mongoose
+const { Decimal128 } = mongoose.Types
 
 let aiNegativePrompt = "nsfw, monochrome, black and white, worst quality, low quality, watermark, signature, bad anatomy, bad hands, deformed limbs, blurry, cropped, cross-eyed, extra arms, extra legs, extra limbs, extra pupils, bad proportions, poorly drawn hands, simple background, bad background, bad lighting, bad perspective"
 
@@ -40,6 +41,7 @@ const settingsSchema = new Schema({
     notification_suggestionPromoted: { type: Boolean, default: true },
     notification_generatorSpentCredits: { type: Boolean, default: true },
     misc_generationReadyBeep: { type: Boolean, default: true },
+    booru_tag_blacklist: { type: String, default: "" },
     user_bio: { type: String, default: "" },
 })
 
@@ -49,10 +51,18 @@ const userProfileSchema = new Schema({
     username: { type: String, required: true, unique: false },
     accountId: { type: String, required: true, unique: true },
     timestamp: { type: String, required: false },
-    exp: { type: Number, default: 0, required: false },
+    exp: { 
+        type: mongoose.Schema.Types.Decimal128,
+        get: (v) => v ? parseFloat(v.toString()) : v,
+        default: 0
+    }, 
     level: { type: Number, default: 1 },
     aiSaveSlots: [aiSaveSlotSchema],
-    credits: { type: String, default: "500" },
+    credits: { 
+        type: mongoose.Schema.Types.Decimal128,
+        get: (v) => v ? parseFloat(v.toString()) : v,
+        default: 500 
+    },
     dailies: dailiesSchema,
     profileImg: { type: String, default: "http://www.jscammie.com/noimagefound.png" },
     booruPostBanned: { type: Boolean, default: false },
@@ -62,7 +72,11 @@ const userProfileSchema = new Schema({
     googleId: { type: String, default: "", required: false },
     followedAccounts: { type: Array, default: [] },
     blockedAccounts: { type: Array, default: [] },
+    favoriteLoras: { type: Array, default: [] },
 })
+
+userProfileSchema.set('toObject', { getters: true });
+userProfileSchema.set('toJSON', { getters: true });
 
 const name = 'userAccount'
 

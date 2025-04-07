@@ -2,18 +2,67 @@
 :root {
     --frosted-background: rgba(0, 0, 0, 0.246);
     --frosted-blur: blur(5px);
-    --background-colour: #5c83ac;
-    --highlight-colour: rgba(0, 208, 255, 0.3);
+    
+    /* Day mode colors */
+    --day-background-colour: #5c83ac;
+    --day-darker-background-colour: #4a6a8a;
+    --day-highlight-colour: rgba(0, 208, 255, 0.3);
+    --day-text-colour: #ffffff;
+    --day-border-colour: rgba(255, 255, 255, 0.2);
+    --day-highlight-colour-hover: rgba(0, 208, 255, 0.5);
+    --day-highlight-colour-active: rgba(0, 208, 255, 0.7);
 
-    --bg-colour-1: rgba(72, 0, 255, 0.5);
-    --bg-colour-2: rgba(0, 255, 217, 0.5);
+    /* Dark mode colors */
+    --dark-background-colour: #1a1a2e;
+    --dark-darker-background-colour: #161625;
+    --dark-highlight-colour: #2a2a3e;
+    --dark-text-colour: #ffffff;
+    --dark-border-colour: #3a3a4e;
+    --dark-highlight-colour-hover: #1d1d27;
+    --dark-highlight-colour-active: #1d1d27;
+    --dark-input-bg: rgba(26, 26, 46, 0.8);
+    --dark-scrollbar-track: rgba(26, 26, 46, 0.8);
+    --dark-scrollbar-thumb: rgba(58, 58, 78, 0.8);
+    --dark-scrollbar-thumb-hover: rgba(74, 74, 94, 0.8);
+    --dark-scrollbar-thumb-active: rgba(90, 90, 110, 0.8);
 
-    --dark-mode-transition: background-color 2s ease, background-image 2s ease;
+    /* Day mode solid color */
+    --day-bg-solid: #4875b4;
 
-    --bg-colour-1-dark: rgba(72, 0, 255, 0.2);
-    --bg-colour-2-dark: rgba(0, 255, 217, 0.2);
+    /* Dark mode solid color */
+    --dark-bg-solid: #2a2a3e;
 
+    --mode-transition: all 1s ease;
+}
 
+/* Default mode (day) */
+body {
+    --background-colour: var(--day-background-colour);
+    --darker-background-colour: var(--day-darker-background-colour);
+    --highlight-colour: var(--day-highlight-colour);
+    --text-colour: var(--day-text-colour);
+    --border-colour: var(--day-border-colour);
+    --highlight-colour-hover: var(--day-highlight-colour-hover);
+    --highlight-colour-active: var(--day-highlight-colour-active);
+    background-color: var(--day-bg-solid) !important;
+    margin: 0px;
+    min-height: 100vh !important;
+    position: relative;
+    background-repeat: repeat;
+    background-attachment: fixed;
+    transition: all 1s ease !important;
+}
+
+/* Dark mode */
+body.dark-mode {
+    --background-colour: var(--dark-background-colour);
+    --darker-background-colour: var(--dark-darker-background-colour);
+    --highlight-colour: var(--dark-highlight-colour);
+    --text-colour: var(--dark-text-colour);
+    --border-colour: var(--dark-border-colour);
+    --highlight-colour-hover: var(--dark-highlight-colour-hover);
+    --highlight-colour-active: var(--dark-highlight-colour-active);
+    background-color: var(--dark-bg-solid) !important;
 }
 
 select {
@@ -32,24 +81,6 @@ select option {
     color: white;
 }
 
-body {
-    background-color: var(--background-colour);
-    /* Create a linear gradient at 45 degrees from pink to blue */
-    background-image: linear-gradient(45deg, var(--bg-colour-1), var(--bg-colour-2));
-    /* Repeat the gradient */
-    background-repeat: repeat;
-    /* Ensure the background covers the entire page */
-    background-attachment: fixed;
-    margin: 0px;
-    min-height: 100vh !important;
-    position: relative;
-    transition: var(--dark-mode-transition);
-}
-
-body.dark {
-    background-image: linear-gradient(45deg, var(--bg-colour-1-dark), var(--bg-colour-2-dark));
-}
-
 .topNavBar.dark {
     background-color: calc(var(--background-colour) - 50) !important;
 }
@@ -57,7 +88,7 @@ body.dark {
 .dark{
     background-color: #000000;
     color: #ffffff;
-    transition: var(--dark-mode-transition);
+    transition: var(--mode-transition);
 }
 
 .no-transition {
@@ -67,6 +98,7 @@ body.dark {
 * {
     color: white;
     font-family: 'Roboto', sans-serif;
+    transition: background-color 1s ease, color 1s ease, border-color 1s ease;
 }
 
 textarea {
@@ -110,17 +142,10 @@ button:hover {
     transition: border 0.5s ease;
 }
 
-
-
 img {
     width: 100%;
     height: auto;
 }
-
-
-
-
-
 
 /* site wide scrollbar adjustments: */
 ::-webkit-scrollbar {
@@ -128,26 +153,82 @@ img {
 }
 
 ::-webkit-scrollbar-track {
-    background: var(--frosted-background);
+    background: rgba(0, 0, 0, 0.3);
 }
 
 ::-webkit-scrollbar-thumb {
-    background: var(--highlight-colour);
+    background: rgba(255, 255, 255, 0.3);
     border-radius: 10px;
+    border: 2px solid rgba(255, 255, 255, 0.1);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: var(--highlight-colour);
-    transition: background 0.5s ease;
+    background: rgba(255, 255, 255, 0.5);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
 }
 
 ::-webkit-scrollbar-thumb:active {
-    background: var(--highlight-colour);
-    transition: background 0.5s ease;
+    background: rgba(255, 255, 255, 0.7);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    transition: all 0.3s ease;
 }
 
+/* Dark mode specific scrollbar styles */
+body.dark-mode ::-webkit-scrollbar-track {
+    background: var(--dark-scrollbar-track);
+}
 
+body.dark-mode ::-webkit-scrollbar-thumb {
+    background: var(--dark-scrollbar-thumb);
+    border: 2px solid var(--dark-border-colour);
+}
 
+body.dark-mode ::-webkit-scrollbar-thumb:hover {
+    background: var(--dark-scrollbar-thumb-hover);
+    border: 2px solid var(--dark-highlight-colour);
+}
+
+body.dark-mode ::-webkit-scrollbar-thumb:active {
+    background: var(--dark-scrollbar-thumb-active);
+    border: 2px solid var(--dark-highlight-colour-active);
+}
+
+/* Dark mode input styles */
+body.dark-mode textarea,
+body.dark-mode input,
+body.dark-mode button {
+    background-color: var(--dark-input-bg);
+    border: 1px solid var(--dark-border-colour);
+}
+
+body.dark-mode button:hover {
+    border: 1px solid var(--dark-highlight-colour);
+}
+
+body.dark-mode input[type=checkbox]:checked {
+    background-color: var(--dark-highlight-colour);
+}
+
+body.dark-mode input[type=checkbox]:hover {
+    background-color: var(--dark-highlight-colour-hover);
+}
+
+/* Dark mode select styles */
+body.dark-mode select {
+    background-color: var(--dark-input-bg);
+    border: 1px solid var(--dark-border-colour);
+}
+
+body.dark-mode select option {
+    background-color: var(--dark-background-colour);
+}
+
+/* Dark mode frosted glass effect */
+body.dark-mode .frosted,
+body.dark-mode .round-frosted {
+    background-color: rgba(5, 5, 20, 0.5);
+}
 
 .page-content {
     margin: 5%;
@@ -168,11 +249,15 @@ img {
     border-radius: 30px;
 }
 
+.rounded {
+    border-radius: 30px;
+}
+
 input[type=checkbox] {
     width: 20px;
     height: 20px;
     scale: 1;
-    transition: var(--dark-mode-transition)
+    transition: var(--mode-transition)
 }
 
 input[type=checkbox]:checked {
@@ -184,7 +269,6 @@ input[type=checkbox]:hover {
     transition: background-color scale 1s ease;
     scale: 1.1;
 }
-
 
 .mw50-dynamic {
     transition: max-width 0.5s ease; /* Transition for max-width over 0.5 seconds */
@@ -204,15 +288,11 @@ input[type=checkbox]:hover {
     }
 }
 
-
-
 .mw75-dynamic {
     transition: max-width 0.5s ease; /* Transition for max-width over 0.5 seconds */
     max-width: 95%; /* Default max-width */
     margin: auto;
 }
-
-
 
 .center-fully {
     display: flex;
@@ -228,7 +308,6 @@ input[type=checkbox]:hover {
     justify-content: left !important;
     text-align: left !important;
 }
-
 
 .booruPopupContent {
     position: fixed;

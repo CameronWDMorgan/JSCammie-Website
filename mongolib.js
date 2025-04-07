@@ -15,15 +15,20 @@ const userBooruCommentsSchema = require('./schemas/userBooruCommentsSchema.js');
 const userNotificationSchema = require('./schemas/userNotificationSchema.js');
 const userRedeemSchema = require('./schemas/userRedeemSchema.js');
 
+const { Decimal128 } = mongoose.Types;
+
 async function connectToDatabase() {
 	try {
 		await mongoose.connect(process.env.MONGODB_URI)
 		await mongoose.set('strictQuery', false)
 		console.log('Connected to database')
+
 	} catch (error) {
 		console.log(`Error connecting to database: ${error}`)
 	}
+
 }
+
 
 async function createUserNotification(accountId, message, type) {
 	let notificationObject = {
@@ -43,27 +48,27 @@ async function modifyUserCredits(accountId, amount, operation, message, testMode
 	
 	let UserProfile = await getSchemaDocumentOnce('userProfile', {accountId: accountId})
 	if (UserProfile.status === 'error') {
-		return {status: 'error', message: 'User not found'}
+		return null
 	}
 
 	userProfile = UserProfile.data
 
-	userCreditsBefore = BigInt(UserProfile.credits)
-	userCreditsAfter = BigInt(UserProfile.credits)
+	userCreditsBefore = Number(UserProfile.credits)
+	userCreditsAfter = Number(UserProfile.credits)
 
 	if (operation == '+') {
-		userCreditsAfter += BigInt(amount)
+		userCreditsAfter += Number(amount)
 	} else if (operation == '-') {
-		userCreditsAfter -= BigInt(amount)
+		userCreditsAfter -= Number(amount)
 	} else if (operation == '=') {
-		userCreditsAfter = BigInt(amount)
+		userCreditsAfter = Number(amount)
 	} else {
-		return {status: 'error', message: 'Invalid operation'}
+		return null
 	}
 
 	// if credits would be negative, return error
 	if (userCreditsAfter < 0) {
-		return {status: 'error', message: 'Insufficient credits'}
+		return null
 	}
 
 	userCreditsAfter = userCreditsAfter.toString()
@@ -85,7 +90,7 @@ async function modifyUserCredits(accountId, amount, operation, message, testMode
 
 	}
 
-	return {status: 'success', newCredits: userCreditsAfter}
+	return userCreditsAfter
 }
 
 async function modifyUserExp(accountId, amount, operation) {
@@ -97,28 +102,28 @@ async function modifyUserExp(accountId, amount, operation) {
 
 	let UserProfile = await getSchemaDocumentOnce('userProfile', {accountId: accountId})
 	if (UserProfile.status === 'error') {
-		return {status: 'error', message: 'User not found'}
+		return null
 	}
 
 	userProfile = UserProfile.data
 
-	userExpAfter = BigInt(UserProfile.exp)
+	userExpAfter = Number(UserProfile.exp)
 
 	if (operation == '+') {
-		userExpAfter += BigInt(amount)
+		userExpAfter += Number(amount)
 	} else if (operation == '-') {
-		userExpAfter -= BigInt(amount)
+		userExpAfter -= Number(amount)
 	} else if (operation == '=') {
-		userExpAfter = BigInt(amount)
+		userExpAfter = Number(amount)
 	} else {
-		return {status: 'error', message: 'Invalid operation'}
+		return null
 	}
 
 	// calculate their level:
 	let userLevel = 1
 	
 	for (let i = 0; i < levelsArray.length; i++) {
-		if (userExpAfter >= BigInt(levelsArray[i].exp)) {
+		if (userExpAfter >= Number(levelsArray[i].exp)) {
 			userLevel = levelsArray[i].level
 		}
 	}
@@ -127,65 +132,61 @@ async function modifyUserExp(accountId, amount, operation) {
 
 	await updateSchemaDocumentOnce('userProfile', {accountId: accountId}, {exp: userExpAfter, level: userLevel})
 
-	return {status: 'success', newExp: userExpAfter}
+	return userExpAfter
 }
 
 async function getSchemaDocumentOnce(schema, query) {
 	try {
-
-		let document
+		let document;
 
 		switch (schema) {
 			case 'userBooru':
-				document = await userBooruSchema.findOne(query)
+				document = await userBooruSchema.findOne(query);
 				break;
 			case 'userBooruTags':
-				document = await userBooruTagsSchema.findOne(query)
+				document = await userBooruTagsSchema.findOne(query);
 				break;
 			case 'userProfile':
-				if (query.accountId == null) {
-					return {status: 'error', message: 'No account ID provided'}
+				if (!query.accountId) {
+					return null; // Return null instead of an error object
 				} else {
-					document = await userProfileSchema.findOne(query)
+					query.accountId = String(query.accountId); // Ensure it's a string
+					document = await userProfileSchema.findOne(query);
 				}
 				break;
 			case 'userSuggestion':
-				document = await userSuggestionSchema.findOne(query)
+				document = await userSuggestionSchema.findOne(query);
 				break;
 			case 'userHistory':
-				document = await userHistorySchema.findOne(query)
+				document = await userHistorySchema.findOne(query);
 				break;
 			case 'userCreditsHistory':
-				document = await userCreditsHistorySchema.findOne(query)
+				document = await userCreditsHistorySchema.findOne(query);
 				break;
 			case 'generationLora':
-				document = await generationLoraSchema.findOne(query)
+				document = await generationLoraSchema.findOne(query);
 				break;
 			case 'userBooruComments':
-				document = await userBooruCommentsSchema.findOne(query)
+				document = await userBooruCommentsSchema.findOne(query);
 				break;
 			case 'userNotification':
-				document = await userNotificationSchema.findOne(query)
+				document = await userNotificationSchema.findOne(query);
 				break;
 			case 'userRedeem':
-				document = await userRedeemSchema.findOne(query)
+				document = await userRedeemSchema.findOne(query);
 				break;
 			default:
-				document = null
+				document = null;
 		}
 
-		if (document == null) {
-			return {status: 'error', message: 'Document not found'}
-		}
-
-		return document
+		return document || null; // Return null explicitly if no document found
 
 	} catch (error) {
-		console.log(`Error getting schema: ${error}`)
-		return {status: 'error', message: 'Error getting schema'}
+		console.log(`Error getting schema: ${error}`);
+		return null; // Return null on error
 	}
-
 }
+
 
 async function getSchemaDocuments(schema, query) {
 	try {
@@ -267,10 +268,6 @@ async function getSchemaDocuments(schema, query) {
 				document = null
 		}
 
-		if (document === null) {
-			return {status: 'error', message: 'Document not found'}
-		}
-
 		return document
 
 	} catch (error) {
@@ -320,10 +317,6 @@ async function aggregateSchemaDocuments(schema, query) {
 				documents = null
 		}
 
-		if (documents === null) {
-			return {status: 'error', message: 'Document not found'}
-		}
-
 		return documents
 
 	} catch (error) {
@@ -343,8 +336,9 @@ async function updateSchemaDocumentOnce(schema, query, update) {
 				break;
 			case 'userProfile':
 				if (query.accountId == null) {
-					return {status: 'error', message: 'No account ID provided'}
+					return null
 				}
+				query.accountId = String(query.accountId)
 				await userProfileSchema.findOneAndUpdate(query, update)
 				break;
 			case 'userSuggestion':
@@ -369,7 +363,7 @@ async function updateSchemaDocumentOnce(schema, query, update) {
 				await userRedeemSchema.findOneAndUpdate(query, update)
 				break;
 			default:
-				return {status: 'error', message: 'Invalid schema'}
+				return null
 		}
 		
 		return {status: 'success', message: `Schema "${schema}" updated`}
@@ -381,53 +375,57 @@ async function updateSchemaDocumentOnce(schema, query, update) {
 	
 }
 
+// Function to create a schema document
 async function createSchemaDocument(schema, document) {
 	try {
+
 		switch (schema) {
 			case 'userBooru':
-				await userBooruSchema.create(document)
+				await userBooruSchema.create(document);
 				break;
 			case 'userBooruTags':
-				await userBooruTagsSchema.create(document)
+				await userBooruTagsSchema.create(document);
 				break;
 			case 'userProfile':
-				if (query.accountId == null) {
-					return {status: 'error', message: 'No account ID provided'}
+
+				if (!document.accountId) {
+					console.error(`Missing accountId in document: ${JSON.stringify(document)}`);
+					return null
 				}
-				await userProfileSchema.create(document)
+
+				await userProfileSchema.create(document);
 				break;
 			case 'userSuggestion':
-				await userSuggestionSchema.create(document)
+				await userSuggestionSchema.create(document);
 				break;
 			case 'userHistory':
-				await userHistorySchema.create(document)
+				await userHistorySchema.create(document);
 				break;
 			case 'userCreditsHistory':
-				await userCreditsHistorySchema.create(document)
+				await userCreditsHistorySchema.create(document);
 				break;
 			case 'generationLora':
-				await generationLoraSchema.create(document)
+				await generationLoraSchema.create(document);
 				break;
 			case 'userBooruComments':
-				await userBooruCommentsSchema.create(document)
+				await userBooruCommentsSchema.create(document);
 				break;
 			case 'userNotification':
-				await userNotificationSchema.create(document)
+				await userNotificationSchema.create(document);
 				break;
 			case 'userRedeem':
-				await userRedeemSchema.create(document)
+				await userRedeemSchema.create(document);
 				break;
 			default:
-				return {status: 'error', message: 'Invalid schema'}
+				console.error(`Invalid schema: ${schema}`);
+				return null
 		}
-		
-		return {status: 'success', message: `Schema "${schema}" created`}
 
+		return { status: 'success', message: `Schema "${schema}" created` };
 	} catch (error) {
-		console.log(`Error creating schema: ${error}`)
-		return {status: 'error', message: 'Error creating schema'}
+		console.error(`Error creating schema "${schema}": ${error.message}`);
+		return { status: 'error', message: 'Error creating schema' };
 	}
-	
 }
 
 async function deleteSchemaDocument(schema, query) {

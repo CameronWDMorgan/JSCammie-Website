@@ -45,13 +45,34 @@
         </div>
     </div>
 
-    <br>
+    <!-- Add a modal for reporting the post -->
+    <div id="reportModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeReportModal()">&times;</span>
+            <h3>Report Post</h3>
+            <label for="reportReason">Reason for report:</label>
+            <textarea id="reportReason" rows="4" cols="50" placeholder="Enter the reason..."></textarea>
+            <!-- report presets: -->
+            <br>
+            <button onclick="setReportReason('Incorrect Safety Rating')">Incorrect Safety Rating</button>
+            <button onclick="setReportReason('AI Errors')">AI Errors</button>
+            <button onclick="setReportReason('Character Belongs to someone else')">Character Belongs to someone else</button>
+            <button onclick="setReportReason('Breaks rules of the booru')">Breaks rules of the booru</button>
+            <br>
+            <button onclick="reportPost()">Report</button>
+            <button onclick="closeReportModal()">Cancel</button>
+        </div>
+    </div>
 
     <script>
     
         function setDeleteReason(reason) {
             document.getElementById("deleteReason").value = reason;
             deletePost();
+        }
+
+        function setReportReason(reason) {
+            document.getElementById("reportReason").value = reason;
         }
     
     </script>
@@ -166,6 +187,8 @@
                     <input type="checkbox" id="nsfwCheckbox" name="nsfwCheckbox" value="nsfw">
                     <label for="extremeCheckbox">EXTREME</label>
                     <input type="checkbox" id="extremeCheckbox" name="extremeCheckbox" value="extreme">
+                    <label for="reportedCheckbox">Reported</label>
+                    <input type="checkbox" id="reportedCheckbox" name="reportedCheckbox" value="reported">
                 <% } else { %>
                     <!-- na hidden -->
                     <input type="hidden" id="naCheckbox" name="naCheckbox" value="na">
@@ -279,8 +302,8 @@
                     safety: `<%=image.safety%>`,
                     score: `<%= image.score %>`,
                     upvotes: <%- JSON.stringify(image.upvotes) %>,
-                    downvotes: <%- JSON.stringify(image.downvotes) %>,
                     comments: `<%=image.comments?.length? image.comments.length : 0%>`,
+                    reports: <%- JSON.stringify(image.reports? image.reports : []) %>,
                     }
             <% }) %>
 
@@ -317,27 +340,106 @@
             function showBanModal(accountId) {
                 document.getElementById("banModal").style.display = "flex";
                 // set the modal-content to be visible:
-                document.querySelector(".modal-content").style.display = "block";
+                document.querySelectorAll(".modal-content").forEach(modal => {
+                    // if parent ID is banModal, set the display to block:
+                    if (modal.parentElement.id == "banModal") {
+                        modal.style.display = "block";
+                    }
+                });
                 window.banAccountId = accountId; // Store the account ID for later use
             }
 
-            // Function to close the ban modal
             function closeBanModal() {
                 document.getElementById("banModal").style.display = "none";
+                document.querySelector(".modal-content").style.display = "none";
+            }
+
+            function showReportModal(booruId) {
+                console.log("showing report modal");
+                document.getElementById("reportModal").style.display = "flex";
+                // set reportModal's SPECIFIC fucking modal-content to be visible:
+                document.querySelectorAll(".modal-content").forEach(modal => {
+                    // if parent ID is deleteModal, set the display to block:
+                    if (modal.parentElement.id == "reportModal") {
+                        modal.style.display = "block";
+                    }
+                });
+                // window.reportBooruId = booruId; // Store the booru ID for later use
+                window.reportBooruId = booruId
+            }
+
+            function closeReportModal() {
+                document.getElementById("reportModal").style.display = "none";
                 document.querySelector(".modal-content").style.display = "none";
             }
             
             // Function to adjust the modal's position when scrolling
             function adjustModalPosition() {
-                // const modalContent = document.querySelector(".modal-content");
-                // modalContent.style.position = "absolute";
-                // modalContent.style.top = window.scrollY + "px"; // Adjust top position based on scroll
-                // there are now multiple modals, so we need to adjust the position of all of them:
                 let modals = document.querySelectorAll(".modal-content");
                 modals.forEach(modal => {
                     modal.style.position = "absolute";
                     modal.style.top = window.scrollY + "px"; // Adjust top position based on scroll
                 });
+            }
+
+            async function reportPost() {
+                const reason = document.getElementById("reportReason").value;
+                if (!reason) {
+                    let response = await globalAlert({
+                        message: "Please provide a reason for the report.",
+                        question: true,
+                        options: {
+                            okay: function (){ }
+                        }
+                    })
+                    return;
+                }
+
+                // send the report request:
+                fetch(`/booru/report`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        reason: reason,
+                        booru_id: window.reportBooruId,
+                    }),
+                })
+                .then((res) => res.json())
+                .then(async (data) => {
+                    if (data.status == "success") {
+                        options = {
+                            message: "Post has been reported successfully.",
+                            question: true,
+                            options: {
+                                okay: function (){ }
+                            }
+                        }
+                        let response = await globalAlert(options)
+                    } else {
+                        let response = await globalAlert({
+                            message: "Failed to report post. Please try again later.",
+                            question: true,
+                            options: {
+                                okay: function (){ }
+                            }
+                        })
+                    }
+                })
+                .catch(async (err) => {
+                    console.error(err);
+                    let response = await globalAlert({
+                        message: "Failed to report post. Please try again later.",
+                        question: true,
+                        options: {
+                            okay: function (){ }
+                        }
+                    })
+                });
+
+                // Close the modal after reporting
+                closeReportModal();
             }
 
             // Function to ban the user
@@ -368,7 +470,6 @@
                         .then((res) => res.json())
                         .then(async (data) => {
                             if (data.status == "success") {
-                                // alert("User has been banned successfully.");
                                 options = {
                                     message: "User has been banned successfully.",
                                     question: true,
@@ -408,7 +509,10 @@
                 document.getElementById("deleteModal").style.display = "flex";
                 // set the modal-content to be visible:
                 document.querySelectorAll(".modal-content").forEach(modal => {
-                    modal.style.display = "block";
+                    // if parent ID is deleteModal, set the display to block:
+                    if (modal.parentElement.id == "deleteModal") {
+                        modal.style.display = "block";
+                    }
                 });
                 window.deleteBooruId = booruId; // Store the booru ID for later use
             }
@@ -555,9 +659,19 @@
                                 <button onclick="setRating('nsfw', '${value.booru_id}')">Set NSFW</button>
                                 <button onclick="setRating('suggestive', '${value.booru_id}')">Set Suggestive</button>
                                 <button onclick="setRating('sfw', '${value.booru_id}')">Set SFW</button>
+                                <button onclick="showReportModal('${value.booru_id}')">Report Post</button>
                                 <button onclick="showBanModal('${value.account_id}')">Ban User</button>
                             </div>
                         `;
+                    } else {
+                        if (userProfile.accountId) {
+                            dropdownHTML = `
+                                <button class="dropdownButton" onclick="document.getElementById('dropdown${value.booru_id}')?.classList.toggle('show')">ℹ️</button>
+                                <div class="dropdown" id="dropdown${value.booru_id}">
+                                    <button onclick="showReportModal('${value.booru_id}')">Report Post</button>
+                                </div>
+                            `;
+                        }
                     }
 
                     let onHoverUpvote = "";
@@ -571,23 +685,8 @@
                                 <div class="upvoters">
                                     ${value.upvotes.map(upvote => `
                                         <a class="upvoteUser" href="https://www.jscammie.com/profile/${upvote.accountId}" target="_blank">
-                                            <img class="postProfileImage" src="${masterUpvoteAccountData[upvote.accountId]?.profileImg ? masterUpvoteAccountData[upvote.accountId].profileImg : 'http://www.jscammie.com/noimagefound.png'}" alt="Upvote Profile Image" />
+                                            <img class="postProfileImage" src="${masterUpvoteAccountData[upvote.accountId]?.profileImg ? masterUpvoteAccountData[upvote.accountId].profileImg : 'http://www.jscammie.com/noimagefound.png'}" alt="Upvote Profile Image" loading="lazy"/>
                                             <span>${masterUpvoteAccountData[upvote.accountId]?.username}</span>
-                                        </a>
-                                    `).join("")}
-                                </div>
-                            </div>
-                        `;
-                    }
-
-                    if (value.downvotes.length > 0) {
-                        onHoverDownvote = `
-                            <div class="downvoteHover hidden" id="downvoteHover${value.booru_id}">
-                                <p>Downvoted by:</p>
-                                <div class="downvoters">
-                                    ${value.downvotes.map(downvote => `
-                                        <a href="https://www.jscammie.com/profile/${downvote.accountId}" target="_blank">
-                                            <img class="postProfileImage" src="${masterDownvoteAccountData[downvote.accountId]?.profileImg ? masterDownvoteAccountData[downvote.accountId].profileImg : 'http://www.jscammie.com/noimagefound.png'}" alt="Downvote Profile Image" /> ${masterDownvoteAccountData[downvote.accountId]?.username}
                                         </a>
                                     `).join("")}
                                 </div>
@@ -600,13 +699,12 @@
                     `;
 
                     let hasUpvoted = value.upvotes.some(upvote => upvote.accountId == userProfile.accountId);
-                    let hasDownvoted = value.downvotes.some(downvote => downvote.accountId == userProfile.accountId);
 
                     let postDiv = `
                     <div class="booruPost" id="booruPostDiv-${value.booru_id}">
                         <div class="abovePost">
                             <a href="https://www.jscammie.com/profile/${value.account_id}" target="_blank">
-                                <img src="${masterAccountData[value.account_id].profileImg}" alt="Profile Image" />
+                                <img src="${masterAccountData[value.account_id].profileImg}" alt="Profile Image" loading="lazy"/>
                             </a>
                             <div class="userDetails">
                                 <p class="username">${masterAccountData[value.account_id].username}</p>
@@ -622,9 +720,20 @@
                         <div class="votesDiv">
                             <button id="upvoteButton${value.booru_id}" onclick="votePost('upvote', '${value.booru_id}')" class="${hasUpvoted ? 'voted' : ''}" data-booru-id="${value.booru_id}">${value.upvotes.length} ⬆️</button>
                             <button id="commentButton${value.booru_id}" onclick="window.open('/booru/post/${value.booru_id}', '_blank')">${value.comments} 💬</button>
-                            <button id="downvoteButton${value.booru_id}" onclick="votePost('downvote', '${value.booru_id}')" class="${hasDownvoted ? 'voted' : ''}" data-booru-id="${value.booru_id}">${value.downvotes.length} ⬇️</button>
                             ${onHoverUpvote}
                         </div>
+                        ${userProfile.badges.moderator ? ` ${value.reports?.length ? `
+                            <div class="reportsDiv">
+                                <p>Reports:</p>
+                                <div class="reports">
+                                    ${value.reports.map(report => `
+                                        <a href="https://www.jscammie.com/profile/${report.accountId}" target="_blank">
+                                            <span>${report.reason}</span>
+                                        </a>
+                                    `).join("")}
+                                </div>
+                            </div>
+                        ` : ""}` : ""}
                         ${userProfile.badges.moderator ? `<p>Score: ${value.score}</p>` : ""}
                         ${userProfile.badges.moderator ? `<p>${value.prompt}</p>` : ""}
                     </div>`;
@@ -676,13 +785,13 @@
                         }, 200); // Small delay to prevent flickering
                     }
 
-                    button.addEventListener("mouseenter", () => {
-                        timeout = setTimeout(showHoverBox, 1000); // Show after 1 second
-                    });
+                    // button.addEventListener("mouseenter", () => {
+                    //     timeout = setTimeout(showHoverBox, 1000); // Show after 1 second
+                    // });
 
-                    button.addEventListener("mouseleave", hideHoverBox);
-                    hoverDiv.addEventListener("mouseenter", showHoverBox); // Prevent hiding when mouse enters
-                    hoverDiv.addEventListener("mouseleave", hideHoverBox); // Hide when leaving the hover box
+                    // button.addEventListener("mouseleave", hideHoverBox);
+                    // hoverDiv.addEventListener("mouseenter", showHoverBox); // Prevent hiding when mouse enters
+                    // hoverDiv.addEventListener("mouseleave", hideHoverBox); // Hide when leaving the hover box
                 });
 
 

@@ -20,8 +20,26 @@ let requestId = null
 let cancelledGeneration = false
 let uploadsToBooru = 0
 
+// ETA calculation variables
 let timeForNextPositionLower = []
 let lastLowestPosition = 9999
+let lastRecordedTime = null
+let lastPosition = null
+let stagnantPositionCount = 0
+let positionChangeCount = 0
+const MIN_POSITION_CHANGES_FOR_ETA = 2  // Only show ETA after 2 position changes
+const MAX_HISTORY_LENGTH = 10  // Shorter history length for more responsiveness
+const POSITION_UPDATE_TIMEOUT = 10000  // 10 seconds max without position update
+
+// Function to reset ETA calculation variables
+const resetETACalculation = () => {
+    timeForNextPositionLower = []
+    lastLowestPosition = 9999
+    lastRecordedTime = null
+    lastPosition = null
+    stagnantPositionCount = 0
+    positionChangeCount = 0
+}
 
 // State management
 const UIState = {
@@ -50,33 +68,102 @@ const UIState = {
 
     updateQueuePosition(position, queueLength) {
         this.queuePosition.style.display = 'block';
-        let currentTime = new Date().getTime();
-
-        // Only store timestamps when the position decreases
-        if (position < lastLowestPosition) {
-            timeForNextPositionLower.push(currentTime);
+        const currentTime = new Date().getTime();
+        
+        // Initialize time tracking on first call
+        if (lastRecordedTime === null) {
+            lastRecordedTime = currentTime;
+            lastPosition = position;
+            timeForNextPositionLower = [];
+            stagnantPositionCount = 0;
             lastLowestPosition = position;
+            positionChangeCount = 0;
+            this.positionNumber.innerText = `${position}/${queueLength} - ETA: Calculating...`;
+            return;
         }
-
-        // Maintain a history limit of 100 timestamps
-        if (timeForNextPositionLower.length > 100) {
+        
+        const timeDiff = currentTime - lastRecordedTime;
+        
+        // Record time data in these cases:
+        // 1. Position decreased (queue progressed)
+        // 2. Position stayed same but significant time passed
+        if (position < lastPosition) {
+            // Position decreased - good data point
+            const positionDiff = lastPosition - position;
+            const timePerPosition = timeDiff / positionDiff;
+            
+            // Increment the position change counter
+            positionChangeCount += positionDiff;
+            
+            // Add weighted entry (more recent changes are more important)
+            timeForNextPositionLower.push({
+                time: timePerPosition,
+                weight: 1 + (0.1 * (MAX_HISTORY_LENGTH - timeForNextPositionLower.length))
+            });
+            
+            // Reset stagnant counter since queue moved
+            stagnantPositionCount = 0;
+            lastLowestPosition = position;
+            lastRecordedTime = currentTime;
+        } else if (position === lastPosition && timeDiff > POSITION_UPDATE_TIMEOUT) {
+            // Position stagnant for too long - might be slower than usual
+            stagnantPositionCount++;
+            
+            // Only add stagnant data points if we have some history already
+            // and we haven't added too many stagnant entries yet
+            if (stagnantPositionCount <= 2 && timeForNextPositionLower.length > 0) {
+                // Calculate average from existing data
+                let avgTime = timeForNextPositionLower.reduce((sum, entry) => 
+                    sum + entry.time * entry.weight, 0) / 
+                    timeForNextPositionLower.reduce((sum, entry) => sum + entry.weight, 0);
+                
+                // Add a slightly inflated entry
+                timeForNextPositionLower.push({
+                    time: avgTime * 1.2,  // 20% slower
+                    weight: 0.5  // Lower weight for these entries
+                });
+            }
+            
+            // Reset time counter for next check
+            lastRecordedTime = currentTime;
+        }
+        
+        // Limit history to most recent entries
+        if (timeForNextPositionLower.length > MAX_HISTORY_LENGTH) {
             timeForNextPositionLower.shift();
         }
-
-        // Calculate ETA based on average time per position decrease
+        
+        // Calculate weighted average ETA only after sufficient position changes
         let etaString = "Calculating...";
-        if (timeForNextPositionLower.length > 1) {
-            let totalTime = 0;
-            for (let i = 1; i < timeForNextPositionLower.length; i++) {
-                totalTime += timeForNextPositionLower[i] - timeForNextPositionLower[i - 1];
+        if (timeForNextPositionLower.length > 0 && positionChangeCount >= MIN_POSITION_CHANGES_FOR_ETA) {
+            // Calculate weighted average
+            const totalWeight = timeForNextPositionLower.reduce((sum, entry) => sum + entry.weight, 0);
+            const weightedAvgTimePerPosition = timeForNextPositionLower.reduce((sum, entry) => 
+                sum + (entry.time * entry.weight), 0) / totalWeight;
+            
+            // Apply some bounds to avoid unrealistic estimates
+            const boundedTimePerPosition = Math.min(Math.max(weightedAvgTimePerPosition, 1000), 60000);
+            let estimatedTimeRemaining = boundedTimePerPosition * (position - 1);
+            
+            // Add a small buffer for position 1 (currently generating)
+            if (position === 1) {
+                estimatedTimeRemaining = Math.max(estimatedTimeRemaining, 5000);
             }
-            let averageTimePerPosition = totalTime / (timeForNextPositionLower.length - 1);
-            let estimatedTimeRemaining = averageTimePerPosition * (position - 1);
-            let etaMinutes = Math.floor(estimatedTimeRemaining / 60000);
-            let etaSeconds = Math.floor((estimatedTimeRemaining % 60000) / 1000);
-            etaString = `${etaMinutes}m ${etaSeconds}s`;
+            
+            const etaMinutes = Math.floor(estimatedTimeRemaining / 60000);
+            const etaSeconds = Math.floor((estimatedTimeRemaining % 60000) / 1000);
+            
+            // Format nicely
+            if (etaMinutes > 0) {
+                etaString = `${etaMinutes}m ${etaSeconds}s`;
+            } else {
+                etaString = `${etaSeconds}s`;
+            }
         }
-
+        
+        // Update for next iteration
+        lastPosition = position;
+        
         this.positionNumber.innerText = `${position}/${queueLength} - ETA: ${etaString}`;
     },
 
@@ -122,7 +209,6 @@ const buildRequestData = async () => {
         quantity: 4,
         lora: selectedLoras,
         lora_strengths: loraStrengths,
-        favoriteLoras: Object.keys(favorites).filter(key => favorites[key]),
         image: imageBase64,
         strength,
         guidance: getValue('cfguidance'),
@@ -189,6 +275,9 @@ funcElementById('generateButton').addEventListener('click', async function(event
     uploadsToBooru = 0
     everHiddenCancel = false;
     cancelledGeneration = false
+    
+    // Reset ETA calculations for new generation
+    resetETACalculation();
 
     try {
         const data = await buildRequestData();
@@ -217,30 +306,90 @@ funcElementById('generateButton').addEventListener('click', async function(event
     }
 });
 
-// Queue position checking
 const checkQueuePosition = async () => {
+    try {
+        const response = await fetch(`${API_BASE}/queue_position/${requestId}`, {
+            method: 'GET',
+            headers: getDefaultHeaders()
+        });
 
-    const response = await fetch(`${API_BASE}/queue_position/${requestId}`, {
-        method: 'GET',
-        headers: getDefaultHeaders()
-    });
-    return await response.json();
+        if (!response.ok) {
+            throw new Error(`HTTP Error: ${response.status}`);
+        }
+
+        // Safely attempt to parse JSON
+        try {
+            return await response.json();
+        } catch (jsonError) {
+            throw new Error("Invalid JSON response received");
+        }
+    } catch (error) {
+        console.error('Queue position fetch failed:', error);
+        return null; // Prevents crashing the main loop
+    }
+};
+
+const checkImageCompletion = async () => {
+    try {
+        const response = await fetch(`${API_BASE}/result/${requestId}`, {
+            method: 'GET',
+            headers: getDefaultHeaders()
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP Error: ${response.status}`);
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error("Image completion check failed:", error);
+        return null;
+    }
 };
 
 const handleCompletedGeneration = async () => {
+    // Reset ETA calculations for completed generation
+    resetETACalculation();
+    
     UIState.response.innerText = "Your image is ready and will be displayed shortly...";
     UIState.queuePosition.style.display = 'none';
 
-    const resultResponse = await fetch(`${API_BASE}/result/${requestId}`, {
-        method: 'GET',
-        headers: getDefaultHeaders()
-    });
+    let retryCount = 0;
+    let results = null;
 
-    if (!resultResponse.ok) {
-        throw new Error('Failed to fetch generation results');
+    while (retryCount < 5) {
+        try {
+            const resultResponse = await fetch(`${API_BASE}/result/${requestId}`, {
+                method: 'GET',
+                headers: getDefaultHeaders()
+            });
+
+            if (!resultResponse.ok) {
+                throw new Error(`HTTP Error: ${resultResponse.status}`);
+            }
+
+            // Safely parse JSON response
+            try {
+                results = await resultResponse.json();
+            } catch (jsonError) {
+                throw new Error("Invalid JSON response received");
+            }
+
+            if (results) {
+                break; // Exit loop if results are successfully fetched
+            }
+        } catch (error) {
+            retryCount++;
+            console.warn(`Failed to fetch generation results, retrying... (${retryCount}/5)`);
+            await new Promise(resolve => setTimeout(resolve, 2000 * retryCount)); // Exponential backoff
+        }
     }
 
-    const results = await resultResponse.json();
+    if (!results) {
+        UIState.setError("Failed to load image results after multiple attempts.");
+        return;
+    }
+
     await displayResults(results);
 };
 
@@ -540,16 +689,38 @@ const handleQueueAndGeneration = async (jsonResponse) => {
     let isCompleted = false;
     let retryCount = 0;
     let queueLoops = 0;
-    let nextCheckMS = 1250;
+    let nextCheckMS = 1500;
     let connectionActive = true;
 
     while (!isCompleted && retryCount < 5) {
         try {
-            if (cancelledGeneration) return;
+
+            console.log(`Queue loop running - retryCount: ${retryCount}, isCompleted: ${isCompleted}`);
+
+            if (cancelledGeneration) {
+                console.log("Queue checking stopped: cancelledGeneration is true");
+                return;
+            }
+
 
             requestId = jsonResponse.request_id;
 
             const positionData = await checkQueuePosition();
+
+            console.log("Queue position response:", positionData);
+
+            if (!positionData) {
+                retryCount++;
+                console.warn(`Retrying queue check... (${retryCount}/5)`);
+                
+                if (!connectionActive) {
+                    UIState.response.innerText = `Temporary error, retrying... (${retryCount}/5)`;
+                }
+
+                await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+                continue; // Skip to the next loop iteration instead of breaking
+            }
+
             
             if (!handlePositionResponse(positionData, queueLoops)) {
                 break;
@@ -649,3 +820,31 @@ funcElementById('cancelButton').addEventListener('click', async function(event) 
         UIState.setError(error.message);
     }
 });
+
+document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+        console.log("User returned, resuming queue check...");
+        handleQueueAndGeneration({ status: "queued", position: "?", request_id });
+    }
+});
+
+setInterval(async () => {
+    try {
+        const response = await fetch(`${API_BASE}/get-all-queue-length`, {
+            method: 'GET',
+            headers: getDefaultHeaders()
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP Error: ${response.status}`);
+        }
+
+        const queueLengths = await response.json();
+
+        funcElementById('queueGeneralInformation').innerText = `\nRegular Queue: ${queueLengths.data.queue_0} | Fast Queue: ${queueLengths.data.queue_1} | Total Queue: ${queueLengths.data.queue_0 + queueLengths.data.queue_1}`
+
+
+    } catch (error) {
+        console.error('Queue length fetch failed:', error);
+    }
+}, 5000);

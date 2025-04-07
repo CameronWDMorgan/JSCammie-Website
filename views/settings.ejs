@@ -162,29 +162,79 @@
 
             </script>
 
+            <link rel='stylesheet' href='/booruStyle.css'/>
+
+            <details>
+                <summary>Booru Tag Blacklist:</summary>
+                <h2>Booru Tag Blacklist</h2>
+                <p>Enter any tags here to block posts with them from showing up on the booru.</p>
+                <div class="searchDiv">
+                    <details id="autoCompleteDropdown" class="autoCompleteDropdown">
+                        <summary>Auto Complete Results</summary>
+                        <div id="searchResultsDiv"></div>
+                    </details>
+                    <input id="searchInput" type="text" placeholder="Search..." style="width: 100%; padding: 10px; border-radius: 10px; margin-bottom: 20px;" />
+                    <br>
+                    <button id="updateBooruTagBlacklistButton">Update Blacklist</button>
+                    <p id="booruBlacklistStatusMessage"></p>
+                </div>
+
+                <script>
+                    <%- booruSearchScript %>
+
+                    booruSearchInitialize(true)
+
+                    let booruBlacklistUpdateButton = document.getElementById('updateBooruTagBlacklistButton');
+
+                    // firstly set searchInput value to the current blacklist:
+                    console.log("<%= userProfile.settings?.booru_tag_blacklist %>");
+                    document.getElementById('searchInput').value = "<%= userProfile.settings?.booru_tag_blacklist %>";
+
+                    booruBlacklistUpdateButton.addEventListener('click', function () {
+                        let blacklist = document.getElementById('searchInput').value
+                        let data = {
+                            setting: 'booru_tag_blacklist',
+                            value: blacklist
+                        }
+
+                        fetch('/settings/update', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(data)
+                        }).then(response => {
+                            if (response.ok) {
+                                document.getElementById('searchInput').value = blacklist
+                                document.getElementById('booruBlacklistStatusMessage').textContent = 'Blacklist updated successfully!';
+                            } else {
+                                document.getElementById('booruBlacklistStatusMessage').textContent = 'Error updating blacklist: ' + response.statusText;
+                            }
+                        }).catch(error => {
+                            document.getElementById('booruBlacklistStatusMessage').textContent = 'Error updating blacklist.';
+                        });
+                    });
+
+                </script>
+            
+            </details>
 
             <style>
-            
-
                 .notificationSetting1, .notificationSetting2 {
                     align-items: right;
                     width: 100%
                 }
-
                 .notificationSetting1 label, .notificationSetting2 label {
                     margin-right: 10px;
                 }
-
                 .notificationSetting1 {
                     background-color: rgba(0, 0, 0, 0.3);
                     padding: 10px;
                 }
-
                 .notificationSetting2 {
                     background-color: rgba(0, 0, 0, 0.1);
                     padding: 10px;
                 }
-            
             </style>
 
             <details>
@@ -193,36 +243,39 @@
                 <div class="notificationSettingsDiv">
                     <div class="notificationSetting1">
                         <label>Notify Booru Votes</label>
-                        <input type="checkbox" id="toggle_notification_booruVote" name="toggle_notification_booruVote" <% if (userProfile.settings?.notification_booruVote) { %>checked<% } %> />
+                        <input type="checkbox" id="toggle_notification_booruVote" name="toggle_notification_booruVote" <% if (userProfile.settings?.notification_booruVote ?? true) { %>checked<% } %> />
                         <span class="tooltip" onclick="showTooltip(this)">❓</span>
                         <div class="tooltipText">Receive a notification when someone votes on your booru post.</div>
                     </div>
+
                     <div class="notificationSetting2">
                         <label>Notify Booru Comments</label>
-                        <input type="checkbox" id="toggle_notification_booruComment" name="toggle_notification_booruComment" <% if (userProfile.settings?.notification_booruComment) { %>checked<% } %> />
+                        <input type="checkbox" id="toggle_notification_booruComment" name="toggle_notification_booruComment" <% if (userProfile.settings?.notification_booruComment ?? true) { %>checked<% } %> />
                         <span class="tooltip" onclick="showTooltip(this)">❓</span>
                         <div class="tooltipText">Receive a notification when someone comments on your booru post.</div>
                     </div>
+
                     <div class="notificationSetting1">
                         <label>Notify Booru Ratings</label>
-                        <input type="checkbox" id="toggle_notification_booruRating" name="toggle_notification_booruRating" <% if (userProfile.settings?.notification_booruRating) { %>checked<% } %> />
+                        <input type="checkbox" id="toggle_notification_booruRating" name="toggle_notification_booruRating" <% if (userProfile.settings?.notification_booruRating ?? true) { %>checked<% } %> />
                         <span class="tooltip" onclick="showTooltip(this)">❓</span>
                         <div class="tooltipText">Receive a notification when a moderator/jscammie rates your booru post.</div>
                     </div>
 
                     <div class="notificationSetting2">
                         <label>Notify Suggestion Promotions</label>
-                        <input type="checkbox" id="toggle_notification_suggestionPromoted" name="toggle_notification_suggestionPromoted" <% if (userProfile.settings?.notification_suggestionPromoted) { %>checked<% } %> />
+                        <input type="checkbox" id="toggle_notification_suggestionPromoted" name="toggle_notification_suggestionPromoted" <% if (userProfile.settings?.notification_suggestionPromoted ?? true) { %>checked<% } %> />
                         <span class="tooltip" onclick="showTooltip(this)">❓</span>
                         <div class="tooltipText">Receive a notification when a suggestion you made is promoted to a booru post.</div>
                     </div>
 
                     <div class="notificationSetting1">
                         <label>Notify Generator Credit Spends</label>
-                        <input type="checkbox" id="toggle_notification_generatorSpentCredits" name="toggle_notification_generatorSpentCredits" <% if (userProfile.settings?.notification_generatorSpentCredits) { %>checked<% } %> />
+                        <input type="checkbox" id="toggle_notification_generatorSpentCredits" name="toggle_notification_generatorSpentCredits" <% if (userProfile.settings?.notification_generatorSpentCredits ?? true) { %>checked<% } %> />
                         <span class="tooltip" onclick="showTooltip(this)">❓</span>
                         <div class="tooltipText">Receive a notification when you spend credits on the generator.</div>
                     </div>
+
 
                     <div id="notification_StatusMessage"></div>
                 </div>
@@ -271,7 +324,7 @@
                 <div class="miscellaneousSettingsDiv">
                     <div class="miscellaneousSetting1">
                         <label>Enable Generation Ready Beep</label>
-                        <input type="checkbox" id="toggle_misc_generationReadyBeep" name="toggle_misc_generationReadyBeep" <% if (userProfile.settings?.misc_generationReadyBeep) { %>checked<% } %> />
+                        <input type="checkbox" id="toggle_misc_generationReadyBeep" name="toggle_misc_generationReadyBeep" <% if (userProfile.settings?.misc_generationReadyBeep?? true) { %>checked<% } %> />
                         <span class="tooltip" onclick="showTooltip(this)">❓</span>
                         <div class="tooltipText">Enable a beep sound when the generator is ready to generate a new suggestion.</div>
                 </div>

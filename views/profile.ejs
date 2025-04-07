@@ -67,7 +67,6 @@
                 timestamp: `<%=image.timestamp%>`,
                 safety: `<%=image.safety%>`,
                 upvotes: <%- JSON.stringify(image.upvotes) %>,
-                downvotes: <%- JSON.stringify(image.downvotes) %>,
                 comments: `<%=image.comments?.length? image.comments.length : 0%>`
             }
         <% }) %>
@@ -84,6 +83,10 @@
                 level: `<%=account.level%>`,
             }
         <% }) %>
+
+
+        var followedCount = `<%= followedCount ?? 0 %>`
+        
 
     </script>
 
@@ -190,7 +193,6 @@
             })
         }
 
-
         async function createProfileTop() {
         
             let profileProfileDiv = document.getElementById('profileProfileDiv')
@@ -238,6 +240,7 @@
                     </div>
                     <div class="profileProfileInfo">
                         <h1>${profileProfile.username}</h1>
+                        <p>Followers: ${followedCount}</p>
                         <p>${profileProfile.userBio}</p>
                         <div id="actionButtons"></div>
                     </div>
@@ -259,79 +262,81 @@
 
         }
 
-        async function createBooruPosts() {
+        let booruPostsDiv;
+        let postsPerPage = 20;
+        let currentPage = 0;
+        let booruPostEntries = [];
+        let loading = false; // Prevent multiple triggers
 
-            let booruPostsDiv = document.getElementById('booruPosts')
+        async function loadMorePosts() {
+            if (loading) return;
+            loading = true;
 
-            booruPostsDivHTML = ""
+            let start = currentPage * postsPerPage;
+            let end = start + postsPerPage;
+            let postsToLoad = booruPostEntries.slice(start, end);
 
-            for (const [key, value] of Object.entries(masterBooruData)) {
+            postsToLoad.forEach(value => {
+                const newContentUrl = value.thumbnailMade
+                    ? value.content_url.replace(".png", "-thumb.png")
+                    : value.content_url;
 
-                if (value.safety == "na" && userProfile.accountId !== profileProfile.accountId) {
-                    console.log("skipping")
-                    continue
-                } else {
-                    console.log(`userProfile.accountId: ${userProfile.accountId}, profileProfile.accountId: ${profileProfile.accountId}`)
-                }
+                const accountData = masterAccountData[value.account_id];
+                const hasUpvoted = value.upvotes.some(upvote => upvote.accountId === userProfile.accountId);
 
-                let newContentUrl = ""
-
-                if (value.thumbnailMade) {
-                    newContentUrl = value.content_url.split(".png")[0] + "-thumb.png"
-                } else {
-                    newContentUrl = value.content_url
-                }
-
-                let booruThumbnailHTML = `
-                    <img src="${newContentUrl}" alt="Booru Image" style="max-width: 100%;" loading="lazy"/>
-                `
-
-                hasUpvoted = false
-                hasDownvoted = false
-
-                for (let i = 0; i < value.upvotes.length; i++) {
-                    if (value.upvotes[i].accountId == userProfile.accountId) {
-                        hasUpvoted = true
-                    }
-                }
-                for (let i = 0; i < value.downvotes.length; i++) {
-                    if (value.downvotes[i].accountId == userProfile.accountId) {
-                        hasDownvoted = true
-                    }
-                }
-
-                let postDiv = `
-                    <div class="booruPost">
-                        <div class="abovePost">
-                            <a href="https://www.jscammie.com/profile/${value.account_id}" target="_blank">
-                                <img src="${masterAccountData[value.account_id].profileImg}" alt="Profile Image" />
-                            </a>
-                            <div class="userDetails">
-                                <p class="username">${masterAccountData[value.account_id].username}</p>
-                                <p class="safety">${value.safety.toUpperCase()}</p>
-                            </div>
-                        </div>
-                        <a href="/booru/post/${value.booru_id}">
-                            ${booruThumbnailHTML}
+                let postDiv = document.createElement('div');
+                postDiv.classList.add('booruPost');
+                postDiv.innerHTML = `
+                    <div class="abovePost">
+                        <a href="https://www.jscammie.com/profile/${value.account_id}" target="_blank">
+                            <img src="${accountData.profileImg}" alt="Profile Image" />
                         </a>
-                        <div class="votesDiv">
-                            <button id="upvoteButton${value.booru_id}" onclick="votePost('upvote', '${value.booru_id}')" class="${hasUpvoted ? 'voted' : ''}">${value.upvotes.length} ⬆️</button>
-                            <button id="commentButton${value.booru_id}" onclick="window.open('/booru/post/${value.booru_id}', '_blank')">${value.comments} 💬</button>
-                            <button id="downvoteButton${value.booru_id}" onclick="votePost('downvote', '${value.booru_id}')" class="${hasDownvoted ? 'voted' : ''}">${value.downvotes.length} ⬇️</button>
+                        <div class="userDetails">
+                            <p class="username">${accountData.username}</p>
+                            <p class="safety">${value.safety.toUpperCase()}</p>
                         </div>
                     </div>
-                `
-                
-                booruPostsDivHTML += postDiv
-            }
+                    <a href="/booru/post/${value.booru_id}">
+                        <img src="${newContentUrl}" alt="Booru Image" style="max-width: 100%;" loading="lazy"/>
+                    </a>
+                    <div class="votesDiv">
+                        <button id="upvoteButton${value.booru_id}" onclick="votePost('upvote', '${value.booru_id}')" class="${hasUpvoted ? 'voted' : ''}">
+                            ${value.upvotes.length} ⬆️
+                        </button>
+                        <button id="commentButton${value.booru_id}" onclick="window.open('/booru/post/${value.booru_id}', '_blank')">
+                            ${value.comments} 💬
+                        </button>
+                    </div>
+                `;
+                booruPostsDiv.appendChild(postDiv);
+            });
 
-
-
-            booruPostsDiv.innerHTML = booruPostsDivHTML
-
+            currentPage++;
+            loading = false;
         }
 
-        createProfileTop()
+        // **Initialize Booru Posts**
+        async function createBooruPosts() {
+            booruPostsDiv = document.getElementById('booruPosts'); // Ensure this is set properly
+            booruPostEntries = Object.values(masterBooruData).filter(value =>
+                !(value.safety === "na" && userProfile.accountId !== profileProfile.accountId)
+            );
+
+            booruPostsDiv.innerHTML = ""; // Clear previous content
+            currentPage = 0;
+            loadMorePosts(); // Load initial batch
+        }
+
+        // **Infinite Scrolling Event**
+        window.addEventListener('scroll', () => {
+            if (!loading && window.innerHeight + window.scrollY >= document.body.offsetHeight - 300) {
+                loadMorePosts();
+            }
+        });
+
+        // **Start the Process**
+        createProfileTop();
+
     
     </script>
 

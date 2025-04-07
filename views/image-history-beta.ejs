@@ -143,7 +143,6 @@
 
             }
 
-            // show fullscreen popup to confirm upload to booru, showing rules etc:
             function showBooruPopup(image_id) {
                 // get the imageData from the masterImageData object:
                 const imageData = masterImageData[image_id];
@@ -723,7 +722,6 @@
     <script>
 
         async function downloadCurrentPage() {
-            // Ask for confirmation
             const options = {
                 message: 'Are you sure you want to download all images on this page?',
                 question: true,

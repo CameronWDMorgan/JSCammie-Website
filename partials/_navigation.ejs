@@ -19,124 +19,321 @@
 
 </style>
 
+<!-- Server state information -->
+<span id="serverLoginState" style="display: none;"><%= session.loggedIn ? 'true' : 'false' %></span>
+
 <script>
+    // Set session data for JavaScript to access
+    const sessionData = {
+        loggedIn: <%= session.loggedIn ? 'true' : 'false' %>
+    };
 
     function throttle(func, limit) {
         let inThrottle;
+        let lastResult;
         return function(...args) {
             if (!inThrottle) {
-                func.apply(this, args);
-                inThrottle = true;
-                setTimeout(() => inThrottle = false, limit);
+                try {
+                    lastResult = func.apply(this, args);
+                    inThrottle = true;
+                    setTimeout(() => inThrottle = false, limit);
+                } catch (error) {
+                    console.error("Error in throttled function:", error);
+                }
             }
+            return lastResult;
         }
     }
 
+    // Define userProfileNavigation as a global variable
+    let userProfileNavigation = null;
+    let userProfileUpdateInProgress = false;
+    let oldUserProfile = {
+        userProfileImg: '',
+        userProfileUsername: '',
+        userProfileLevel: '',
+        userProfileExp: ''
+    };
+
     const updateUserProfile = throttle(async () => {
-        let userProfileRaw = await fetch('/userProfile', {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        })
-
-        // console.log(userProfileRaw)
-
-        // res.send({ userProfile: userProfile}) is what the server uses to send it back to the client:
-        let userProfile = await userProfileRaw.json();
-        userProfile = userProfile?.userProfile;
-
-        if (userProfile == null || userProfile == undefined) {
-            document.getElementById('loggedIn').textContent = 'false';
-            // set the creditsDisplay to 0 if the userProfile is null AND the CreditsButtons to be "Log in to claim", hide the topTextCreditsButton:
-            document.getElementById('creditsDisplay').textContent = 0;
-            document.getElementById('3hrCreditsButton').textContent = 'Log in to claim';
-            document.getElementById('12hrCreditsButton').textContent = 'Log in to claim';
-            document.getElementById('24hrCreditsButton').textContent = 'Log in to claim';
-            document.getElementById('168hrCreditsButton').textContent = 'Log in to claim';
+        if (userProfileUpdateInProgress) {
+            console.log("Update already in progress, skipping");
             return;
-        } else {
-            document.getElementById('loggedIn').textContent = 'true';
         }
         
-        document.getElementById('creditsDisplay').textContent = userProfile?.credits ?? 0;
+        userProfileUpdateInProgress = true;
+        console.log("Starting user profile update");
+        
+        try {
+            // Add timeout to the fetch request to prevent hanging
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+            
+            let userProfileRaw = await fetch('/userProfile', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                signal: controller.signal
+            });
 
-        // update the time left on the buttons using current time and the dailies timestamps, convert it from ms to hours mins seconds left, if it's over 3 hours then show it as claimable:
+            clearTimeout(timeoutId);
 
-        timestamp3hr = userProfile?.dailies?.timestamp3hr ?? "0";
-        timestamp3hr = Number(timestamp3hr)
-        timestamp3hrDifferenceRequired = 10800000
+            if (!userProfileRaw.ok) {
+                throw new Error(`HTTP error: ${userProfileRaw.status}`);
+            }
 
-        timestamp12hr = userProfile?.dailies?.timestamp12hr ?? "0";
-        timestamp12hr = Number(timestamp12hr)
-        timestamp12hrDifferenceRequired = 43200000
+            // res.send({ userProfile: userProfile}) is what the server uses to send it back to the client:
+            let userProfileData = await userProfileRaw.json();
+            
+            // Update the global userProfile variable
+            if (userProfileData?.userProfile) {
+                userProfileNavigation = userProfileData.userProfile;
+                console.log("User profile data updated:", userProfileNavigation);
+                
+                // Schedule display update after successful data fetch
+                setTimeout(() => {
+                    updateUserProfileDisplay();
+                }, 500);
+            } else {
+                console.warn("Received empty or invalid user profile data");
+            }
+        } catch (error) {
+            // Don't log AbortError as it's expected when timeout occurs
+            if (error.name !== 'AbortError') {
+                console.error("Error fetching user profile:", error);
+            }
+        } finally {
+            userProfileUpdateInProgress = false;
+        }
+    }, 2000); // Increased throttle to 2000ms
 
-        timestamp24hr = userProfile?.dailies?.timestamp24hr ?? "0";
-        timestamp24hr = Number(timestamp24hr)
-        timestamp24hrDifferenceRequired = 86400000
-
-        timestamp168hr = userProfile?.dailies?.timestamp168hr ?? "0";
-        timestamp168hr = Number(timestamp168hr)
-        timestamp168hrDifferenceRequired = 604800000
-
-        currentTime = new Date().getTime();
-
-        if (timestamp3hr + timestamp3hrDifferenceRequired < currentTime || timestamp3hr == 0) {
-            document.getElementById('3hrCreditsButton').disabled = false;
-            document.getElementById('3hrCreditsButtonTimeLeft').textContent = 'Claimable';
-        } else {
-            document.getElementById('3hrCreditsButton').disabled = true;
-            timeLeft = timestamp3hr + timestamp3hrDifferenceRequired - currentTime;
-            timeLeftHours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            timeLeftMinutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-            timeLeftSeconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-            document.getElementById('3hrCreditsButtonTimeLeft').textContent = timeLeftHours + 'h ' + timeLeftMinutes + 'm ' + timeLeftSeconds + 's';
+    // Helper function to forcefully update profile elements
+    function forceUpdateProfileElements() {
+        if (!userProfileNavigation) {
+            console.warn("Cannot update profile elements: userProfileNavigation is null");
+            return;
+        }
+        
+        // Initialize oldUserProfile if it doesn't exist
+        if (!oldUserProfile) {
+            oldUserProfile = {};
+        }
+        
+        const profileImgSrc = userProfileNavigation.profileImg? userProfileNavigation.profileImg : 'http://www.jscammie.com/noimagefound.png';
+        const username = userProfileNavigation.username? userProfileNavigation.username : 'User';
+        const level = userProfileNavigation.level? userProfileNavigation.level : '1';
+        const exp = userProfileNavigation.exp?.toString()? userProfileNavigation.exp?.toString() : '0';
+        
+        // Direct DOM manipulation for desktop elements only
+        const elements = {
+            'userProfileImg': profileImgSrc
+        };
+        
+        const textElements = {
+            'userProfileUsername': username,
+            'userProfileLevel': level,
+            'userProfileExp': exp
+        };
+        
+        for (const [id, src] of Object.entries(elements)) {
+            // dont update if its the same image:
+            if (src == oldUserProfile[id]) {
+                continue;
+            }
+            const element = document.getElementById(id);
+            if (element) {
+                element.setAttribute('src', src);
+                
+                // Force image reload
+                element.onload = null;
+                const newImg = new Image();
+                newImg.onload = function() {
+                    element.src = this.src;
+                };
+                newImg.src = src + '?t=' + new Date().getTime();
+                oldUserProfile[id] = src;
+            } else {
+                console.warn(`Element with id ${id} not found`);
+            }
         }
 
-        if (timestamp12hr + timestamp12hrDifferenceRequired < currentTime || timestamp12hr == 0) {
-            document.getElementById('12hrCreditsButton').disabled = false;
-            document.getElementById('12hrCreditsButtonTimeLeft').textContent = 'Claimable';
-        } else {
-            document.getElementById('12hrCreditsButton').disabled = true;
-            timeLeft = timestamp12hr + timestamp12hrDifferenceRequired - currentTime;
-            timeLeftHours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            timeLeftMinutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-            timeLeftSeconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-            document.getElementById('12hrCreditsButtonTimeLeft').textContent = timeLeftHours + 'h ' + timeLeftMinutes + 'm ' + timeLeftSeconds + 's';
+        for (const [id, text] of Object.entries(textElements)) {
+            // dont update if its the same text:
+            if (text == oldUserProfile[id]) {
+                continue;
+            }
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = text;
+                oldUserProfile[id] = text;
+            } else {
+                console.warn(`Element with id ${id} not found`);
+            }
+        }
+    }
+    
+    // Update user profile info in the dropdown and mobile view
+    const updateUserProfileDisplay = () => {
+        // console.log("Running updateUserProfileDisplay with userProfileNavigation:", userProfileNavigation);
+        
+        try {
+            // Update profile elements in the dropdown menu
+            forceUpdateProfileElements();
+            
+            // Get UI elements with null checks
+            const loggedInElement = document.getElementById('loggedIn');
+            const serverLoginStateElement = document.getElementById('serverLoginState');
+            const creditsDisplayElement = document.getElementById('creditsDisplay');
+            const btn3hr = document.getElementById('3hrCreditsButton');
+            const btn12hr = document.getElementById('12hrCreditsButton');
+            const btn24hr = document.getElementById('24hrCreditsButton');
+            const btn168hr = document.getElementById('168hrCreditsButton');
+            
+            // Additional check: Are profile elements visible on the page?
+            // This is another way to determine if the user is logged in
+            const profileDisplayElement = document.getElementById('profileDisplay');
+            const userProfileDivElement = document.getElementById('userProfileDiv');
+            const hasVisibleProfileElements = !!profileDisplayElement || !!userProfileDivElement;
+            
+            // Check if the session indicates user is logged in
+            // First check the server-provided login state, then fall back to the local state
+            const serverIsLoggedIn = serverLoginStateElement ? serverLoginStateElement.textContent === 'true' : false;
+            const localIsLoggedIn = loggedInElement ? loggedInElement.textContent === 'true' : false;
+            const isLoggedIn = serverIsLoggedIn || localIsLoggedIn || hasVisibleProfileElements;
+            
+            // Update login status and credits
+            if (userProfileNavigation == null || userProfileNavigation == undefined) {
+                if (loggedInElement) loggedInElement.textContent = isLoggedIn ? 'true' : 'false';
+                
+                // Only show "Log in to claim" if user is actually not logged in
+                if (!isLoggedIn) {
+                    // set the creditsDisplay to 0 if not logged in
+                    if (creditsDisplayElement) creditsDisplayElement.textContent = '0';
+                    if (btn3hr) btn3hr.textContent = 'Log in to claim';
+                    if (btn12hr) btn12hr.textContent = 'Log in to claim';
+                    if (btn24hr) btn24hr.textContent = 'Log in to claim';
+                    if (btn168hr) btn168hr.textContent = 'Log in to claim';
+                    return;
+                }
+                
+                // If logged in but profile not loaded yet, just exit without changing button texts
+                if (isLoggedIn) {
+                    console.log("User is logged in but profile not loaded yet");
+                    // Only retry update if it's been some time since the last attempt
+                    setTimeout(() => {
+                        updateUserProfile();
+                    }, 1000);
+                    return;
+                }
+                
+                return;
+            } else {
+                if (loggedInElement) loggedInElement.textContent = 'true';
+            }
+
+            // Update credits display
+            let roundedCredits = Math.floor(userProfileNavigation?.credits ?? 0);
+            if (creditsDisplayElement) creditsDisplayElement.textContent = roundedCredits.toString();
+
+            // Update the dailies timers
+            updateDailiesTimers();
+        } catch (error) {
+            console.error("Error updating profile display:", error);
+        }
+    };
+    
+    // Separate function to update the dailies timers
+    function updateDailiesTimers() {
+        if (!userProfileNavigation) return;
+        
+        // update the time left on the buttons using current time and the dailies timestamps:
+        const currentTime = new Date().getTime();
+        
+        const timestamp3hr = Number(userProfileNavigation?.dailies?.timestamp3hr ?? "0");
+        const timestamp3hrDifferenceRequired = 10800000;
+
+        const timestamp12hr = Number(userProfileNavigation?.dailies?.timestamp12hr ?? "0");
+        const timestamp12hrDifferenceRequired = 43200000;
+
+        const timestamp24hr = Number(userProfileNavigation?.dailies?.timestamp24hr ?? "0");
+        const timestamp24hrDifferenceRequired = 86400000;
+
+        const timestamp168hr = Number(userProfileNavigation?.dailies?.timestamp168hr ?? "0");
+        const timestamp168hrDifferenceRequired = 604800000;
+
+        // Get button elements with null checks
+        const btn3hr = document.getElementById('3hrCreditsButton');
+        const btn3hrTimeLeft = document.getElementById('3hrCreditsButtonTimeLeft');
+        const btn12hr = document.getElementById('12hrCreditsButton');
+        const btn12hrTimeLeft = document.getElementById('12hrCreditsButtonTimeLeft');
+        const btn24hr = document.getElementById('24hrCreditsButton');
+        const btn24hrTimeLeft = document.getElementById('24hrCreditsButtonTimeLeft');
+        const btn168hr = document.getElementById('168hrCreditsButton');
+        const btn168hrTimeLeft = document.getElementById('168hrCreditsButtonTimeLeft');
+        
+        // 3hr button
+        if (btn3hr && btn3hrTimeLeft) {
+            if (timestamp3hr + timestamp3hrDifferenceRequired < currentTime || timestamp3hr == 0) {
+                btn3hr.disabled = false;
+                btn3hrTimeLeft.textContent = 'Claimable';
+            } else {
+                btn3hr.disabled = true;
+                const timeLeft = timestamp3hr + timestamp3hrDifferenceRequired - currentTime;
+                const timeLeftHours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const timeLeftMinutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+                const timeLeftSeconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+                btn3hrTimeLeft.textContent = timeLeftHours + 'h ' + timeLeftMinutes + 'm ' + timeLeftSeconds + 's';
+            }
         }
 
-        if (timestamp24hr + timestamp24hrDifferenceRequired < currentTime || timestamp24hr == 0) {
-            document.getElementById('24hrCreditsButton').disabled = false;
-            document.getElementById('24hrCreditsButtonTimeLeft').textContent = 'Claimable';
-        } else {
-            document.getElementById('24hrCreditsButton').disabled = true;
-            timeLeft = timestamp24hr + timestamp24hrDifferenceRequired - currentTime;
-            timeLeftHours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            timeLeftMinutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-            timeLeftSeconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-            document.getElementById('24hrCreditsButtonTimeLeft').textContent = timeLeftHours + 'h ' + timeLeftMinutes + 'm ' + timeLeftSeconds + 's';
+        // 12hr button
+        if (btn12hr && btn12hrTimeLeft) {
+            if (timestamp12hr + timestamp12hrDifferenceRequired < currentTime || timestamp12hr == 0) {
+                btn12hr.disabled = false;
+                btn12hrTimeLeft.textContent = 'Claimable';
+            } else {
+                btn12hr.disabled = true;
+                const timeLeft = timestamp12hr + timestamp12hrDifferenceRequired - currentTime;
+                const timeLeftHours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const timeLeftMinutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+                const timeLeftSeconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+                btn12hrTimeLeft.textContent = timeLeftHours + 'h ' + timeLeftMinutes + 'm ' + timeLeftSeconds + 's';
+            }
         }
 
-        if (timestamp168hr + timestamp168hrDifferenceRequired < currentTime || timestamp168hr == 0) {
-            document.getElementById('168hrCreditsButton').disabled = false;
-            document.getElementById('168hrCreditsButtonTimeLeft').textContent = 'Claimable';
-        } else {
-            // show it as D H M S left:
-            document.getElementById('168hrCreditsButton').disabled = true;
-            timeLeft = timestamp168hr + timestamp168hrDifferenceRequired - currentTime;
-            timeLeftDays = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
-            timeLeftHours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            timeLeftMinutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-            timeLeftSeconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-            document.getElementById('168hrCreditsButtonTimeLeft').textContent = timeLeftDays + 'd ' + timeLeftHours + 'h ' + timeLeftMinutes + 'm ' + timeLeftSeconds + 's';
+        // 24hr button
+        if (btn24hr && btn24hrTimeLeft) {
+            if (timestamp24hr + timestamp24hrDifferenceRequired < currentTime || timestamp24hr == 0) {
+                btn24hr.disabled = false;
+                btn24hrTimeLeft.textContent = 'Claimable';
+            } else {
+                btn24hr.disabled = true;
+                const timeLeft = timestamp24hr + timestamp24hrDifferenceRequired - currentTime;
+                const timeLeftHours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const timeLeftMinutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+                const timeLeftSeconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+                btn24hrTimeLeft.textContent = timeLeftHours + 'h ' + timeLeftMinutes + 'm ' + timeLeftSeconds + 's';
+            }
         }
 
-        // if none of the buttons are claimable, then change the creditsText to "No rewards available":
-        if (document.getElementById('3hrCreditsButton').disabled == true && document.getElementById('12hrCreditsButton').disabled == true && document.getElementById('24hrCreditsButton').disabled == true && document.getElementById('168hrCreditsButton').disabled == true) {
-            // console.log("NO REWARDS AVAILABLE")
-            document.getElementsByClassName('creditsText')[0].textContent = "No rewards available";
+        // 168hr button
+        if (btn168hr && btn168hrTimeLeft) {
+            if (timestamp168hr + timestamp168hrDifferenceRequired < currentTime || timestamp168hr == 0) {
+                btn168hr.disabled = false;
+                btn168hrTimeLeft.textContent = 'Claimable';
+            } else {
+                // show it as D H M S left:
+                btn168hr.disabled = true;
+                const timeLeft = timestamp168hr + timestamp168hrDifferenceRequired - currentTime;
+                const timeLeftDays = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+                const timeLeftHours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const timeLeftMinutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+                const timeLeftSeconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+                btn168hrTimeLeft.textContent = timeLeftDays + 'd ' + timeLeftHours + 'h ' + timeLeftMinutes + 'm ' + timeLeftSeconds + 's';
+            }
         }
-    }, 1000);
+    }
 
 </script>
 
@@ -144,8 +341,10 @@
 /* Navigation Bar */
 .topNavBar {
     color: #fff;
-    padding: 10px 20px;
+    padding: 5px 20px;
     background-color: rgba(0, 0, 0, 0.2);
+    position: relative;
+    z-index: 1000;
 }
 
 .navContainer {
@@ -160,64 +359,79 @@
 .navigationLinksWrapper {
     display: flex;
     align-items: center;
+    gap: 8px;
 }
 
 .navigationLink {
     color: #fff;
     text-decoration: none;
-    padding: 7px 10px;
-    margin: 0 2px;
-    border-radius: 5px;
-    transition: background-color 0.3s, color 0.3s;
-    border: 2px solid rgba(0, 140, 255, 0.2)
+    padding: 8px 12px;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    font-size: 0.95em;
+    white-space: nowrap;
 }
 
 .navigationLink:hover,
 .navigationLink:focus {
-    background-color: var(--highlight-colour);
-    border: 2px solid rgb(146, 206, 255);
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: translateY(-1px);
 }
 
 .navigationLinkActive {
-    background-color: var(--highlight-colour);
-    border: 2px solid rgb(146, 206, 255);
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+    font-weight: 500;
 }
 
 /* Button Styling */
 #creditsNav {
-    background-color: var(--highlight-colour);
-    border: none;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     color: #fff;
-    padding: 10px 15px;
+    padding: 8px 12px;
     margin-left: 10px;
-    border-radius: 5px;
+    border-radius: 6px;
     cursor: pointer;
     display: flex;
     align-items: center;
-    transition: background-color 0.3s;
+    transition: all 0.3s ease;
+    font-size: 0.95em;
 }
 
 #creditsNav:hover {
-    background-color: rgba(9, 255, 0, 0.199)
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: translateY(-1px);
 }
 
 #creditsDisplay {
     margin-left: 5px;
-    font-weight: bold;
+    font-weight: 500;
 }
 
 /* Dark Mode Button */
 #darkModeButton {
-    background: none;
-    border: 2px solid #fff;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     color: #fff;
-    font-size: 1.25em;
+    font-size: 1.1em;
     cursor: pointer;
-    transition: color 0.3s;
+    transition: all 0.3s ease;
+    padding: 8px 12px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 #darkModeButton:hover {
-    color: #ddd;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: translateY(-1px);
 }
 
 #darkModeIcon {
@@ -225,81 +439,70 @@
     transition: transform 0.3s;
 }
 
-/* Dropdown Menu for Mobile */
+/* Mobile Menu Button */
+#mobileMenuButton {
+    display: none;
+    font-size: 1.5em;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+    z-index: 1001;
+}
+
+#mobileMenuButton:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: translateY(-1px);
+}
+
+#mobileMenuButton.active {
+    transform: rotate(90deg);
+}
+
+/* Mobile Menu */
 .mobileMenu {
     display: none;
     flex-direction: column;
-    background-color: rgba(0, 0, 0, 0.7) !important;
-    border: 2px solid #fff;
-    padding: 10px;
-    position: absolute;
-    top: 60px; /* Adjust according to your header height */
-    left: 20px;
-    border-radius: 5px;
-    z-index: 1000;
+    background-color: rgba(0, 0, 0, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 12px;
+    position: fixed;
+    top: 60px;
+    left: 0;
+    right: 0;
+    border-radius: 0 0 15px 15px;
+    z-index: 999;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.mobileMenu.active {
+    display: grid;
 }
 
 .mobileMenu a {
-    padding: 10px;
-    margin: 5px 0;
+    padding: 10px 12px;
+    margin: 4px 0;
     color: #fff;
     text-decoration: none;
     text-align: left;
     display: block;
+    border-radius: 6px;
+    font-size: 0.95em;
+    transition: all 0.3s ease;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .mobileMenu a:hover {
-    background-color: var(--highlight-colour);
-}
-
-/* Mobile Menu Button */
-#mobileMenuButton {
-    display: none;
-    font-size: 2em;
-    background: none;
-    border: none;
-    color: #fff;
-    cursor: pointer;
-    transition: transform 0.3s;
-}
-
-/* animation for the mobile navigation button wobbling */
-
-/* keyframes: */
-
-@keyframes wobble {
-    0% {
-        transform: rotate(0deg);
-    }
-
-    15% {
-        transform: rotate(-5deg);
-    }
-
-    30% {
-        transform: rotate(3deg);
-    }
-
-    45% {
-        transform: rotate(-3deg);
-    }
-
-    60% {
-        transform: rotate(2deg);
-    }
-
-    75% {
-        transform: rotate(-1deg);
-    }
-
-    100% {
-        transform: rotate(0deg);
-    }
-}
-
-/* apply the keyframes to the mobileMenuButton: */
-#mobileMenuButton {
-    animation: wobble 1s infinite;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: translateX(5px);
 }
 
 /* Responsive Styles */
@@ -313,8 +516,64 @@
     }
 
     .mobileMenu {
-        display: flex;
         display: none;
+    }
+}
+
+/* Grid layouts for different screen sizes */
+@media screen and (max-width: 800px) {
+    .mobileMenu.active {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        padding: 12px;
+    }
+}
+
+@media screen and (max-width: 600px) {
+    .mobileMenu.active {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+        padding: 8px;
+    }
+}
+
+@media screen and (max-width: 400px) {
+    .mobileMenu.active {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 4px;
+        padding: 6px;
+    }
+}
+
+/* Handle small heights */
+@media screen and (max-height: 10000px) {
+    .mobileMenu.active {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 4px;
+        padding: 6px;
+    }
+
+    .mobileMenu a {
+        padding: 6px;
+        margin: 1px 0;
+        font-size: 13px;
+        min-height: 35px;
+    }
+}
+
+/* Handle very small heights */
+@media screen and (max-height: 400px) {
+    .mobileMenu.active {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 3px;
+        padding: 4px;
+    }
+
+    .mobileMenu a {
+        padding: 4px;
+        margin: 1px 0;
+        font-size: 12px;
+        min-height: 30px;
     }
 }
 </style>
@@ -332,11 +591,7 @@
             <a class="navigationLink" href="https://discord.gg/AvbQuRmh7t">Discord</a>
             <a id="navigationLink-suggestions" class="navigationLink" href="/suggestions">Suggestions</a>
             <a id="navigationLink-redeem" class="navigationLink" href="/redeem-code">Redeem</a>
-            <% if (session.loggedIn) { %>
-                <a id="navigationLink-history" class="navigationLink" href="/image-history">History</a>
-                <a class="navigationLink" href="/logout">Logout</a>
-                <a id="navigationLink-profile" class="navigationLink" href="/profile/<%=session.accountId%>">My Profile</a>
-            <% } else { %>
+            <% if (!session.loggedIn) { %>
                 <a class="navigationLink" href="/login">Login</a>
             <% } %>
             
@@ -358,8 +613,6 @@
             <a href="/paypal-shop">Buy Credits</a>
             <% if (session.loggedIn) { %>
                 <a href="/image-history">History</a>
-                <a href="/logout">Logout</a>
-                <a href="/profile/<%=session.accountId%>">My Profile</a>
             <% } else { %>
                 <a href="/login">Login</a>
             <% } %>
@@ -371,35 +624,49 @@
             <button id="notificationsNav">🔔</button>
         </div>
         
-        <!-- settings button that opens jscammie.com/settings: -->
-        <div id="settingsDiv">
-            <button id="settingsNav" onclick='window.open("/settings/")'>⚙️</button>
+
+        <% if (session.loggedIn) { %>
+        <!-- User Profile Display -->
+        <div id="userProfileDiv" class="userProfileDiv">
+            <div class="profileDisplay" id="profileDisplay">
+                <img id="userProfileImg" class="userProfileImg" src="http://www.jscammie.com/noimagefound.png" alt="Profile">
+                <span id="userProfileUsername" class="userProfileUsername">User</span>
+            </div>
+            <div class="profileDropdown" id="profileDropdown">
+                <div class="profileStats">
+                    <div class="profileStat">
+                        <span class="statLabel">Level:</span>
+                        <span id="userProfileLevel" class="statValue">1</span>
+                    </div>
+                    <div class="profileStat">
+                        <span class="statLabel">EXP:</span>
+                        <span id="userProfileExp" class="statValue">0</span>
+                    </div>
+                </div>
+                <div class="profileLinks">
+                    <a href="/profile/<%=session.accountId%>" class="profileLink">My Profile</a>
+                    <a href="/image-history" class="profileLink">Image History</a>
+                    <a href="/settings/" class="profileLink">Settings</a>
+                    <button id="darkModeButton" class="profileLink darkModeButton">
+                        <span id="darkModeIcon" class="darkModeIcon">🌙</span>
+                        <span class="darkModeText">Dark Mode</span>
+                    </button>
+                    <a href="/logout" class="profileLink">Logout</a>
+                </div>
+            </div>
         </div>
-        
+        <% } %>
 
         <!-- Dark Mode Button -->
-        <button id="darkModeButton">
-            <span id="darkModeIcon">🌙</span>
-        </button>
+        <% if (session.loggedIn) { %>
+            <button id="darkModeButton" style="display: none;">
+                <span id="darkModeIcon">🌙</span>
+            </button>
+        <% } %>
     </div>
 </nav>
 
 <style>
-    /* make it so the credits text is below the credits button and centered: */
-    .creditsText {
-        position: absolute;
-        text-align: center;
-        font-size: 1em;
-        font-weight: bold;
-        color: white;
-        margin-top: -5px;
-        cursor: pointer;
-        background-color: rgba(0, 0, 0, 0.5);
-        padding: 5px;
-        border-radius: 5px;
-        transition: background-color 0.3s ease, transform 0.2s ease;
-        z-index: 1000;
-    }
 
     .creditsHowToSummary {
         background-color: rgba(0, 0, 0, 0.1);
@@ -415,10 +682,279 @@
         background-color: rgba(0,0,0,0);
         border: 2px solid #ffffff;
     }
+
+    /* User Profile Styles */
+    .userProfileDiv {
+        position: relative;
+        margin-left: 10px;
+    }
+
+    .profileDisplay {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        padding: 5px 10px;
+        border-radius: 20px;
+        border: 1px solid var(--border-colour);
+        background-color: var(--background-colour);
+        transition: all 0.3s ease;
+    }
+
+    .profileDisplay:hover {
+        background-color: var(--highlight-colour);
+        border-color: var(--border-colour);
+        transform: translateY(-1px);
+    }
+
+    .userProfileImg {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .userProfileUsername {
+        color: white;
+        font-weight: 500;
+        max-width: 100px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .profileDropdown {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        background-color: var(--background-colour);
+        border: 1px solid var(--border-colour);
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        padding: 12px;
+        min-width: 200px;
+        z-index: 1000;
+        display: none;
+    }
+
+    .userProfileDiv:hover .profileDropdown {
+        display: none;
+    }
+
+    .profileStats {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 12px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--border-colour);
+    }
+
+    .profileStat {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .statLabel {
+        font-size: 0.8em;
+        color: var(--text-colour);
+        opacity: 0.7;
+    }
+
+    .statValue {
+        font-size: 1.1em;
+        font-weight: bold;
+        color: var(--text-colour);
+    }
+
+    .profileLinks {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .profileLink {
+        color: var(--text-colour);
+        text-decoration: none;
+        padding: 8px 12px;
+        border-radius: 4px;
+        transition: background-color 0.3s ease;
+        display: flex;
+        align-items: center;
+    }
+
+    .profileLink:hover {
+        background-color: var(--highlight-colour);
+    }
+
+    /* Dark Mode Button Styles */
+    .darkModeButton {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: none;
+        border: none;
+        width: 100%;
+        text-align: left;
+        padding: 8px 12px;
+        color: var(--text-colour);
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        font-size: 1em;
+        font-family: inherit;
+    }
+
+    .darkModeButton:hover {
+        background-color: var(--highlight-colour);
+    }
+
+    .darkModeIcon {
+        font-size: 1.2em;
+        margin-right: 8px;
+        transition: transform 0.3s ease;
+    }
+
+    .darkModeText {
+        flex: 1;
+    }
+
+    .darkModeButton:hover .darkModeIcon {
+        transform: rotate(15deg);
+    }
+
+    /* Dark Mode Styles */
+    .dark-mode {
+        --background-colour: #1a1a1a;
+        --text-colour: #ffffff;
+        --border-colour: #333333;
+        --highlight-colour: #2a2a2a;
+    }
+
+    /* Show dropdown when profileDisplay is clicked */
+    .profileDisplay.active + .profileDropdown {
+        display: block;
+    }
+
+    /* Mobile Profile Styles - can be removed since we're not using them anymore */
+    .mobileProfileSection {
+        display: none;
+    }
+
+    /* Make sure user profile in navbar is visible on all screen sizes */
+    @media (max-width: 1300px) {
+        .userProfileDiv {
+            display: flex;
+            margin-left: 5px;
+        }
+    }
+
+    /* Ensure profile is visible and styled correctly on mobile */
+    @media (max-width: 600px) {
+        .userProfileDiv {
+            margin-left: 5px;
+            margin-right: 5px;
+        }
+        
+        .profileDisplay {
+            padding: 5px 8px;
+        }
+        
+        .userProfileUsername {
+            max-width: 60px;
+        }
+    }
+
+    /* For very small screens, hide the username and just show the profile picture */
+    @media (max-width: 400px) {
+        .userProfileUsername {
+            display: none;
+        }
+        
+        .profileDisplay {
+            padding: 5px;
+        }
+    }
 </style>
 
 <script>
+    // User Profile Dropdown Functionality
+    let profileDisplay = document.getElementById('profileDisplay');
+    let profileDropdown = document.getElementById('profileDropdown');
 
+    if (profileDisplay && profileDropdown) {
+        // Toggle dropdown on click
+        profileDisplay.addEventListener('click', (e) => {
+            e.stopPropagation();
+            profileDisplay.classList.toggle('active');
+            profileDropdown.style.display = profileDisplay.classList.contains('active') ? 'block' : 'none';
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!profileDisplay.contains(e.target) && !profileDropdown.contains(e.target)) {
+                profileDisplay.classList.remove('active');
+                profileDropdown.style.display = 'none';
+            }
+        });
+
+        // Close dropdown when pressing Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && profileDisplay.classList.contains('active')) {
+                profileDisplay.classList.remove('active');
+                profileDropdown.style.display = 'none';
+            }
+        });
+    }
+
+    // Instead of redefining the function, call both functions in sequence
+    function updateUserProfileAndDisplay() {
+        console.log("Calling updateUserProfileAndDisplay");
+        
+        try {
+            // Call updateUserProfile which is throttled and doesn't return a Promise
+            updateUserProfile();
+            
+            // Schedule the display update separately with longer delay
+            setTimeout(() => {
+                try {
+                    console.log("Running display update");
+                    updateUserProfileDisplay();
+                } catch (error) {
+                    console.error("Error in delayed display update:", error);
+                }
+            }, 500); // Increased to 500ms
+        } catch (error) {
+            console.error("Error in updateUserProfileAndDisplay:", error);
+        }
+    }
+
+    // Execute profile display update once the DOM is loaded
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log("DOM loaded, initializing profile display");
+        
+        // Set initial login state from server-side data
+        const loginStateElement = document.getElementById('loggedIn');
+        const serverLoginStateElement = document.getElementById('serverLoginState');
+        
+        if (loginStateElement && serverLoginStateElement) {
+            loginStateElement.textContent = serverLoginStateElement.textContent;
+        }
+        
+        // Allow a small delay for all elements to be created and rendered
+        setTimeout(() => {
+            console.log("Running delayed initialization");
+            updateUserProfileAndDisplay();
+            
+            // Only do one additional update attempt with longer delay
+            setTimeout(() => {
+                console.log("Running second delayed initialization");
+                updateUserProfileAndDisplay();
+            }, 3000); // Increased to 3000ms
+        }, 500); // Increased to 500ms
+    });
+</script>
+
+<script>
     // if the current page is one of the navigation links, then highlight it by setting it to :focus :
     let currentPath = window.location.pathname;
 
@@ -477,10 +1013,6 @@
 </script>
 
 <script>
-    creditsButtonDiv = document.getElementById('creditsButtonDiv');
-    // make the credits div say "Claim free credits!" underneath the "creditsNav" ID'd button:
-    creditsButtonDiv.innerHTML += '<p class="creditsText">Click to claim credits!</p>';
-
     // center the credits text every few seconds:
     function debounce(func, wait) {
         let timeout;
@@ -494,39 +1026,14 @@
         };
     }
 
-    const centerCreditsText = debounce(() => {
-        document.getElementsByClassName('creditsText')[0].style.left = 
-            (document.getElementById('creditsNav').offsetLeft + 
-            document.getElementById('creditsNav').offsetWidth / 2 - 
-            document.getElementsByClassName('creditsText')[0].offsetWidth / 2) + 'px';
-    }, 250);
-
-    // setInterval(() => {
-    //     centerCreditsText();
-    // }, 100);
-
-    // use requestAnimationFrame to center the credits text:
-    function animateCreditsText() {
-        requestAnimationFrame(() => {
-            centerCreditsText();
-            animateCreditsText();
-        });
-    }
-
-    animateCreditsText();
-
-    // event listener for the credits text to trigger the button click:
-    document.getElementsByClassName('creditsText')[0].addEventListener('click', () => {
-        document.getElementById('creditsNav').click();
+    // event listeners for the creditsNav button to show the navigationOverlay and the notificationsPopup:
+    document.getElementById('creditsNav').addEventListener('click', () => {
+        if (document.getElementById('creditsDailyPopup').style.display == 'none') {
+            showHideCreditsPopup('show');
+        } else {
+            showHideCreditsPopup('hide');
+        }
     });
-
-    // have the creditsText background pulsate:
-    setInterval(() => {
-        document.getElementsByClassName('creditsText')[0].style.backgroundColor = 'rgba(0, 0, 0, 0.2)';
-        setTimeout(() => {
-            document.getElementsByClassName('creditsText')[0].style.backgroundColor = 'rgba(0, 0, 0, 0.4)';
-        }, 500);
-    }, 1000);
 
 </script>
 
@@ -535,10 +1042,11 @@
     #topSiteText {
         background-color: rgba(0, 0, 0, 0.2);
         color: white;
-        padding: 10px;
+        padding: 5px;
         text-align: center;
         font-size: 1em;
         font-weight: bold;
+        margin-top: 0;
     }
 </style>
 
@@ -546,23 +1054,96 @@
 
 <script>
     let topSiteTextArray = [
-        // "Low on credits? Check out the <a href='https://www.jscammie.com/paypal-shop'>'Credits Shop'</a> to buy more!",
-        "Check out the <a href='https://www.jscammie.com/booru'>'Booru'</a> for some cool user-created images & to earn credits!",
-        // "Check out the <a href='https://www.discord.gg/AvbQuRmh7t'>'Discord'</a> to compete in contests for credits and more!",
+        {
+            message: "Check out the <a id='advert-link-colour' href='https://www.jscammie.com/booru'>'Booru'</a> for some cool user-created images & to earn credits!",
+            linkcolour: "rgba(0, 255, 38, 1)",
+            active: true
+        },
+        {
+            message: "We are currently doing a contest on the <a id='advert-link-colour' href='https://www.discord.gg/AvbQuRmh7t'>'Discord'</a> for 70,000 credits! Join now to participate!",
+            linkcolour: "rgba(0, 100, 255, 1)",
+            active: true
+        },
+        {
+            message: "Check out the <a id='advert-link-colour' href='https://www.discord.gg/AvbQuRmh7t'>'Discord'</a> to compete in contests for credits and more!",
+            linkcolour: "rgba(0, 100, 255, 1)",
+            active: false
+        },
     ]
 
     let topSiteText = document.getElementById('topSiteText');
 
     // set the topSiteText to a random element from the array:
-    topSiteText.innerHTML = topSiteTextArray[Math.floor(Math.random() * topSiteTextArray.length)];
+    // topSiteText.innerHTML = topSiteTextArray[Math.floor(Math.random() * topSiteTextArray.length)];
+
+    function randomIndex(array) {
+        // remove non active arrays:
+        array = array.filter(element => element.active == true);
+        return Math.floor(Math.random() * array.length);
+    }
+
+    // have the topSiteText change every 25 seconds:
+    let topSiteTextIndex = randomIndex(topSiteTextArray);
+
+    function changeTopSiteText() {
+        topSiteTextIndex = randomIndex(topSiteTextArray);
+        topSiteText.innerHTML = topSiteTextArray[topSiteTextIndex].message;
+        document.getElementById('advert-link-colour').style.color = topSiteTextArray[topSiteTextIndex].linkcolour;
+    }
+
+    setInterval(() => {
+        changeTopSiteText();
+    }, 25000);
+
+    changeTopSiteText();
 
 </script>
 
 <script>
-    // Mobile Menu Toggle
-    document.getElementById('mobileMenuButton').addEventListener('click', function () {
-        const mobileMenu = document.getElementById('mobileMenu');
-        mobileMenu.style.display = mobileMenu.style.display === 'none' || mobileMenu.style.display === '' ? 'block' : 'none';
+    // Mobile Menu Toggle with improved animation
+    const mobileMenuButton = document.getElementById('mobileMenuButton');
+    const mobileMenu = document.getElementById('mobileMenu');
+    const navigationOverlay = document.getElementById('navigationOverlay');
+
+    function toggleMobileMenu() {
+        mobileMenuButton.classList.toggle('active');
+        mobileMenu.classList.toggle('active');
+        navigationOverlay.style.display = mobileMenu.classList.contains('active') ? 'block' : 'none';
+        
+        // Prevent body scrolling when menu is open
+        document.body.style.overflow = mobileMenu.classList.contains('active') ? 'hidden' : '';
+    }
+
+    mobileMenuButton.addEventListener('click', toggleMobileMenu);
+
+    // Close menu when clicking overlay
+    navigationOverlay.addEventListener('click', () => {
+        if (mobileMenu.classList.contains('active')) {
+            toggleMobileMenu();
+        }
+    });
+
+    // Close menu when clicking a link
+    mobileMenu.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', () => {
+            if (mobileMenu.classList.contains('active')) {
+                toggleMobileMenu();
+            }
+        });
+    });
+
+    // Handle orientation change
+    window.addEventListener('orientationchange', () => {
+        if (mobileMenu.classList.contains('active')) {
+            toggleMobileMenu();
+        }
+    });
+
+    // Close menu on escape key
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && mobileMenu.classList.contains('active')) {
+            toggleMobileMenu();
+        }
     });
 </script>
 
@@ -742,7 +1323,16 @@
     const MAX_NOTIFICATIONS = 50;
 
     function getNotifications() {
-        // if the user is not logged in, then don't get notifications:
+        // Skip if not logged in or if the request is already in progress
+        if (document.getElementById('loggedIn')?.textContent !== 'true' || window.notificationsRequestInProgress) {
+            return;
+        }
+        
+        window.notificationsRequestInProgress = true;
+        
+        // Add timeout to the fetch request
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
         
         fetch('/get-notifications', {
             method: 'POST',
@@ -750,7 +1340,8 @@
             body: JSON.stringify({
                 notificationsReceived,
                 popupOpened: document.getElementById('notificationsPopup').classList.contains('activeNotificationsPopup')
-            })
+            }),
+            signal: controller.signal
         })
         .then(response => response.json())
         .then(data => {
@@ -771,6 +1362,16 @@
             }
 
             buildNotificationsFromArray(data.notificationsChecked);
+        })
+        .catch(error => {
+            // Don't log AbortError as it's expected when timeout occurs
+            if (error.name !== 'AbortError') {
+                console.error("Error fetching notifications:", error);
+            }
+        })
+        .finally(() => {
+            clearTimeout(timeoutId);
+            window.notificationsRequestInProgress = false;
         });
     }
 
@@ -953,22 +1554,12 @@
 
 <script>
 
-    // when the creditsNav button is clicked, show the creditsDailyPopup: on the center of the screen:
+    // when the creditsNav button is clicked, show the creditsDailyPopup:
     document.getElementById('creditsNav').addEventListener('click', () => {
         if (document.getElementById('creditsDailyPopup').style.display == 'none') {
-            // make it side by side the divs inside it:
-            document.getElementById('creditsDailyPopup').style.display = 'inline-block';
+            showHideCreditsPopup('show');
         } else {
-            document.getElementById('creditsDailyPopup').style.display = 'none';
-        }
-    });
-
-    document.getElementById('creditsText').addEventListener('click', () => {
-        if (document.getElementById('creditsDailyPopup').style.display == 'none') {
-            // make it side by side the divs inside it:
-            document.getElementById('creditsDailyPopup').style.display = 'inline-block';
-        } else {
-            document.getElementById('creditsDailyPopup').style.display = 'none';
+            showHideCreditsPopup('hide');
         }
     });
 
@@ -1021,6 +1612,8 @@
         }).then(response => response.json())
             .then(data => {
                 // console.log(data);
+                // Update user profile display after claiming credits
+                updateUserProfileAndDisplay();
             });
     }
 
@@ -1040,7 +1633,7 @@
         sendDailiesRequest('168hr');
     });
 
-    updateUserProfile()
+    updateUserProfileAndDisplay()
 
 </script>
 
@@ -1062,64 +1655,70 @@
 <script>
     const darkModeButton = document.getElementById('darkModeButton');
     const darkModeIcon = document.getElementById('darkModeIcon');
+    const docuBody = document.body;
+    const savedDarkMode = localStorage.getItem('darkMode') === 'true';
 
-    function toggleDarkMode(darkmodeStatus) {
-        // console.log(darkmodeStatus + " darkmodeStatus")
-        if (darkmodeStatus == "false") {
-            document.body.classList.remove('dark');
-            document.getElementsByClassName('topNavBar')[0].classList.remove('dark');
-            darkModeIcon.textContent = '☀️';
-        } if (darkmodeStatus == "true") {
-            document.body.classList.add('dark');
-            document.getElementsByClassName('topNavBar')[0].classList.add('dark');
-            darkModeIcon.textContent = '🌙';
-        }
+    // Apply saved dark mode preference
+    if (savedDarkMode) {
+        docuBody.classList.add('dark-mode');
+        darkModeIcon.textContent = '☀️';
     }
 
-
-
+    // Toggle dark mode
     darkModeButton.addEventListener('click', () => {
-        fetch('/toggle-darkmode', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    darkmode: true
-                })
-            });
-        if (document.body.classList.contains('dark')) {
-            toggleDarkMode("false")
-        } else {
-            toggleDarkMode("true")
-        }
-    });
+        docuBody.classList.toggle('dark-mode');
+        const isDarkMode = docuBody.classList.contains('dark-mode');
+        localStorage.setItem('darkMode', isDarkMode);
+        darkModeIcon.textContent = isDarkMode ? '☀️' : '🌙';
 
+        // send a request to the server to update the dark mode:
+        fetch('/toggle-darkmode', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                isDarkMode: isDarkMode.toString() // Convert boolean to string
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Dark mode updated:', data.darkmode);
+        })
+        .catch(error => {
+            console.error('Error updating dark mode:', error);
+        });
+    });
+    
+    // Function to toggle dark mode based on a boolean value
+    function toggleDarkMode(isDarkMode) {
+        if (isDarkMode === 'true') {
+            docuBody.classList.add('dark-mode');
+            if (darkModeIcon) darkModeIcon.textContent = '☀️';
+        } else {
+            docuBody.classList.remove('dark-mode');
+            if (darkModeIcon) darkModeIcon.textContent = '🌙';
+        }
+    }
 </script>
 
-<% if (session.darkmode == true) { %>
-    <span hidden id="isDarkMode">true</span>
-<% } if (session.darkmode == false) { %>
-    <span hidden id="isDarkMode">false</span>
-<% } %>
+<span hidden id="isDarkMode"><%= session.darkmode ? 'true' : 'false' %></span>
 
 <script>
-    
     document.addEventListener('DOMContentLoaded', (event) => {
         // Temporarily disable transitions
         document.body.classList.add('no-transition');
         document.getElementsByClassName('topNavBar')[0].classList.add('no-transition');
 
-        const isDarkMode = document.getElementById('isDarkMode').textContent
-        toggleDarkMode(isDarkMode); // Assuming toggleDarkMode is a function that correctly toggles the dark mode.
+        const isDarkMode = document.getElementById('isDarkMode').textContent;
+        toggleDarkMode(isDarkMode);
 
-        // Use setTimeout to delay the removal of 'no-transition', allowing changes to apply without transition
+        // Use setTimeout to delay the removal of 'no-transition'
         setTimeout(() => {
             document.body.classList.remove('no-transition');
             document.getElementsByClassName('topNavBar')[0].classList.remove('no-transition');
-        }, 50); // 50 milliseconds is usually enough, but this can be adjusted as needed
+        }, 50);
     });
-
 </script>
 
 
@@ -1133,20 +1732,30 @@
         }
     }
 
+    function showHideCreditsPopup(show) {
+        if (show == 'show') {
+            document.getElementById('creditsDailyPopup').style.display = 'block';
+            showHideNavigationOverlay('show');
+        } else if (show == 'hide') {
+            document.getElementById('creditsDailyPopup').style.display = 'none';
+            showHideNavigationOverlay('hide');
+        }
+    }
+
     // add an event listener to the navigationOverlay to hide it when clicked:
     document.getElementById('navigationOverlay').addEventListener('click', () => {
-        showHideNavigationOverlay('hide');
-        document.getElementById('creditsDailyPopup').style.display = 'none';
+        showHideCreditsPopup('hide');
         document.getElementById('notificationsPopup').classList.remove('activeNotificationsPopup');
+        document.getElementById('creditsDailyPopup').style.display = 'none';
     });
 
     // event listeners for the creditsNav button to show the navigationOverlay and the notificationsPopup:
     document.getElementById('creditsNav').addEventListener('click', () => {
-        showHideNavigationOverlay('show');
-    });
-
-    document.getElementById('notificationsNav').addEventListener('click', () => {
-        showHideNavigationOverlay('show');
+        if (document.getElementById('creditsDailyPopup').style.display == 'none') {
+            showHideCreditsPopup('show');
+        } else {
+            showHideCreditsPopup('hide');
+        }
     });
 
     // add ESC keyboard event listener to hide the navigationOverlay and any other popups if active
@@ -1375,11 +1984,24 @@
 
     let intervalIds = [];
     <% if (session.loggedIn) { %> 
-        // Check for new notifications and update the user profile every 2 seconds
-        let notificationsInterval = setInterval(getNotifications, 2000);
-        let profileUpdateInterval = setInterval(updateUserProfile, 1000);
+        // Initial load - just once to get started
+        getNotifications();
+        updateUserProfileAndDisplay();
 
-        intervalIds.push(notificationsInterval, profileUpdateInterval);
+        // once everything else has loaded:
+        document.addEventListener('DOMContentLoaded', () => {
+            // Use less aggressive intervals
+            let notificationsInterval = setInterval(getNotifications, 10000); // 10 seconds
+            let profileUpdateInterval = setInterval(updateUserProfileAndDisplay, 30000); // 30 seconds
+
+            setTimeout(() => {
+                clearInterval(profileUpdateInterval);
+                let infrequentProfileUpdate = setInterval(updateUserProfileAndDisplay, 2000);
+                intervalIds.push(infrequentProfileUpdate);
+            }, 2000);
+
+            intervalIds.push(notificationsInterval, profileUpdateInterval);
+        });
     <% } %>
 
     // Add cleanup function to be called when page unloads

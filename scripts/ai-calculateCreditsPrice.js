@@ -1,38 +1,32 @@
 function getFastqueuePrice(loraCount, model) {
 
 	let dynamicCreditsPrice = 0
-	const baseCreditsPrice = 20
+	const baseCreditsPrice = 18
 
 	dynamicCreditsPrice = baseCreditsPrice
 
 	// split the model on the -, if there isnt a - then make it sd15:
 	model = model.split('-')[0] || 'sd15'
 
-	console.log(`Model: ${model}`)
-
 	switch(model) {
 		case 'sd15':
-			loraModifier = 1.3
+			loraModifier = 1.5
 			break
 		case 'pdxl':
-			dynamicCreditsPrice = dynamicCreditsPrice * 2.5
-			loraModifier = 4
+			dynamicCreditsPrice = dynamicCreditsPrice * 3.5
+			loraModifier = 5
 			break
 		case 'flux':
-			dynamicCreditsPrice = dynamicCreditsPrice * 3
+			dynamicCreditsPrice = dynamicCreditsPrice * 5
 			loraModifier = 5
 			break
 		case 'illustrious':
-			dynamicCreditsPrice = dynamicCreditsPrice * 2.5
+			dynamicCreditsPrice = dynamicCreditsPrice * 3.5
 			loraModifier = 4
 			break
 		default:
 			loraModifier = 1.25
 	}
-
-	// console.log(`Lora Modifier: ${loraModifier}`)
-	// console.log(`Lora Count: ${loraCount}`)
-	// console.log(`Base Credits Price: ${baseCreditsPrice}`)
 
 	// credits price before loras
 	priceBeforeLoras = dynamicCreditsPrice
@@ -40,12 +34,10 @@ function getFastqueuePrice(loraCount, model) {
 	loraModifier = loraModifier * (priceBeforeLoras / 14)
 
 	if (loraCount > 0) {
-		dynamicCreditsPrice = Math.round(dynamicCreditsPrice + (loraCount * loraModifier))
+		dynamicCreditsPrice = dynamicCreditsPrice + (loraCount * loraModifier)
 	}
 
-	// console.log(`Price Before Loras: ${priceBeforeLoras}`)
-	// console.log(`Price After Loras: ${dynamicCreditsPrice}`)
-
+	dynamicCreditsPrice = Math.round(dynamicCreditsPrice)
 
 	return dynamicCreditsPrice
 
@@ -80,7 +72,7 @@ function getExtrasPrice(extras, model='') {
 
 	if (extras.doubleImages) {
 		extrasPrice.doubleImages += getFastqueuePrice(1, model)
-		extrasPrice.doubleImages = Math.round(extrasPrice.doubleImages * 2)
+		extrasPrice.doubleImages = Math.round(extrasPrice.doubleImages * 2.5)
 		if (model.startsWith('flux')) {
 			extrasPrice.doubleImages = Math.round(extrasPrice.doubleImages * 1.25)
 		}
@@ -88,8 +80,8 @@ function getExtrasPrice(extras, model='') {
 
 	// if both upscale and doubleImages are passed, multiply them to create the bonus:
 	if (extras.upscale && extras.doubleImages) {
-		extrasPrice.upscaleBonus = Math.round(extrasPrice.upscale * 0.5)
-		extrasPrice.doubleImagesBonus = Math.round(extrasPrice.doubleImages * 1.5)
+		extrasPrice.upscaleBonus = Math.round(extrasPrice.upscale * 1)
+		extrasPrice.doubleImagesBonus = Math.round(extrasPrice.doubleImages * 1)
 	}
 
 	if (extras.removeBackground) {

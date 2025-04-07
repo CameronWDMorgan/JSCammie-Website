@@ -75,58 +75,75 @@
         </style>
 
         <script>
-        
             var userProfile = {
-                accountId: '<%=userProfile.accountId? userProfile.accountId : ''%>',
+                accountId: '<%=userProfile.accountId ? userProfile.accountId : ''%>',
                 badges: {
-                    owner: <%=userProfile.badges?.owner? userProfile.badges.owner : false%>
+                    owner: <%=userProfile.badges && userProfile.badges.owner ? userProfile.badges.owner : false%>
                 }
-            }
-        
+            };
+
+            var suggestion = {
+                suggestionId: '<%=suggestion.suggestionId%>',
+                type: '<%=suggestion.type%>',
+                title: '<%=suggestion.title%>',
+                text: '<%=suggestion.text%>',
+                safety: '<%=suggestion.safety%>',
+                promoted: <%=suggestion.promoted%>,
+                upvotes: <%=suggestion.upvotes.length%>,
+                downvotes: <%=suggestion.downvotes.length%>,
+                accountId: '<%=suggestion.accountId%>',
+                status: '<%=suggestion.status%>',
+                timestamp: '<%=suggestion.timestamp%>'
+            };
+
         </script>
-            
+                
         <h1>Suggestion: <%=suggestion.suggestionId%></h1>
 
-        <div class="suggestionDiv">
-            <p id="suggestionId" style="display: none;"><%= suggestion.suggestionId %></p>
-            <p>
-                <%= suggestion.safety === 'nsfw' ? 'NSFW' : 'SFW' %>
-                <%= suggestion.promoted ? '<a style="color: gold;" class="dont-linkify">⭐Promoted</a>' : '' %>
-            </p>
-            <a class="suggestionTopBar">
-                <%= suggestion.type === 'lora' 
-                    ? '💜Lora' 
-                    : suggestion.type === 'feature' 
-                    ? '💚Feature' 
-                    : suggestion.type === 'bug' 
-                    ? '❤️Bug' 
-                    : '🧡Model' %>
-                | <%= suggestion.title %> |
-            </a>
-            <a class="suggestionTopBar">
-                <button class="votingButton" id="upvote" <%= !userProfile ? 'disabled' : '' %>>Upvotes: <%= suggestion.upvotes.length %></button>
-                <button class="votingButton" id="downvote" <%= !userProfile ? 'disabled' : '' %>>Downvotes: <%= suggestion.downvotes.length %></button>
-            </a>
-            <br>
-            <a><%= suggestion.text %></a>
-            <br>
-            <a>
-                <% if (userProfile && (userProfile.accountId === suggestion.accountId || userProfile.badges?.owner)) { %>
+        <div id="suggestionDiv" class="suggestionDiv"></div>
+
+        <script>
+        
+            // create the suggestionDiv from the suggestion object:
+            var suggestionDiv = document.getElementById('suggestionDiv');
+            suggestionDiv.innerHTML = `
+                <p id="suggestionId" style="display: none;">${suggestion.suggestionId}</p>
+                <p>
+                    ${suggestion.safety === 'nsfw' ? 'NSFW' : 'SFW'}
+                    ${suggestion.promoted && suggestion.status.toLowerCase() === 'pending' ? '<a style="color: gold;" class="dont-linkify">⭐Promoted</a>' : ''}
+                </p>
+                <div class="suggestionTopBar">
+                    ${suggestion.type === 'lora' 
+                        ? '💜Lora' 
+                        : suggestion.type === 'feature' 
+                        ? '💚Feature' 
+                        : suggestion.type === 'bug' 
+                        ? '❤️Bug' 
+                        : '🧡Model'}
+                    | ${suggestion.title} |
+                </div>
+                <div class="suggestionTopBar">
+                    <button class="votingButton" id="upvote" ${!userProfile ? 'disabled' : ''}>Upvotes: ${suggestion.upvotes}</button>
+                    <button class="votingButton" id="downvote" ${!userProfile ? 'disabled' : ''}>Downvotes: ${suggestion.downvotes}</button>
+                </div>
+                <br>
+                <p>${suggestion.text}</p>
+                ${suggestion.timestamp ? `<p class="timestamp">Posted: ${new Date(parseInt(suggestion.timestamp)).toLocaleString()}</p>` : ''}
+                <br>
+                ${userProfile && (userProfile.accountId == suggestion.accountId || (userProfile.badges && userProfile.badges.owner)) ? `
                     <button id="removeSuggestion">Remove</button>
-                <% } %>
-                <% if (userProfile?.badges?.owner) { %>
+                ` : ''}
+                ${userProfile && userProfile.badges && userProfile.badges.owner ? `
                     <button id="addSuggestion">Add</button>
                     <button id="rejectSuggestion">Reject</button>
-                <% } %>
-                <% if (userProfile && (userProfile.accountId === suggestion.accountId || userProfile.badges?.owner)) { %>
                     <button id="toggleSuggestionSafety">NSFW/SFW</button>
-                <% } %>
-                <% if (userProfile && suggestion.status.toLowerCase() === 'pending' && !suggestion.promoted) { %>
+                ` : ''}
+                ${userProfile && suggestion.status.toLowerCase() === 'pending' && !suggestion.promoted ? `
                     <button id="promoteSuggestion">Promote (Costs 1500 Credits)</button>
-                <% } %>
-            </a>
-        </div>
-
+                ` : ''}
+            `;
+        
+        </script>
 
         <script>
             // make any links in the text clickable:
@@ -178,133 +195,4 @@
                         };
 
                         // send the remove request to the server:
-                        const response = await fetch(`/remove-suggestion`, {
-                            method: 'POST',
-                            body: JSON.stringify(requestBody),
-                            headers: {
-                                'Content-Type': 'application/json'
-                            }
-                        });
-                        const data = await response.json();
-                        // console.log(data);
-
-                        // reload page:
-                        window.location.reload();
-                    });
-                });
-
-                // apply the add suggestion logic to the new suggestions:
-                document.querySelectorAll('#addSuggestion').forEach(button => {
-                    button.addEventListener('click', async (e) => {
-                        const suggestionId = e.target.parentElement.parentElement.querySelector('#suggestionId').innerText;
-
-                        // set request body:
-                        let requestBody = {
-                            suggestionId: suggestionId,
-                            status: 'added'
-                        };
-
-                        // send the update request to the server:
-                        const response = await fetch(`/update-suggestion-status`, {
-                            method: 'POST',
-                            body: JSON.stringify(requestBody),
-                            headers: {
-                                'Content-Type': 'application/json'
-                            }
-                        });
-                        const data = await response.json();
-                        // console.log(data);
-
-                        // reload page:
-                        window.location.reload();
-                    });
-                });
-
-                // promoteSuggestion logic:
-                document.querySelectorAll('#promoteSuggestion').forEach(button => {
-                    button.addEventListener('click', async (e) => {
-                        const suggestionId = e.target.parentElement.parentElement.querySelector('#suggestionId').innerText;
-
-                        // set request body:
-                        let requestBody = {
-                            suggestionId: suggestionId,
-                            accountId: userProfile.accountId
-                        };
-
-                        // send the promote request to the server:
-                        const response = await fetch(`/promote-suggestion`, {
-                            method: 'POST',
-                            body: JSON.stringify(requestBody),
-                            headers: {
-                                'Content-Type': 'application/json'
-                            }
-                        });
-                        const data = await response.json();
-                        // console.log(data);
-
-                        // reload page:
-                        window.location.reload();
-                    });
-                });
-
-                document.querySelectorAll('#toggleSuggestionSafety').forEach(button => {
-                    button.addEventListener('click', async (e) => {
-                        const suggestionId = e.target.parentElement.parentElement.querySelector('#suggestionId').innerText;
-
-                        // set request body:
-                        let requestBody = {
-                            suggestionId: suggestionId,
-                            accountId: userProfile.accountId
-                        };
-
-                        // send the update request to the server:
-                        const response = await fetch(`/toggle-suggestion-safety`, {
-                            method: 'POST',
-                            body: JSON.stringify(requestBody),
-                            headers: {
-                                'Content-Type': 'application/json'
-                            }
-                        });
-                        const data = await response.json();
-                        // console.log(data);
-                        // reload page:
-                        window.location.reload();
-                    });
-                });
-
-                // apply the reject suggestion logic to the new suggestions:
-                document.querySelectorAll('#rejectSuggestion').forEach(button => {
-                    button.addEventListener('click', async (e) => {
-                        const suggestionId = e.target.parentElement.parentElement.querySelector('#suggestionId').innerText;
-
-                        // set request body:
-                        let requestBody = {
-                            suggestionId: suggestionId,
-                            status: 'rejected'
-                        };
-
-                        // send the update request to the server:
-                        const response = await fetch(`/update-suggestion-status`, {
-                            method: 'POST',
-                            body: JSON.stringify(requestBody),
-                            headers: {
-                                'Content-Type': 'application/json'
-                            }
-                        });
-                        const data = await response.json();
-                        // console.log(data);
-
-                        // reload page:
-                        window.location.reload();
-                    });
-                });
-            
-        </script>
-
-    </div>
-
-    <!-- get partials/_footer: -->
-    <%- include('../../partials/_footer') %>
-    
-</body>
-</html>
+                        const response = await fetch(`

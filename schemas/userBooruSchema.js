@@ -31,8 +31,7 @@ const userBooruSchema = new Schema({
     safety: { type: String, default: "na" },
     upvotes: { type: Array, default: [] },
     downvotes: { type: Array, default: [] },
-    reported: { type: Boolean, default: false },
-    reported_by: { type: Array, default: [] },
+    reports: { type: Array, default: [] },
     comments: { type: [userBooruCommentSchema], default: [] },
 })
 
