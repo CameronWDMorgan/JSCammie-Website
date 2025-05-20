@@ -20,8 +20,7 @@ async function positive(prompt) {
 	prompt += stringToAdd
 
 	let blacklistedWords = [
-		'loli', 'shota', 'child', 'young', 'underage', 'teen', 'teenager', 'kid', 'baby', 'infant', 'toddler', 'minor', 'preteen', 'puberty', 
-		'pubescent', 'adolescent', 'underdeveloped', 'underaged', 
+		'loli', 'shota', 'underdeveloped', 'underaged', 'rape', 'imminent rape', 'non consensual', 'rape face',
 	]
 
 	// remove blacklisted words, ensuring that case doesn't matter
