@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Creator Statistics - Booru</title>
+    <link rel="stylesheet" href="/style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    
+    <%- include('../../partials/_headerAll') %>
+    <style>
+        .stat-description {
+            font-size: 14px;
+            color: #aaa;
+            margin-top: 5px;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+        
+        .stats-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            padding: 15px;
+            min-width: 200px;
+            margin: 10px;
+            flex: 1 1 calc(50% - 20px);
+            transition: transform 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .top-posts-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            gap: 15px;
+        }
+        
+        .top-post-card {
+            width: 200px;
+            border-radius: 10px;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+            margin-bottom: 15px;
+        }
+        
+        .top-post-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .top-post-image {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 10px 10px 0 0;
+        }
+        
+        .top-post-info {
+            padding: 10px;
+        }
+        
+        .top-post-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px;
+        }
+        
+        .top-post-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .chart-controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .chart-control-btn {
+            padding: 8px 15px;
+            background-color: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--highlight-colour);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .chart-control-btn:hover {
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+        
+        .chart-control-btn.active {
+            background-color: var(--highlight-colour);
+            font-weight: bold;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-bottom: 20px;
+        }
+        
+        .chart-wrapper {
+            display: none;
+            height: 100%;
+        }
+        
+        .chart-wrapper.active {
+            display: block;
+        }
+        
+        /* Responsive layout for desktop */
+        @media (min-width: 992px) {
+            .desktop-layout {
+                display: grid;
+                grid-template-columns: 2fr 1fr;
+                gap: 20px;
+            }
+            
+            .stat-card {
+                flex: 1 1 calc(25% - 20px);
+            }
+            
+            .charts-section {
+                grid-column: 1;
+                grid-row: 1;
+                margin-top: 0;
+            }
+            
+            .stats-container {
+                grid-column: 2;
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 15px;
+                margin-top: 0;
+            }
+            
+            .top-posts-section {
+                grid-column: 1 / span 2;
+                grid-row: 2;
+            }
+        }
+    </style>
+</head>
+<body>
+    <%- include('../../partials/_navigation') %>
+
+    <div class="center-fully-no-flex" style="margin-bottom: 1rem;">
+        <%- include('../../partials/_bannerAdvert') %>
+    </div>
+
+    <div class="page-content">
+        <div class="round-frosted mw75-dynamic" style="padding: 20px; margin-bottom: 20px;">
+            <h1 class="center-fully-no-flex">Creator Statistics</h1>
+            
+            <% if (!userStats || !session.accountId) { %>
+                <p class="center-fully-no-flex">Please log in to view your statistics.</p>
+            <% } else { %>
+                <div class="desktop-layout">
+                    <!-- Stats Cards Section -->
+                    <div class="stats-container">
+                        <div class="round-frosted stat-card">
+                            <h3>Upvotes</h3>
+                            <p class="stat-description">Total number of upvotes received on your posts</p>
+                            <div style="margin-bottom: 15px;">
+                                <div style="font-size: 24px; font-weight: bold;"><%= userStats.last24Hours.upvotes %> <span style="font-size: 14px; color: <%= userStats.last24Hours.upvotesChange > 0 ? 'lightgreen' : userStats.last24Hours.upvotesChange < 0 ? 'salmon' : 'gray' %>;">
+                                    <%= userStats.last24Hours.upvotesChange > 0 ? '↑' : userStats.last24Hours.upvotesChange < 0 ? '↓' : '→' %> 
+                                    <%= Math.abs(userStats.last24Hours.upvotesChange) %>%
+                                </span></div>
+                                <div>Last 24 hours</div>
+                            </div>
+                            <div style="margin-bottom: 15px;">
+                                <div style="font-size: 24px; font-weight: bold;"><%= userStats.last7Days.upvotes %> <span style="font-size: 14px; color: <%= userStats.last7Days.upvotesChange > 0 ? 'lightgreen' : userStats.last7Days.upvotesChange < 0 ? 'salmon' : 'gray' %>;">
+                                    <%= userStats.last7Days.upvotesChange > 0 ? '↑' : userStats.last7Days.upvotesChange < 0 ? '↓' : '→' %> 
+                                    <%= Math.abs(userStats.last7Days.upvotesChange) %>%
+                                </span></div>
+                                <div>Last 7 days</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 24px; font-weight: bold;"><%= userStats.last28Days.upvotes %> <span style="font-size: 14px; color: <%= userStats.last28Days.upvotesChange > 0 ? 'lightgreen' : userStats.last28Days.upvotesChange < 0 ? 'salmon' : 'gray' %>;">
+                                    <%= userStats.last28Days.upvotesChange > 0 ? '↑' : userStats.last28Days.upvotesChange < 0 ? '↓' : '→' %> 
+                                    <%= Math.abs(userStats.last28Days.upvotesChange) %>%
+                                </span></div>
+                                <div>Last 28 days</div>
+                            </div>
+                        </div>
+                        
+                        <div class="round-frosted stat-card">
+                            <h3>Comments</h3>
+                            <p class="stat-description">Number of comments received on your posts</p>
+                            <div style="margin-bottom: 15px;">
+                                <div style="font-size: 24px; font-weight: bold;"><%= userStats.last24Hours.comments %> <span style="font-size: 14px; color: <%= userStats.last24Hours.commentsChange > 0 ? 'lightgreen' : userStats.last24Hours.commentsChange < 0 ? 'salmon' : 'gray' %>;">
+                                    <%= userStats.last24Hours.commentsChange > 0 ? '↑' : userStats.last24Hours.commentsChange < 0 ? '↓' : '→' %> 
+                                    <%= Math.abs(userStats.last24Hours.commentsChange) %>%
+                                </span></div>
+                                <div>Last 24 hours</div>
+                            </div>
+                            <div style="margin-bottom: 15px;">
+                                <div style="font-size: 24px; font-weight: bold;"><%= userStats.last7Days.comments %> <span style="font-size: 14px; color: <%= userStats.last7Days.commentsChange > 0 ? 'lightgreen' : userStats.last7Days.commentsChange < 0 ? 'salmon' : 'gray' %>;">
+                                    <%= userStats.last7Days.commentsChange > 0 ? '↑' : userStats.last7Days.commentsChange < 0 ? '↓' : '→' %> 
+                                    <%= Math.abs(userStats.last7Days.commentsChange) %>%
+                                </span></div>
+                                <div>Last 7 days</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 24px; font-weight: bold;"><%= userStats.last28Days.comments %> <span style="font-size: 14px; color: <%= userStats.last28Days.commentsChange > 0 ? 'lightgreen' : userStats.last28Days.commentsChange < 0 ? 'salmon' : 'gray' %>;">
+                                    <%= userStats.last28Days.commentsChange > 0 ? '↑' : userStats.last28Days.commentsChange < 0 ? '↓' : '→' %> 
+                                    <%= Math.abs(userStats.last28Days.commentsChange) %>%
+                                </span></div>
+                                <div>Last 28 days</div>
+                            </div>
+                        </div>
+                        
+                        <div class="round-frosted stat-card">
+                            <h3>Posts</h3>
+                            <p class="stat-description">Number of booru posts you've created</p>
+                            <div style="margin-bottom: 15px;">
+                                <div style="font-size: 24px; font-weight: bold;"><%= userStats.last24Hours.posts %> <span style="font-size: 14px; color: <%= userStats.last24Hours.postsChange > 0 ? 'lightgreen' : userStats.last24Hours.postsChange < 0 ? 'salmon' : 'gray' %>;">
+                                    <%= userStats.last24Hours.postsChange > 0 ? '↑' : userStats.last24Hours.postsChange < 0 ? '↓' : '→' %> 
+                                    <%= Math.abs(userStats.last24Hours.postsChange) %>%
+                                </span></div>
+                                <div>Last 24 hours</div>
+                            </div>
+                            <div style="margin-bottom: 15px;">
+                                <div style="font-size: 24px; font-weight: bold;"><%= userStats.last7Days.posts %> <span style="font-size: 14px; color: <%= userStats.last7Days.postsChange > 0 ? 'lightgreen' : userStats.last7Days.postsChange < 0 ? 'salmon' : 'gray' %>;">
+                                    <%= userStats.last7Days.postsChange > 0 ? '↑' : userStats.last7Days.postsChange < 0 ? '↓' : '→' %> 
+                                    <%= Math.abs(userStats.last7Days.postsChange) %>%
+                                </span></div>
+                                <div>Last 7 days</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 24px; font-weight: bold;"><%= userStats.last28Days.posts %> <span style="font-size: 14px; color: <%= userStats.last28Days.postsChange > 0 ? 'lightgreen' : userStats.last28Days.postsChange < 0 ? 'salmon' : 'gray' %>;">
+                                    <%= userStats.last28Days.postsChange > 0 ? '↑' : userStats.last28Days.postsChange < 0 ? '↓' : '→' %> 
+                                    <%= Math.abs(userStats.last28Days.postsChange) %>%
+                                </span></div>
+                                <div>Last 28 days</div>
+                            </div>
+                        </div>
+                        
+                        <div class="round-frosted stat-card">
+                            <h3>Engagement Rate</h3>
+                            <p class="stat-description">Average upvotes received per post — higher is better!</p>
+                            <div style="margin-bottom: 15px;">
+                                <div style="font-size: 24px; font-weight: bold;"><%= userStats.last24Hours.engagementRate.toFixed(2) %> <span style="font-size: 14px; color: <%= userStats.last24Hours.engagementRateChange > 0 ? 'lightgreen' : userStats.last24Hours.engagementRateChange < 0 ? 'salmon' : 'gray' %>;">
+                                    <%= userStats.last24Hours.engagementRateChange > 0 ? '↑' : userStats.last24Hours.engagementRateChange < 0 ? '↓' : '→' %> 
+                                    <%= Math.abs(userStats.last24Hours.engagementRateChange) %>%
+                                </span></div>
+                                <div>Last 24 hours</div>
+                            </div>
+                            <div style="margin-bottom: 15px;">
+                                <div style="font-size: 24px; font-weight: bold;"><%= userStats.last7Days.engagementRate.toFixed(2) %> <span style="font-size: 14px; color: <%= userStats.last7Days.engagementRateChange > 0 ? 'lightgreen' : userStats.last7Days.engagementRateChange < 0 ? 'salmon' : 'gray' %>;">
+                                    <%= userStats.last7Days.engagementRateChange > 0 ? '↑' : userStats.last7Days.engagementRateChange < 0 ? '↓' : '→' %> 
+                                    <%= Math.abs(userStats.last7Days.engagementRateChange) %>%
+                                </span></div>
+                                <div>Last 7 days</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 24px; font-weight: bold;"><%= userStats.last28Days.engagementRate.toFixed(2) %> <span style="font-size: 14px; color: <%= userStats.last28Days.engagementRateChange > 0 ? 'lightgreen' : userStats.last28Days.engagementRateChange < 0 ? 'salmon' : 'gray' %>;">
+                                    <%= userStats.last28Days.engagementRateChange > 0 ? '↑' : userStats.last28Days.engagementRateChange < 0 ? '↓' : '→' %> 
+                                    <%= Math.abs(userStats.last28Days.engagementRateChange) %>%
+                                </span></div>
+                                <div>Last 28 days</div>
+                            </div>
+                        </div>
+                        
+                        <div class="round-frosted stat-card">
+                            <h3>Booru Score</h3>
+                            <p class="stat-description">Your overall content score based on upvotes and comments</p>
+                            <div style="margin-bottom: 15px;">
+                                <div style="font-size: 24px; font-weight: bold;"><%= (userStats.totalStats.booruScore * 1.0162).toFixed(2) %></div>
+                                <div style="font-size: 14px; color: #aaa;">Raw score: <%= userStats.totalStats.rawBooruScore.toFixed(2) %> × <%= userStats.totalStats.followerBoost.toFixed(2) %> (follower boost)</div>
+                                <div>All-time score</div>
+                            </div>
+                            <div style="margin-bottom: 15px;">
+                                <div style="font-size: 16px;"><i class="fas fa-arrow-up"></i> <%= userStats.totalStats.upvotes %> upvotes</div>
+                                <div style="font-size: 16px;"><i class="fas fa-comment"></i> <%= userStats.totalStats.comments %> comments</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 16px;"><i class="fas fa-image"></i> <%= userStats.totalStats.posts %> posts</div>
+                                <div style="font-size: 14px; color: #aaa;"><%= userStats.followerCount %> follower<%= userStats.followerCount !== 1 ? 's' : '' %></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Unified Charts Section -->
+                    <div class="round-frosted charts-section" style="padding: 20px; margin-bottom: 20px;">
+                        <h3 class="center-fully-no-flex">Statistics Over Time</h3>
+                        <p class="stat-description center-fully-no-flex">View your performance metrics over different time periods</p>
+                        
+                        <div class="chart-controls">
+                            <div>
+                                <span>Metric:</span>
+                                <button class="chart-control-btn active" data-metric="upvotes">Upvotes</button>
+                                <button class="chart-control-btn" data-metric="comments">Comments</button>
+                                <button class="chart-control-btn" data-metric="posts">Posts</button>
+                                <button class="chart-control-btn" data-metric="engagement">Engagement</button>
+                            </div>
+                            <div>
+                                <span>Time Period:</span>
+                                <button class="chart-control-btn active" data-period="28">28 Days</button>
+                                <button class="chart-control-btn" data-period="7">7 Days</button>
+                                <button class="chart-control-btn" data-period="1">24 Hours</button>
+                            </div>
+                        </div>
+                        
+                        <div class="chart-container">
+                            <canvas id="unifiedChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Top Posts Section -->
+                    <% if (userStats.topPosts && userStats.topPosts.length > 0) { %>
+                    <div class="round-frosted top-posts-section" style="padding: 20px; margin-bottom: 20px;">
+                        <h3 class="center-fully-no-flex">Your Top Posts (Last 28 Days)</h3>
+                        <p class="stat-description center-fully-no-flex">These are your most engaging posts based on upvotes and comments</p>
+                        
+                        <div class="top-posts-container">
+                            <% userStats.topPosts.forEach((post, index) => { %>
+                                <div class="round-frosted top-post-card">
+                                    <a href="/booru/post/<%= post.booru_id %>">
+                                        <img src="<%= post.content_url %>" alt="<%= post.title || 'Booru Post' %>" class="top-post-image">
+                                    </a>
+                                    <div class="top-post-info">
+                                        <div class="top-post-title"><%= post.title || `Post #${index+1}` %></div>
+                                        <div class="top-post-stats">
+                                            <span><i class="fas fa-arrow-up"></i> <%= post.upvotes.length %></span>
+                                            <span><i class="fas fa-comment"></i> <%= post.comments.length %></span>
+                                            <span><i class="fas fa-calendar"></i> <%= new Date(Number(post.timestamp)).toLocaleDateString() %></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            <% }) %>
+                        </div>
+                    </div>
+                    <% } %>
+                </div>
+            <% } %>
+        </div>
+    </div>
+
+    <% if (userStats && session.accountId) { %>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Data preparation
+            const allData = {
+                labels: <%- JSON.stringify(userStats.dailyLabels) %>,
+                upvotes: <%- JSON.stringify(userStats.dailyUpvotes) %>,
+                comments: <%- JSON.stringify(userStats.dailyComments) %>,
+                posts: <%- JSON.stringify(userStats.dailyPosts) %>,
+                engagement: <%- JSON.stringify(userStats.dailyEngagement) %>
+            };
+            
+            // Debug output to console
+            console.log('Server data:', {
+                labels: allData.labels,
+                upvotes: allData.upvotes,
+                comments: allData.comments,
+                posts: allData.posts
+            });
+            
+            // Hourly data for 24-hour view - we'll use the most recent day's data
+            // instead of artificially distributing it with randomness
+            const hourlyLabels = [];
+            const hourlyData = {
+                upvotes: Array(24).fill(0),
+                comments: Array(24).fill(0),
+                posts: Array(24).fill(0),
+                engagement: Array(24).fill(0)
+            };
+            
+            // Generate hourly labels
+            const now = new Date();
+            for (let i = 23; i >= 0; i--) {
+                const hour = new Date(now);
+                hour.setHours(now.getHours() - i);
+                hourlyLabels.push(hour.getHours() + ':00');
+            }
+            
+            // Use the last day's data and divide it evenly across hours
+            // This is still not ideal but better than random distribution
+            if (allData.upvotes.length > 0) {
+                const lastDayData = {
+                    upvotes: allData.upvotes[allData.upvotes.length - 1] || 0,
+                    comments: allData.comments[allData.comments.length - 1] || 0,
+                    posts: allData.posts[allData.posts.length - 1] || 0,
+                    engagement: allData.engagement[allData.engagement.length - 1] || 0
+                };
+                
+                // For posts, we can't determine exactly when they were posted in the day
+                // So we assume they are evenly distributed - but not randomly
+                const postsPerHour = lastDayData.posts / 24;
+                
+                for (let i = 0; i < 24; i++) {
+                    hourlyData.posts[i] = Math.round(postsPerHour);
+                    hourlyData.upvotes[i] = Math.round(lastDayData.upvotes / 24);
+                    hourlyData.comments[i] = Math.round(lastDayData.comments / 24);
+                    hourlyData.engagement[i] = lastDayData.engagement / 24;
+                }
+                
+                // Adjust the total to match the actual total
+                let totalPosts = hourlyData.posts.reduce((sum, val) => sum + val, 0);
+                let diff = lastDayData.posts - totalPosts;
+                
+                // Distribute any remaining posts due to rounding
+                let i = 0;
+                while (diff !== 0) {
+                    if (diff > 0) {
+                        hourlyData.posts[i % 24]++;
+                        diff--;
+                    } else {
+                        if (hourlyData.posts[i % 24] > 0) {
+                            hourlyData.posts[i % 24]--;
+                            diff++;
+                        }
+                    }
+                    i++;
+                }
+            }
+            
+            // Colors and labels for each metric
+            const metricConfig = {
+                upvotes: { color: 'rgba(75, 192, 192, 0.8)', label: 'Upvotes' },
+                comments: { color: 'rgba(255, 159, 64, 0.8)', label: 'Comments' },
+                posts: { color: 'rgba(54, 162, 235, 0.8)', label: 'Posts' },
+                engagement: { color: 'rgba(153, 102, 255, 0.8)', label: 'Engagement Rate' }
+            };
+            
+            // Initialize unified chart
+            const ctx = document.getElementById('unifiedChart').getContext('2d');
+            let currentMetric = 'upvotes';
+            let currentPeriod = 28;
+            let unifiedChart;
+            
+            function updateChart() {
+                // Get filtered data based on time period
+                let filteredLabels, filteredData;
+                
+                if (currentPeriod === 1) {
+                    // Use hourly data for 24-hour view
+                    filteredLabels = hourlyLabels;
+                    filteredData = hourlyData[currentMetric];
+                } else {
+                    // Ensure we have all days in the period
+                    const fullLabels = [];
+                    const fullData = [];
+                    
+                    // Only use the number of days we need based on currentPeriod
+                    const daysToUse = Math.min(currentPeriod, allData.labels.length);
+                    const startIdx = Math.max(0, allData.labels.length - daysToUse);
+                    
+                    // Use the most recent days directly from server data
+                    for (let i = 0; i < daysToUse; i++) {
+                        const dataIdx = startIdx + i;
+                        fullLabels.push(allData.labels[dataIdx]);
+                        fullData.push(allData[currentMetric][dataIdx]);
+                    }
+                    
+                    filteredLabels = fullLabels;
+                    filteredData = fullData;
+                }
+                
+                // Debug the current data being displayed
+                console.log(`Chart data for ${currentMetric} over ${currentPeriod} ${currentPeriod === 1 ? 'hours' : 'days'}:`, {
+                    labels: filteredLabels,
+                    data: filteredData
+                });
+                
+                // Destroy existing chart if it exists
+                if (unifiedChart) {
+                    unifiedChart.destroy();
+                }
+                
+                // Create new chart with appropriate labels
+                unifiedChart = new Chart(ctx, {
+                    type: currentMetric === 'posts' ? 'bar' : 'line',
+                    data: {
+                        labels: filteredLabels,
+                        datasets: [{
+                            label: `${metricConfig[currentMetric].label}`,
+                            data: filteredData,
+                            backgroundColor: metricConfig[currentMetric].color,
+                            borderColor: metricConfig[currentMetric].color,
+                            borderWidth: 1,
+                            tension: 0.3,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: metricConfig[currentMetric].label
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: currentPeriod === 1 ? 'Hour' : 'Date'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            }
+                        },
+                        animation: {
+                            duration: 500
+                        }
+                    }
+                });
+            }
+            
+            // Set up event listeners for chart controls
+            document.querySelectorAll('.chart-control-btn[data-metric]').forEach(button => {
+                button.addEventListener('click', function() {
+                    // Update active state
+                    document.querySelectorAll('.chart-control-btn[data-metric]').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    this.classList.add('active');
+                    
+                    // Update chart
+                    currentMetric = this.getAttribute('data-metric');
+                    updateChart();
+                });
+            });
+            
+            document.querySelectorAll('.chart-control-btn[data-period]').forEach(button => {
+                button.addEventListener('click', function() {
+                    // Update active state
+                    document.querySelectorAll('.chart-control-btn[data-period]').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    this.classList.add('active');
+                    
+                    // Update chart
+                    currentPeriod = parseInt(this.getAttribute('data-period'));
+                    updateChart();
+                });
+            });
+            
+            // Initialize chart
+            updateChart();
+        });
+    </script>
+    <% } %>
+
+    <%- include('../../partials/_footer') %>
+</body>
+</html> 
