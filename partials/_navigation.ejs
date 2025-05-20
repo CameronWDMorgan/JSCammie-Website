@@ -612,7 +612,10 @@
             <a href="/redeem-code">Redeem</a>
             <a href="/paypal-shop">Buy Credits</a>
             <% if (session.loggedIn) { %>
-                <a href="/image-history">History</a>
+                <a href="/image-history">Image History</a>
+                <a href="/booru/creator-stats">Creator Stats</a>
+                <a href="/profile-upgrades">Profile Upgrades</a>
+                <a href="/settings/">Settings</a>
             <% } else { %>
                 <a href="/login">Login</a>
             <% } %>
@@ -646,6 +649,8 @@
                 <div class="profileLinks">
                     <a href="/profile/<%=session.accountId%>" class="profileLink">My Profile</a>
                     <a href="/image-history" class="profileLink">Image History</a>
+                    <a href="/booru/creator-stats" class="profileLink">Creator Stats</a>
+                    <a href="/profile-upgrades" class="profileLink">Profile Upgrades</a>
                     <a href="/settings/" class="profileLink">Settings</a>
                     <button id="darkModeButton" class="profileLink darkModeButton">
                         <span id="darkModeIcon" class="darkModeIcon">🌙</span>
@@ -1059,11 +1064,11 @@
             linkcolour: "rgba(0, 255, 38, 1)",
             active: true
         },
-        {
-            message: "We are currently doing a contest on the <a id='advert-link-colour' href='https://www.discord.gg/AvbQuRmh7t'>'Discord'</a> for 70,000 credits! Join now to participate!",
-            linkcolour: "rgba(0, 100, 255, 1)",
-            active: true
-        },
+        // {
+        //     message: "We are currently doing a contest on the <a id='advert-link-colour' href='https://www.discord.gg/AvbQuRmh7t'>'Discord'</a> for 70,000 credits! Join now to participate!",
+        //     linkcolour: "rgba(0, 100, 255, 1)",
+        //     active: true
+        // },
         {
             message: "Check out the <a id='advert-link-colour' href='https://www.discord.gg/AvbQuRmh7t'>'Discord'</a> to compete in contests for credits and more!",
             linkcolour: "rgba(0, 100, 255, 1)",
