@@ -3,6 +3,7 @@
 <head>
     <title>Suggestions | JSCammie.com</title>
     <link rel='stylesheet' href='/style.css'/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
     <meta name="description" content="Suggest features or loras to be added to the site!">
     <meta name="keywords" content="loras, features, jscammie suggestions, suggestion, upvote, downvote">
@@ -30,66 +31,241 @@
 
     <style>
         .suggestionTopBar {
-            display: inline;
+            display: flex;
             justify-content: space-between;
-            font-size: 24px;
+            font-size: 18px;
+            margin-bottom: 8px;
+            align-items: center;
         }
 
         .votingButton {
-            /* remove border, background colour */
-            background-color: rgba(0, 0, 0, 0) !important;
-            /* make the cursor a pointer */
+            background-color: rgba(0, 0, 0, 0.3) !important;
             cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            margin: 0 3px;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .votingButton:hover {
+            background-color: rgba(0, 0, 0, 0.5) !important;
+            border: 1px solid rgba(255, 255, 255, 0.5);
         }
 
         .suggestionDiv {
-            border: 3px solid rgb(255, 150, 253);
-            padding: 10px;
-            margin: 10px;
-            border-radius: 10px;
+            border: 2px solid rgba(255, 150, 253, 0.7);
+            padding: 16px;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            background-color: rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            position: relative;
         }
 
-        .pendingSuggestion p {
-            color: yellow;
-        }
-        .pendingSuggestion div {
-            background-color: rgba(255, 255, 0, 0.5) !important;
+        .suggestionDiv:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
         }
 
-        .addedSuggestion p {
+        .pendingSuggestion .status-indicator {
+            color: gold;
+            font-weight: bold;
+        }
+        .pendingSuggestion {
+            border-color: rgba(255, 215, 0, 0.7);
+        }
+
+        .addedSuggestion .status-indicator {
             color: rgb(119, 200, 255);
+            font-weight: bold;
         }
-        .addedSuggestion div {
-            background-color: rgba(119, 200, 255, 0.5) !important;
-        }
-
-        .rejectedSuggestion p {
-            color: red;
-        }
-        .rejectedSuggestion div {
-            background-color: rgba(255, 0, 0, 0.5) !important;
+        .addedSuggestion {
+            border-color: rgba(119, 200, 255, 0.7);
         }
 
+        .rejectedSuggestion .status-indicator {
+            color: rgb(255, 100, 100);
+            font-weight: bold;
+        }
+        .rejectedSuggestion {
+            border-color: rgba(255, 100, 100, 0.7);
+        }
+
+        .suggestion-text {
+            margin: 12px 0;
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .action-buttons button {
+            font-size: 14px;
+            padding: 6px 10px;
+            background-color: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+        }
+
+        .action-buttons select {
+            font-size: 14px;
+            padding: 6px 10px;
+            height: auto;
+            width: auto;
+        }
+
+        .submitSuggestionHyperlink {
+            display: inline-block;
+            background-color: rgba(100, 200, 255, 0.3);
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            text-decoration: none;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(100, 200, 255, 0.5);
+        }
+
+        .submitSuggestionHyperlink:hover {
+            background-color: rgba(100, 200, 255, 0.5);
+            transform: translateY(-2px);
+        }
+
+        /* Filter section styling */
+        #suggestionsFilters {
+            background-color: rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        #suggestionsFilters label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        #suggestionsFilters select,
+        #suggestionsFilters input {
+            width: 100%;
+            padding: 8px 12px;
+            font-size: 16px;
+            border-radius: 8px;
+        }
+
+        #suggestionCount {
+            margin-bottom: 20px;
+            font-style: italic;
+            text-align: center;
+        }
+
+        .promoted-badge {
+            background-color: rgba(255, 215, 0, 0.2);
+            color: gold;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 14px;
+            margin-left: 10px;
+            border: 1px solid gold;
+        }
+
+        /* Type badges */
+        .type-badge {
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 14px;
+            margin-right: 8px;
+        }
+
+        .type-lora {
+            background-color: rgba(170, 100, 255, 0.2);
+            border: 1px solid rgba(170, 100, 255, 0.7);
+        }
+
+        .type-feature {
+            background-color: rgba(100, 200, 100, 0.2);
+            border: 1px solid rgba(100, 200, 100, 0.7);
+        }
+
+        .type-bug {
+            background-color: rgba(255, 100, 100, 0.2);
+            border: 1px solid rgba(255, 100, 100, 0.7);
+        }
+
+        .type-model {
+            background-color: rgba(255, 150, 100, 0.2);
+            border: 1px solid rgba(255, 150, 100, 0.7);
+        }
+
+        .timestamp {
+            font-size: 0.8em;
+            color: #aaa;
+            margin-top: 5px;
+        }
+
+        @media (max-width: 768px) {
+            #suggestionsFilters {
+                grid-template-columns: 1fr;
+            }
+            
+            .suggestionTopBar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+        }
     </style>
 
     <div class="container round-frosted page-content mw75-dynamic" style="margin-bottom: 12rem; padding: 24px">
-        <a class="submitSuggestionHyperlink" href="/submit-suggestion">Submit a Suggestion</a>
-        <h1 style="text-align: center;">Suggestions</h1>
+        <div class="center-fully-no-flex">
+            <a class="submitSuggestionHyperlink" href="/submit-suggestion">Submit a Suggestion</a>
+        </div>
+        <h1 style="text-align: center; margin-bottom: 30px;">Suggestions</h1>
 
         <script>
-            // manually animate the .promotedSuggestion class divs:
-
+            // Enhanced promoted suggestion animation
             function animatePromoted() {
                 const promotedSuggestions = document.querySelectorAll('.promotedSuggestion');
-                    promotedSuggestions.forEach(suggestion => {
-                        suggestion.animate([
-                        { border: '3px solid rgb(0, 0, 0)', boxShadow: '0 0 20px rgb(0,0,0)', offset: 0 },    // start
-                        { border: '3px solid rgb(100, 255, 100)', boxShadow: '0 0 20px rgb(100, 255, 100)', offset: 0.3 }, 
-                        { border: '3px solid rgb(100, 100, 255)', boxShadow: '0 0 30px rgb(100, 100, 255)', offset: 0.7 }, 
-                        { border: '3px solid rgb(0, 0, 0)', boxShadow: '0 0 20px rgb(0,0,0)', offset: 1 }    // Back to start
+                promotedSuggestions.forEach(suggestion => {
+                    // Apply a persistent glow
+                    suggestion.style.boxShadow = '0 0 15px rgba(255, 215, 0, 0.3)';
+                    
+                    // Create pulsing animation
+                    suggestion.animate([
+                        // Start state - subtle
+                        { 
+                            boxShadow: '0 0 10px rgba(255, 215, 0, 0.2)',
+                            transform: 'scale(1)',
+                            offset: 0 
+                        },
+                        // Middle state - enhanced glow
+                        { 
+                            boxShadow: '0 0 25px rgba(255, 215, 0, 0.4)',
+                            transform: 'scale(1.005)',
+                            offset: 0.5 
+                        },
+                        // End state - back to subtle
+                        { 
+                            boxShadow: '0 0 10px rgba(255, 215, 0, 0.2)',
+                            transform: 'scale(1)',
+                            offset: 1 
+                        }
                     ], {
-                        duration: 2000, // Total animation duration (in milliseconds)
-                        iterations: Infinity // Infinite loop
+                        duration: 3000, // Slower, more subtle animation
+                        iterations: Infinity, // Infinite loop
+                        easing: 'ease-in-out' // Smooth transition
                     });
                 });
             }
@@ -97,12 +273,9 @@
             function stopAnimatePromoted() {
                 const promotedSuggestions = document.querySelectorAll('.promotedSuggestion');
                 promotedSuggestions.forEach(suggestion => {
-                    suggestion.style.border = '3px solid rgb(255, 150, 253)';
                     suggestion.style.boxShadow = 'none';
-                    suggestion.style.color = 'black';
                 });
             }
-
         </script>
 
         <script>
@@ -131,53 +304,61 @@
                     owner: <%=userProfile.badges?.owner? userProfile.badges.owner : false%>
                 }
             }
-
-
-
         </script>
 
         <div id="suggestionsFilters">
-            <label>Type</label>
-            <select id="suggestionsTypeSearch">
-                <option value="all">All</option>
-                <option value="lora">Lora</option>
-                <option value="model">Model</option>
-                <option value="feature">Feature</option>
-                <option value="bug">Bug</option>
-            </select>
-            <br>
-            <label>Safety</label>
-            <select id="suggestionsSafetySearch">
-                <option value="sfw">SFW</option>
-                <option value="nsfw">NSFW</option>
-                <option value="all">All</option>
-            </select>
-            <br>
-            <label>Status</label>
-            <select id="suggestionsStatusSearch">
-                <option value="pending">Pending</option>
-                <option value="added">Added</option>
-                <option value="rejected">Rejected</option>
-            </select>
-            <br>
-            <label>Sort Order</label>
-            <select id="suggestionsSortOrder">
-                <option value="newest">Newest</option>
-                <option value="oldest">Oldest</option>
-                <option value="votesAggregated">Votes</option>
-            </select>
-            <br>
-            <label id="suggestionsModelFilterLabel">Model Filter</label>
-            <select id="suggestionsModelFilter">
-                <option value="sd1.5">SD 1.5</option>
-                <option value="pdxl">PDXL</option>
-                <option value="illustrious">Illustrious</option>
-                <option value="all">All</option>
-            </select>
-            <br>
-            <!-- search box -->
-            <label>Search:</label>
-            <input type="text" id="suggestionsSearch" placeholder="Search for a suggestion...">
+            <div>
+                <label>Type</label>
+                <select id="suggestionsTypeSearch">
+                    <option value="all">All</option>
+                    <option value="lora">Lora</option>
+                    <option value="model">Model</option>
+                    <option value="feature">Feature</option>
+                    <option value="bug">Bug</option>
+                </select>
+            </div>
+            
+            <div>
+                <label>Safety</label>
+                <select id="suggestionsSafetySearch">
+                    <option value="sfw">SFW</option>
+                    <option value="nsfw">NSFW</option>
+                    <option value="all">All</option>
+                </select>
+            </div>
+            
+            <div>
+                <label>Status</label>
+                <select id="suggestionsStatusSearch">
+                    <option value="pending">Pending</option>
+                    <option value="added">Added</option>
+                    <option value="rejected">Rejected</option>
+                </select>
+            </div>
+            
+            <div>
+                <label>Sort Order</label>
+                <select id="suggestionsSortOrder">
+                    <option value="newest">Newest</option>
+                    <option value="oldest">Oldest</option>
+                    <option value="votesAggregated">Votes</option>
+                </select>
+            </div>
+            
+            <div>
+                <label id="suggestionsModelFilterLabel">Model Filter</label>
+                <select id="suggestionsModelFilter">
+                    <option value="sd1.5">SD 1.5</option>
+                    <option value="pdxl">PDXL</option>
+                    <option value="illustrious">Illustrious</option>
+                    <option value="all">All</option>
+                </select>
+            </div>
+            
+            <div>
+                <label>Search:</label>
+                <input type="text" id="suggestionsSearch" placeholder="Search for a suggestion...">
+            </div>
         </div>
 
         <p id="suggestionCount"></p>
@@ -295,47 +476,53 @@
                 let loraModelModelSelection = ``
 
                 if (suggestion.type == 'lora' || suggestion.type == 'model') {
-                
-                    // <option selected="selected">
-                    // 3
-                    // </option>
-
-                    console.log(`suggestion model: ${suggestion.model}`);
-
                     loraModelModelSelection = `
                         <option value="sd1.5" ${suggestion.model == 'sd1.5' ? 'selected="selected"' : ''}>SD 1.5</option>
                         <option value="pdxl" ${suggestion.model == 'pdxl' ? 'selected="selected"' : ''}>PDXL</option>
                         <option value="illustrious" ${suggestion.model == 'illustrious' ? 'selected="selected"' : ''}>Illustrious</option>
                     `
-                
                 }
+
+                // Determine type badge class
+                const typeBadgeClass = `type-${suggestion.type.toLowerCase()}`;
+                const typeName = suggestion.type.charAt(0).toUpperCase() + suggestion.type.slice(1);
+                const typeEmoji = suggestion.type === 'lora' ? '💜' : 
+                                 suggestion.type === 'feature' ? '💚' : 
+                                 suggestion.type === 'bug' ? '❤️' : '🧡';
 
                 suggestionDiv.innerHTML = `
                     <span hidden id="suggestionId">${suggestion.suggestionId}</span>
-                    <p id="${suggestion.suggestionId}-safety">${suggestion.safety === 'nsfw' ? 'NSFW' : 'SFW'} ${suggestion.promoted && suggestion.status.toLowerCase() === 'pending' ? '<a style="color: gold;">⭐Promoted</a>' : ''}</p>
-                    <a class="suggestionTopBar">${suggestion.type === 'lora' ? '💜Lora' : suggestion.type === 'feature' ? '💚Feature' : suggestion.type === 'bug' ? '❤️Bug' : '🧡Model'} | ${suggestion.title} | </a>
-                    <a class="suggestionTopBar">
-                        <button class="votingButton" id="upvote">Upvotes: ${suggestion.upvotes.length}</button>
-                        <button class="votingButton" id="downvote">Downvotes: ${suggestion.downvotes.length}</button>
-                    </a><br>
-                    <a>${suggestion.text}</a>
-                    ${suggestion.timestamp ? `<p class="timestamp" style="font-size: 0.8em; color: #aaa;">Posted: ${new Date(parseInt(suggestion.timestamp)).toLocaleString()}</p>` : ''}
-                    <br>
-                    <a>
+                    <div class="suggestionTopBar">
+                        <div>
+                            <span class="type-badge ${typeBadgeClass}">${typeEmoji} ${typeName}</span>
+                            <span>${suggestion.safety === 'nsfw' ? '🔞 NSFW' : '✅ SFW'}</span>
+                            ${suggestion.promoted && suggestion.status.toLowerCase() === 'pending' ? '<span class="promoted-badge">⭐ Promoted</span>' : ''}
+                        </div>
+                        <div>
+                            <button class="votingButton" id="upvote" data-suggestion-id="${suggestion.suggestionId}">👍 ${suggestion.upvotes.length}</button>
+                            <button class="votingButton" id="downvote" data-suggestion-id="${suggestion.suggestionId}">👎 ${suggestion.downvotes.length}</button>
+                        </div>
+                    </div>
+                    
+                    <h3>${suggestion.title}</h3>
+                    <div class="suggestion-text">${suggestion.text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>')}</div>
+                    
+                    ${suggestion.timestamp ? `<p class="timestamp">Posted: ${new Date(parseInt(suggestion.timestamp)).toLocaleString()}</p>` : ''}
+                    
+                    <div class="action-buttons">
                         ${userProfile.accountId === suggestion.accountId || userProfile.badges?.owner ? '<button id="removeSuggestion">Remove</button>' : ''}
-                        ${userProfile.badges?.owner ? '<button id="addSuggestion">Add</button>' : ''}
+                        ${userProfile.badges?.owner ? '<button id="addSuggestion">Approve</button>' : ''}
                         ${userProfile.badges?.owner ? '<button id="rejectSuggestion">Reject</button>' : ''}
-                        ${userProfile.accountId === suggestion.accountId || userProfile.badges?.owner ? '<button id="toggleSuggestionSafety">NSFW/SFW</button>' : ''}
-                        ${userProfile.accountId && suggestion.status.toLowerCase() === 'pending' && !suggestion.promoted ? '<button id="promoteSuggestion">Promote (Costs 1500 Credits)</button>' : ''}
-                        ${userProfile.accountId === suggestion.accountId && suggestion.type == 'lora' || userProfile.accountId === suggestion.accountId && suggestion.type == 'model' || userProfile.badges?.owner && suggestion.type == 'lora' || userProfile.badges?.owner && suggestion.type == 'model' ? `
+                        ${userProfile.accountId === suggestion.accountId || userProfile.badges?.owner ? '<button id="toggleSuggestionSafety">Toggle SFW/NSFW</button>' : ''}
+                        ${userProfile.accountId && suggestion.status.toLowerCase() === 'pending' && !suggestion.promoted ? '<button id="promoteSuggestion">Promote (1500 Credits)</button>' : ''}
+                        ${userProfile.accountId === suggestion.accountId && (suggestion.type == 'lora' || suggestion.type == 'model') || userProfile.badges?.owner && (suggestion.type == 'lora' || suggestion.type == 'model') ? `
                             <select id="model">
                                 ${loraModelModelSelection}
-                                
                             </select>
                         ` : ''}
-                        <button id="viewSuggestion">View</button>
-                    </a>
-                    <p id="${suggestion.suggestionId}-response"></p>
+                        <button id="viewSuggestion">View Details</button>
+                    </div>
+                    <p id="${suggestion.suggestionId}-response" class="response-message"></p>
                 `;
                 suggestionsContainer.appendChild(suggestionDiv);
             });
@@ -352,8 +539,7 @@
             // make the view suggestion button work:
             document.querySelectorAll('#viewSuggestion').forEach(button => {
                 button.addEventListener('click', (e) => {
-                    const suggestionId = e.target.parentElement.parentElement.querySelector('#suggestionId').innerText;
-                    // window.location.href = `/suggestion/${suggestionId}`; in new tab:
+                    const suggestionId = e.target.closest('.suggestionDiv').querySelector('#suggestionId').innerText;
                     window.open(`/suggestion/${suggestionId}`, '_blank');
                 });
             });
@@ -361,7 +547,7 @@
             // apply the voting logic to the new suggestions:
             document.querySelectorAll('.votingButton').forEach(button => {
                 button.addEventListener('click', async (e) => {
-                    const suggestionId = e.target.parentElement.parentElement.querySelector('#suggestionId').innerText;
+                    const suggestionId = e.target.getAttribute('data-suggestion-id');
                     const vote = e.target.id;
 
                     // set request body:
@@ -370,9 +556,7 @@
                         vote: vote
                     };
 
-                    // console.log(requestBody);
                     // send the vote to the server:
-
                     const response = await fetch(`/vote-suggestion`, {
                         method: 'POST',
                         body: JSON.stringify(requestBody),
@@ -395,7 +579,7 @@
             // model change logic:
             document.querySelectorAll('#model').forEach(select => {
                 select.addEventListener('change', async (e) => {
-                    const suggestionId = e.target.parentElement.parentElement.querySelector('#suggestionId').innerText;
+                    const suggestionId = e.target.closest('.suggestionDiv').querySelector('#suggestionId').innerText;
                     const model = e.target.value;
 
                     // set request body:
@@ -413,7 +597,6 @@
                         }
                     });
                     const data = await response.json();
-                    // console.log(data);
 
                     masterSuggestionData[suggestionId].model = model;
                     searchSuggestions();
@@ -424,7 +607,7 @@
             // apply the remove suggestion logic to the new suggestions:
             document.querySelectorAll('#removeSuggestion').forEach(button => {
                 button.addEventListener('click', async (e) => {
-                    const suggestionId = e.target.parentElement.parentElement.querySelector('#suggestionId').innerText;
+                    const suggestionId = e.target.closest('.suggestionDiv').querySelector('#suggestionId').innerText;
 
                     // set request body:
                     let requestBody = {
@@ -440,7 +623,6 @@
                         }
                     });
                     const data = await response.json();
-                    // console.log(data);
 
                     // remove the suggestion from the page:
                     masterSuggestionData[suggestionId] = undefined;
@@ -451,7 +633,7 @@
             // apply the add suggestion logic to the new suggestions:
             document.querySelectorAll('#addSuggestion').forEach(button => {
                 button.addEventListener('click', async (e) => {
-                    const suggestionId = e.target.parentElement.parentElement.querySelector('#suggestionId').innerText;
+                    const suggestionId = e.target.closest('.suggestionDiv').querySelector('#suggestionId').innerText;
 
                     // set request body:
                     let requestBody = {
@@ -468,7 +650,6 @@
                         }
                     });
                     const data = await response.json();
-                    // console.log(data);
 
                     masterSuggestionData[suggestionId].status = 'added';
                     
@@ -479,7 +660,7 @@
             // promoteSuggestion logic:
             document.querySelectorAll('#promoteSuggestion').forEach(button => {
                 button.addEventListener('click', async (e) => {
-                    const suggestionId = e.target.parentElement.parentElement.querySelector('#suggestionId').innerText;
+                    const suggestionId = e.target.closest('.suggestionDiv').querySelector('#suggestionId').innerText;
 
                     // set request body:
                     let requestBody = {
@@ -496,7 +677,6 @@
                         }
                     });
                     const data = await response.json();
-                    // console.log(data);
 
                     if (masterSuggestionData[suggestionId].promoted) {
                         responseElement = document.getElementById(`${suggestionId}-response`);
@@ -510,7 +690,7 @@
 
             document.querySelectorAll('#toggleSuggestionSafety').forEach(button => {
                 button.addEventListener('click', async (e) => {
-                    const suggestionId = e.target.parentElement.parentElement.querySelector('#suggestionId').innerText;
+                    const suggestionId = e.target.closest('.suggestionDiv').querySelector('#suggestionId').innerText;
 
                     // set request body:
                     let requestBody = {
@@ -527,7 +707,7 @@
                         }
                     });
                     const data = await response.json();
-                    // console.log(data);
+                    
                     safetyCurrent = masterSuggestionData[suggestionId].safety;
                     masterSuggestionData[suggestionId].safety = safetyCurrent === 'sfw' ? 'nsfw' : 'sfw';
                     searchSuggestions();
@@ -537,7 +717,7 @@
             // apply the reject suggestion logic to the new suggestions:
             document.querySelectorAll('#rejectSuggestion').forEach(button => {
                 button.addEventListener('click', async (e) => {
-                    const suggestionId = e.target.parentElement.parentElement.querySelector('#suggestionId').innerText;
+                    const suggestionId = e.target.closest('.suggestionDiv').querySelector('#suggestionId').innerText;
 
                     // set request body:
                     let requestBody = {
@@ -554,7 +734,6 @@
                         }
                     });
                     const data = await response.json();
-                    // console.log(data);
 
                     masterSuggestionData[suggestionId].status = 'rejected';
                     searchSuggestions();
@@ -573,7 +752,6 @@
             document.getElementById('suggestionsModelFilter').addEventListener('change', searchSuggestions);
             searchSuggestions();
         }
-
     </script>
 
     <!-- get partials/_footer: -->
