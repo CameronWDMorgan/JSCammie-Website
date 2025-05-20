@@ -21,6 +21,13 @@
     gtag('config', 'G-K3KJJKS1R4');
     </script>
 
+    <!-- Shepherd.js for guided tour -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shepherd.js@10.0.1/dist/css/shepherd.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/shepherd.js@10.0.1/dist/js/shepherd.min.js"></script>
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+
     <link rel="stylesheet" href="../style.css">
     <link rel="stylesheet" href="../ai-style.css">
 
@@ -36,6 +43,164 @@
             flex-shrink: 1;
             justify-content: center;
             flex-basis: 0%;
+        }
+
+        /* Custom styles for the tour */
+        .shepherd-button {
+            color: white;
+            border: 0;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-right: 0.5rem;
+            padding: 0.5rem 1.5rem;
+            transition: all 0.3s ease-out;
+        }
+
+        /* Add custom width for tour content */
+        .shepherd-element {
+            width: 40% !important;
+            max-width: 40% !important;
+        }
+
+        /* Responsive width for smaller screens */
+        @media (max-width: 1024px) {
+            .shepherd-element {
+                width: 75% !important;
+                max-width: 75% !important;
+            }
+        }
+
+        .shepherd-button-secondary {
+            background: var(--highlight-colour);
+        }
+
+        .shepherd-button-primary {
+            background: var(--highlight-colour-active);
+        }
+
+        .shepherd-button-skip {
+            background: #ff5252;
+        }
+
+        .shepherd-element {
+            background-color: var(--background-colour) !important;
+            color: var(--text-colour) !important;
+            border: 1px solid var(--border-colour) !important;
+            border-radius: 8px;
+            max-width: 400px;
+            opacity: 0.95;
+            z-index: 99;
+            margin: 20px !important;
+            padding: 5px !important;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5) !important;
+            /* Position is now handled by Shepherd positioning */
+            position: absolute !important;
+        }
+
+        .shepherd-modal-overlay-container {
+            z-index: 98 !important;
+        }
+
+        .shepherd-header {
+            background-color: var(--background-colour) !important;
+            color: var(--text-colour) !important;
+            border-bottom: 1px solid var(--border-colour) !important;
+        }
+
+        /* Highlight effect for tour elements */
+        .shepherd-highlight {
+            box-shadow: 0 0 0 5px var(--highlight-colour) !important;
+            border-radius: 4px !important;
+            animation: shepherd-highlight-pulse 1.5s infinite !important;
+            z-index: 99997 !important;
+        }
+        
+        @keyframes shepherd-highlight-pulse {
+            0% {
+                box-shadow: 0 0 0 5px var(--highlight-colour);
+            }
+            50% {
+                box-shadow: 0 0 0 8px var(--highlight-colour-hover);
+            }
+            100% {
+                box-shadow: 0 0 0 5px var(--highlight-colour);
+            }
+        }
+
+        .shepherd-element .shepherd-arrow {
+            display: none !important;
+        }
+
+        .shepherd-content {
+            font-family: inherit;
+            padding: 10px !important;
+            background-color: var(--background-colour) !important;
+            color: var(--text-colour) !important;
+        }
+        
+        .shepherd-text {
+            padding: 10px !important;
+            margin-bottom: 10px !important;
+            line-height: 1.5 !important;
+            font-size: 16px !important;
+            color: var(--text-colour) !important;
+        }
+        
+        .shepherd-footer {
+            padding: 10px !important;
+            border-top: 1px solid var(--border-colour) !important;
+        }
+
+        /* Tour start button */
+        #startTourButton {
+            background-color: var(--highlight-colour);
+            border: none;
+            color: var(--text-colour);
+            padding: 10px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9990;
+            transition: transform 0.3s, background-color 0.3s;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            animation: pulse 2s infinite;
+            font-size: 16px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #startTourButton:hover {
+            transform: scale(1.05);
+            background-color: var(--highlight-colour-hover);
+            animation: none;
+        }
+        
+        #startTourButton i {
+            font-size: 18px;
+        }
+
+        /* Tour popup styling */
+        .shepherd-title {
+            font-size: 22px !important;
+            font-weight: bold !important;
+            margin-bottom: 15px !important;
+            color: #ffffff !important;
+        }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 var(--highlight-colour);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(0, 0, 0, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+            }
         }
 
         .flex-under-div {
@@ -591,30 +756,12 @@
             },
 
             {
-                id: 'pdxl-sonichasautismmix',
-                name: 'PDXL | SonicHasAutismMix',
-                description: 'SonicHasAutismMix is a model that is based on SonicDiffusionXL and AutismMix merged together.',
-                author: "LOL2024",
-                authorLink: 'https://huggingface.co/LOL2024/SonicHasAutismMix',
-                image: 'https://www.jscammie.com/modelImages/pdxl-sonichasautismmix.png'
-            },
-
-            {
                 id: 'pdxl-ponyrealism',
                 name: 'PDXL | PonyRealism',
                 description: 'PonyRealism is a model that is based on realistic images.',
                 author: "ZyloO",
                 authorLink: 'https://civitai.com/models/372465/pony-realism',
                 image: 'https://www.jscammie.com/modelImages/pdxl-ponyrealism.png'
-            },
-
-            {
-                id: 'pdxl-fluffysonic',
-                name: 'PDXL | FluffySonic',
-                description: 'FluffySonic is a model that is based on Sonic the Hedgehog characters in a certain style.',
-                author: 'Kitsune_Sage',
-                authorLink: '',
-                image: 'https://www.jscammie.com/modelImages/pdxl-fluffysonic.png'
             },
 
             {
@@ -777,6 +924,11 @@
     <div id="description" style="display: none;">
         JSCammie is a Free FLUX, PDXL and SD 1.5 Stable Diffusion Generator | Generate free images SFW & NSFW with multiple models, loras & more!
     </div>
+
+    <!-- Tour button -->
+    <button id="startTourButton" aria-label="Start guided tour">
+        <i class="fas fa-map-marked-alt"></i> Guided Tour
+    </button>
 
     <style>
         .loadingGradient {
@@ -1623,6 +1775,12 @@
 
                             // check if the value is undefined or null, if so then dont change it:
                             function setValueSafelyIfNotUndefinedOrNull(elementId, value) {
+                                if (elementId == 'model') {
+                                    // check if it exists in the model select box:
+                                    if (!document.getElementById('model').querySelector(`option[value="${value}"]`)) {
+                                        value = 'illustrious-novafurry';
+                                    }
+                                }
                                 if (value !== undefined && value !== null) {
                                     setValueSafely(elementId, value);
                                 }
@@ -2061,9 +2219,9 @@
                             <option value="fluffysonic">(SD 1.5) FluffySonic (Sonic the Hedgehog)</option>
                             <option value="realisticVision">(SD 1.5) realisticVision (Realstic)</option>
                             <option value="pdxl-autismmix">(PDXL) Autism Mix (2D, 3D)</option>
-                            <option value="pdxl-sonichasautismmix">(PDXL) SonicHasAutismMix (SonicDiffusionXL & AutismMix merge)</option>
+                            <!-- <option value="pdxl-sonichasautismmix">(PDXL) SonicHasAutismMix (SonicDiffusionXL & AutismMix merge)</option> -->
                             <option value="pdxl-ponyrealism">(PDXL) Pony Realism (Realistic)</option>
-                            <option value="pdxl-fluffysonic">(PDXL) FluffySonic (Sonic the Hedgehog)</option>
+                            <!-- <option value="pdxl-fluffysonic">(PDXL) FluffySonic (Sonic the Hedgehog)</option> -->
                             <option value="illustrious-wai">BEST (ILLUSTRIOUS) WAI (2d, Anime, Human)</option>
                             <option value="illustrious-novafurry" selected>(ILLUSTRIOUS) Nova Furry (2d, 3d, Furry)</option>
                             <option value="illustrious-novaanimal">(ILLUSTRIOUS) Nova Animal (Realistic, 3d, Animal)</option>
@@ -3061,44 +3219,7 @@
                         <span id="img2imgStrengthValue" class="range-value">70%</span></a>
                     </div>
 
-                    <style>
-                        #openposeControls {
-                            max-width: 100%; /* Adjust this as needed */
-                            /* Add more styling as needed */
-                        }
-                    
-                        #stickCanvas {
-                            width: 100%; /* This will scale the canvas to fit the container */
-                            height: auto; /* Maintain aspect ratio */
-                            display: block; /* Prevents extra space below the canvas */
-                        }
-                    </style>
-                    
 
-                    <div class="form-control" hidden style="display: none;">
-                        <label for="openposeCheckbox">OpenPose:</label>
-                        <input type="checkbox" id="openposeCheckbox" name="openposeCheckbox">
-                    </div>
-
-                    <div class="form-control" id="openposeControls">
-                        <canvas id="stickCanvas" width="512" height="756" style="background-color: black;"></canvas>
-                        <script src="../scripts/openpose.js" type="text/javascript" defer></script>
-                    </div>
-
-                    <script>
-                        // show the openposeControls when the openposeCheckbox is checked:
-                        document.getElementById('openposeCheckbox').addEventListener('change', function() {
-                            // if the openpose checkbox is checked
-                            if (this.checked) {
-                                // show the openposeControls
-                                document.getElementById('openposeControls').style.display = 'block';
-                            } else {
-                                // hide the openposeControls
-                                document.getElementById('openposeControls').style.display = 'none';
-                            }
-                        });
-                        document.getElementById('openposeCheckbox').dispatchEvent(new Event('change'));
-                    </script>
 
 
 
@@ -3551,8 +3672,138 @@
                                 FLUX: 1<br>
                             </div>
                     </label>
-                    <div class="form-control inline-slider">
+                    <div class="form-control inline-slider" style="background-color: rgba(0, 0, 0, 0.25); border-radius: 10px; padding: 5px;">
+                        <style>
+                            /* Reset and override any global styles for this specific slider */
+                            #cfguidance {
+                                -webkit-appearance: none;
+                                appearance: none;
+                                height: 6px;
+                                width: 100%;
+                                background: #2d2d2d;
+                                border-radius: 5px;
+                                outline: none;
+                                margin: 10px 0;
+                                padding: 0;
+                                position: relative;
+                            }
+                            
+                            /* Middle gradient line */
+                            #cfguidance:before {
+                                content: '';
+                                position: absolute;
+                                left: 0;
+                                top: 50%;
+                                right: 0;
+                                height: 2px;
+                                background: linear-gradient(to right, #6a11cb, #c259ff);
+                                transform: translateY(-50%);
+                                border-radius: 5px;
+                                z-index: 0;
+                                pointer-events: none;
+                            }
+                            
+                            /* Override all webkit sliders */
+                            #cfguidance::-webkit-slider-thumb {
+                                -webkit-appearance: none !important;
+                                appearance: none !important;
+                                width: 18px !important;
+                                height: 18px !important;
+                                border-radius: 50% !important;
+                                background: #c259ff !important;
+                                cursor: pointer !important;
+                                border: 2px solid white !important;
+                                box-shadow: 0 0 5px rgba(0, 0, 0, 0.5) !important;
+                                position: relative !important;
+                                z-index: 2 !important;
+                                transition: all 0.2s ease !important;
+                                transform: scale(1) translateY(-50%) !important;
+                                transform-origin: center center !important;
+                                top: 50% !important;
+                                margin-top: 0 !important;
+                            }
+                            
+                            /* Override all moz sliders */
+                            #cfguidance::-moz-range-thumb {
+                                width: 18px !important;
+                                height: 18px !important;
+                                border-radius: 50% !important;
+                                background: #c259ff !important;
+                                cursor: pointer !important;
+                                border: 2px solid white !important;
+                                box-shadow: 0 0 5px rgba(0, 0, 0, 0.5) !important;
+                                position: relative !important;
+                                z-index: 2 !important;
+                                transition: all 0.2s ease !important;
+                                transform: scale(1) translateY(-50%) !important;
+                                transform-origin: center center !important;
+                                top: 50% !important;
+                                margin-top: 0 !important;
+                            }
+                            
+                            /* Track styling for consistency */
+                            #cfguidance::-webkit-slider-runnable-track {
+                                height: 6px;
+                                border-radius: 5px;
+                                background: transparent;
+                            }
+                            
+                            #cfguidance::-moz-range-track {
+                                height: 6px;
+                                border-radius: 5px;
+                                background: transparent;
+                            }
+                            
+                            /* Hover effects with !important to override any global styles */
+                            #cfguidance:hover::-webkit-slider-thumb {
+                                background: #8a3aff !important;
+                                transform: scale(1.1) translateY(-50%) !important;
+                                box-shadow: 0 0 8px rgba(194, 89, 255, 0.7) !important;
+                            }
+                            
+                            #cfguidance:hover::-moz-range-thumb {
+                                background: #8a3aff !important;
+                                transform: scale(1.1) translateY(-50%) !important;
+                                box-shadow: 0 0 8px rgba(194, 89, 255, 0.7) !important;
+                            }
+                            
+                            /* Active states */
+                            #cfguidance:active::-webkit-slider-thumb {
+                                background: #6a11cb !important;
+                                transform: scale(1.2) translateY(-50%) !important;
+                                box-shadow: 0 0 12px rgba(194, 89, 255, 0.9) !important;
+                            }
+                            
+                            #cfguidance:active::-moz-range-thumb {
+                                background: #6a11cb !important;
+                                transform: scale(1.2) translateY(-50%) !important;
+                                box-shadow: 0 0 12px rgba(194, 89, 255, 0.9) !important;
+                            }
+                            
+                            /* Tick marks */
+                            .tick-marks {
+                                display: flex;
+                                justify-content: space-between;
+                                margin-top: -2px;
+                                padding: 0 10px;
+                                position: relative;
+                                z-index: 1;
+                            }
+                            
+                            .tick {
+                                width: 1px;
+                                height: 5px;
+                                background-color: rgba(255, 255, 255, 0.5);
+                            }
+                        </style>
                         <input form="generatorForm" type="range" id="cfguidance" name="cfguidance" min="1" max="24" step="0.5" value="6">
+                        <div class="tick-marks">
+                            <div class="tick"></div>
+                            <div class="tick"></div>
+                            <div class="tick"></div>
+                            <div class="tick"></div>
+                            <div class="tick"></div>
+                        </div>
                         <input form="generatorForm" type="number" class="sliderInputBox" id="cfguidanceInput" name="cfguidanceInput" value="6"><a id="cfguidanceMax"></a>
                     </div>
     
@@ -3820,12 +4071,15 @@
                 <div id="additionalInfo"></div><br>
                 <div id="response"></div>
                 <div id="queuePosition" style="display: none;">
-                    Your position in queue: <span style="color: gold;" id="positionNumber"></span>
+                    <span style="color: gold;" id="positionNumber"></span>
                     <span class="tooltip" onclick="showTooltip(this)">❓</span>
                         <div class="tooltiptext">
-                            This is your position in the queue, you will be notified by a sound when your image is ready<br>
+                            Shows the ETA for your image to be generated, you will be notified by a sound when your image is ready<br>
+                            The ETA is based on the average time it takes to generate an image with the current settings
                         </div>
                 </div>
+
+                <span id="bothQueueETA"></span>
 
                 <label>
                     Generate Image:
@@ -3838,7 +4092,6 @@
                 <button form="generatorForm" type="submit" id="generateButton">Generate Image</button>
                 <button style="display: none;" id="cancelButton">Cancel Request</button>
 
-                <span id="queueGeneralInformation"></span>
             </div>
 
             <style>
@@ -4534,11 +4787,16 @@
 
     </script>
     
-    <script> <%- scripts.aiForm %> </script>
+    <script> <%- scripts.APIForm %> </script>
     <script src="https://www.jscammie.com/scripts/ai-autocomplete.js?v20"></script>
 
     <div class="overlay" id="overlayBooru"></div>
     <div class="booruPopupContent" id="booruPopupContent"></div>
+
+    <!-- AI Image Generator Tour Script -->
+    <script>
+        <%- scripts.imageGeneratorTour %>
+    </script>
 
 </body>
 </html>
