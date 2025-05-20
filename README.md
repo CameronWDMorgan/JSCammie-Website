@@ -2,7 +2,7 @@
 
 JSCammie-Website is most of the usable web assets used by [JSCammie](https://jscammie.com)
 
-[Report Bug] · [Report Typo] · [Report i8n issues] · [Request Enhancement]
+[Report Bug] · [Report Typo] · [Report i18n issues] · [Request Enhancement]
 
 ## Table of Contents
 
@@ -33,7 +33,7 @@ To get started with the repo, do the following;
 1. Fork the Repository.
 2. Find an issue that you can work on
 3. Make a pull request for your changes.
-4. Await a contributor to test and impliment the PR.
+4. Await a contributor to test and implement the PR.
 
 ### Prerequisites
 
@@ -43,16 +43,14 @@ To get started with the repo, do the following;
 
 ## Usage
 
-**Please note, this repo is not ready to be hostable in its current state.**
+**Please note, this repo is not hostable in its current state.**
 
 ## Roadmap
 
-- [ ] Upload the character prompt used for generating LORA preview images.
 - [ ] Preview images for the LORAs.
   - [ ] SD 1.5 based LORAs.
-  - [ ] SD XL based LORAs.
-- [ ] Work on redesigned Frontend (views/beta/ai.ejs) (LOW PRIORITY)
-- [ ] Fix bugs as and when they appear.
+  - [ ] PDXL based LORAs.
+  - [ ] Illustrious based LORAs.
 
 ## Contributing
 
