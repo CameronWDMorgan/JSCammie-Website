@@ -312,7 +312,8 @@
                 badges: {
                     owner: <%=userProfile?.badges?.owner? userProfile.badges.owner : false%>,
                     moderator: <%=userProfile?.badges?.moderator? userProfile.badges.moderator : false%>
-                }
+                },
+                favoriteBooruPosts: <%- JSON.stringify(userProfile?.favoriteBooruPosts ? userProfile.favoriteBooruPosts : []) %>
             }
 
             var masterUpvoteAccountData = {}
@@ -591,6 +592,36 @@
                 };
             }
 
+            async function favoritePost(booruId) {
+
+                console.log("favoritePost", booruId)
+                console.log("userProfile.favoriteBooruPosts", userProfile.favoriteBooruPosts)
+
+                body = {
+                    booru_id: booruId
+                }
+
+                fetch(`/booru/favorite`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(body)
+                })
+                .then((res) => res.json())
+                .then((data) => {
+                    if (data.status == "success") {
+                        console.log("data.message", data.message)
+                        // update the favorite button text:
+                        let favoriteButton = document.getElementById(`favoriteButton${booruId}`)
+                        if (data.favorited) {
+                            favoriteButton.innerHTML = "Unfavorite"
+                        } else {
+                            favoriteButton.innerHTML = "Favorite"
+                        }
+                    }
+                })
+            }
 
             async function setRating(rating, booruId) {
                     
@@ -659,8 +690,9 @@
                                 <button onclick="setRating('nsfw', '${value.booru_id}')">Set NSFW</button>
                                 <button onclick="setRating('suggestive', '${value.booru_id}')">Set Suggestive</button>
                                 <button onclick="setRating('sfw', '${value.booru_id}')">Set SFW</button>
-                                <button onclick="showReportModal('${value.booru_id}')">Report Post</button>
                                 <button onclick="showBanModal('${value.account_id}')">Ban User</button>
+                                <button onclick="showReportModal('${value.booru_id}')">Report Post</button>
+                                <button id="favoriteButton${value.booru_id}" onclick="favoritePost('${value.booru_id}')">${userProfile.favoriteBooruPosts.some(post => post.booru_id === value.booru_id) ? "Unfavorite" : "Favorite"}</button>
                             </div>
                         `;
                     } else {
@@ -669,6 +701,7 @@
                                 <button class="dropdownButton" onclick="document.getElementById('dropdown${value.booru_id}')?.classList.toggle('show')">ℹ️</button>
                                 <div class="dropdown" id="dropdown${value.booru_id}">
                                     <button onclick="showReportModal('${value.booru_id}')">Report Post</button>
+                                    <button id="favoriteButton${value.booru_id}" onclick="favoritePost('${value.booru_id}')">${userProfile.favoriteBooruPosts.some(post => post.booru_id === value.booru_id) ? "Unfavorite" : "Favorite"}</button>
                                 </div>
                             `;
                         }

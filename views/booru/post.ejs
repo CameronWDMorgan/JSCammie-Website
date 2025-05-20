@@ -15,7 +15,7 @@
     <meta content="https://embed.com/embedimage.png" property="og:image" />
     <meta content="#43B581" data-react-helmet="true" name="theme-color" /> -->
 
-    <meta property="og:title" content="<%= postProfile.username %> | <%= booruImage.model %> | JSCammie.com" />
+    <meta property="og:title" content="<%= booruImage.title? booruImage.title : postProfile.username %> | <%= booruImage.model %> | JSCammie.com" />
     <meta property="og:image" content="<%= booruImage.content_url %>" />
     <meta property="og:url" content="https://jscammie.com/booru/post/<%= booruImage.booru_id %>" />
     <meta content="#43B581" data-react-helmet="true" name="theme-color" />
@@ -52,8 +52,417 @@
 
     <div class="round-frosted page-content" style="padding: 40px; justify-content: center;">
 
-        <script>
+        <style>
+            /* New Post Page UI Styles */
+            .post-container {
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
+                width: 100%;
+                max-width: 1200px;
+                margin: 0 auto;
+            }
 
+            .post-header {
+                display: flex;
+                align-items: center;
+                gap: 15px;
+                padding: 15px;
+                background-color: rgba(0, 0, 0, 0.2);
+                border-radius: 12px;
+                margin-bottom: 10px;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            }
+
+            .post-author {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                text-decoration: none;
+                flex-grow: 1;
+            }
+
+            .post-author img {
+                width: 60px;
+                height: 60px;
+                border-radius: 50%;
+                object-fit: cover;
+                border: 3px solid rgba(255, 255, 255, 0.3);
+                transition: all 0.3s ease;
+            }
+
+            .post-author img:hover {
+                border-color: rgba(255, 255, 255, 0.7);
+                transform: scale(1.05);
+            }
+
+            .post-author-info {
+                display: flex;
+                flex-direction: column;
+            }
+
+            .post-author-name {
+                font-size: 1.4rem;
+                font-weight: bold;
+                margin: 0;
+                color: white;
+                text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+            }
+
+            .post-safety-badge {
+                font-size: 0.8rem;
+                padding: 3px 8px;
+                border-radius: 4px;
+                display: inline-block;
+                margin-top: 5px;
+                text-transform: uppercase;
+                font-weight: bold;
+                max-width: fit-content;
+            }
+
+            .safety-sfw {
+                background-color: rgba(0, 128, 0, 0.7);
+            }
+
+            .safety-suggestive {
+                background-color: rgba(255, 165, 0, 0.7);
+            }
+
+            .safety-nsfw {
+                background-color: rgba(255, 0, 0, 0.7);
+            }
+
+            .safety-extreme {
+                background-color: rgba(128, 0, 128, 0.7);
+            }
+
+            .safety-na {
+                background-color: rgba(100, 100, 100, 0.7);
+            }
+
+            .post-title-container {
+                padding: 10px 15px;
+                background-color: rgba(0, 0, 0, 0.2);
+                border-radius: 8px;
+                margin-bottom: 15px;
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+            }
+
+            .post-title {
+                font-size: 1.8rem;
+                font-weight: 600;
+                margin: 0;
+                text-align: center;
+                text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+            }
+
+            .post-description {
+                font-size: 1rem;
+                color: rgba(255, 255, 255, 0.8);
+                text-align: center;
+                margin: 5px 0 0 0;
+                line-height: 1.5;
+                font-style: italic;
+            }
+
+            .post-image-container {
+                position: relative;
+                margin: 0 auto;
+                text-align: center;
+                background-color: rgba(0, 0, 0, 0.3);
+                padding: 20px;
+                border-radius: 12px;
+                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+                overflow: hidden;
+                max-width: 100%;
+            }
+
+            .post-image {
+                max-width: 100%;
+                height: auto;
+                border-radius: 8px;
+                display: block;
+                margin: 0 auto;
+                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            }
+
+            .post-actions {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 10px;
+                margin: 15px 0;
+                padding: 15px;
+                background-color: rgba(0, 0, 0, 0.2);
+                border-radius: 8px;
+            }
+
+            .post-actions button {
+                padding: 8px 15px;
+                border-radius: 8px;
+                background-color: rgba(30, 30, 30, 0.7);
+                color: white;
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                font-size: 1rem;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                display: flex;
+                align-items: center;
+                gap: 5px;
+            }
+
+            .post-actions button:hover {
+                background-color: rgba(60, 60, 60, 0.9);
+                transform: translateY(-2px);
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            }
+
+            .action-upvote {
+                background-color: rgba(0, 132, 255, 0.6) !important;
+            }
+
+            .action-upvote:hover {
+                background-color: rgba(0, 132, 255, 0.8) !important;
+            }
+
+            .action-delete {
+                background-color: rgba(220, 53, 69, 0.6) !important;
+            }
+
+            .action-delete:hover {
+                background-color: rgba(220, 53, 69, 0.8) !important;
+            }
+
+            .post-details {
+                margin-top: 20px;
+                background-color: rgba(0, 0, 0, 0.2);
+                border-radius: 8px;
+                overflow: hidden;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            .post-details summary {
+                padding: 12px 15px;
+                background-color: rgba(0, 0, 0, 0.3);
+                font-weight: bold;
+                cursor: pointer;
+                position: relative;
+                transition: background-color 0.3s ease;
+            }
+
+            .post-details summary:hover {
+                background-color: rgba(0, 0, 0, 0.4);
+            }
+
+            .post-details summary::after {
+                content: "▼";
+                position: absolute;
+                right: 15px;
+                transition: transform 0.3s ease;
+            }
+
+            .post-details[open] summary::after {
+                transform: rotate(180deg);
+            }
+
+            .post-details-content {
+                padding: 15px;
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                gap: 10px;
+            }
+
+            .detail-item {
+                margin: 5px 0;
+                padding: 8px;
+                background-color: rgba(0, 0, 0, 0.1);
+                border-radius: 4px;
+            }
+
+            .detail-label {
+                font-weight: bold;
+                display: block;
+                margin-bottom: 3px;
+                font-size: 0.9rem;
+                color: rgba(255, 255, 255, 0.8);
+            }
+
+            .detail-value {
+                font-size: 1rem;
+                word-break: break-word;
+            }
+
+            /* Comments Section */
+            .comments-container {
+                margin-top: 30px;
+                padding-top: 20px;
+                border-top: 1px solid rgba(255, 255, 255, 0.2);
+            }
+
+            .comments-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 15px;
+            }
+
+            #commentsLoadButton {
+                padding: 8px 15px;
+                background-color: rgba(0, 132, 255, 0.6);
+                color: white;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                font-weight: bold;
+                margin: 0 auto 20px auto;
+                display: block;
+            }
+
+            #commentsLoadButton:hover {
+                background-color: rgba(0, 132, 255, 0.8);
+                transform: translateY(-2px);
+            }
+
+            .comment-form {
+                display: flex;
+                gap: 10px;
+                margin-bottom: 20px;
+            }
+
+            .comment-form input {
+                flex-grow: 1;
+                padding: 12px;
+                border-radius: 8px;
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                background-color: rgba(0, 0, 0, 0.2);
+            }
+
+            .comment-form button {
+                padding: 8px 15px;
+                background-color: rgba(0, 132, 255, 0.6);
+                color: white;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+
+            .comment-form button:hover {
+                background-color: rgba(0, 132, 255, 0.8);
+                transform: translateY(-2px);
+            }
+
+            .commentDiv {
+                display: flex;
+                flex-direction: column;
+                margin-bottom: 15px;
+                padding: 12px;
+                background-color: rgba(0, 0, 0, 0.2);
+                border-radius: 8px;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                transition: transform 0.2s ease;
+            }
+
+            .commentDiv:hover {
+                transform: translateY(-2px);
+                border-color: rgba(255, 255, 255, 0.3);
+            }
+
+            .commentInfo {
+                display: flex;
+                align-items: center;
+                text-decoration: none;
+                color: white;
+                margin-bottom: 8px;
+            }
+
+            .commentProfileImage {
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                object-fit: cover;
+                margin-right: 10px;
+                border: 2px solid rgba(255, 255, 255, 0.3);
+            }
+
+            .commentInfo h1 {
+                font-size: 1rem;
+                margin: 0;
+                font-weight: 600;
+            }
+
+            .commentContent {
+                font-size: 1rem;
+                color: #ffffff;
+                margin: 8px 0;
+                line-height: 1.4;
+            }
+
+            .timestamp {
+                font-size: 0.8rem;
+                color: rgba(255, 255, 255, 0.6);
+                margin-top: 5px;
+                text-align: right;
+            }
+
+            .commentButtons {
+                display: flex;
+                gap: 10px;
+                margin-top: 8px;
+            }
+
+            .commentButtons button {
+                padding: 5px 10px;
+                border-radius: 4px;
+                font-size: 0.9rem;
+                background-color: rgba(30, 30, 30, 0.7);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                color: white;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            }
+
+            .commentButtons button:hover {
+                background-color: rgba(60, 60, 60, 0.9);
+            }
+
+            .deleteButton {
+                background-color: rgba(220, 53, 69, 0.4) !important;
+            }
+
+            .deleteButton:hover {
+                background-color: rgba(220, 53, 69, 0.7) !important;
+            }
+
+            /* Media Queries */
+            @media (max-width: 768px) {
+                .post-header {
+                    flex-direction: column;
+                    text-align: center;
+                }
+
+                .post-author {
+                    flex-direction: column;
+                }
+
+                .post-details-content {
+                    grid-template-columns: 1fr;
+                }
+
+                .post-actions {
+                    flex-direction: column;
+                }
+
+                .post-actions button {
+                    width: 100%;
+                }
+            }
+        </style>
+
+        <script>
             let booruImage = {}
             booruImage.booru_id = `<%= booruImage.booru_id %>`
             booruImage.account_id = `<%= booruImage.account_id %>`
@@ -69,10 +478,11 @@
             booruImage.content_url = `<%= booruImage.content_url %>`
             booruImage.timestamp = `<%= booruImage.timestamp %>`
             booruImage.safety = `<%= booruImage.safety %>`
-            booruImage.upvotes = <%- JSON.stringify(booruImage.upvotes) %>
+            booruImage.title = `<%= booruImage.title? booruImage.title : postProfile.username %>`
+            booruImage.description = `<%= booruImage.description || "" %>`
+            booruImage.upvotes = <% try { %><%- JSON.stringify(booruImage.upvotes) %><% } catch(e) { %>[]; console.error("Error parsing upvotes:", e)<% } %>
 
             function exportAIData() {
-
                 // get the imageData from the masterImageData object:
                 const imageData = booruImage
 
@@ -122,10 +532,10 @@
                 
 
             var userProfile = {
-                accountId: '<%=userProfile?.accountId? userProfile.accountId : ''%>',
+                accountId: '<%= userProfile?.accountId ? userProfile.accountId : "" %>',
                 badges: {
-                    owner: <%=userProfile?.badges?.owner? userProfile.badges.owner : false%>,
-                    moderator: <%=userProfile?.badges?.moderator? userProfile.badges.moderator : false%>
+                    owner: <%= userProfile?.badges?.owner ? "true" : "false" %>,
+                    moderator: <%= userProfile?.badges?.moderator ? "true" : "false" %>
                 }
             }
 
@@ -169,112 +579,7 @@
                     }
                 })
             }
-
-            window.onload = () => {
-                postDiv = document.getElementById("postDiv")
-
-                postAccountIdButtons = ""
-                moderatorButtons=""
-
-                if (userProfile.accountId == booruImage.account_id) {
-                    // show delete button for post owner and moderators:
-                    postAccountIdButtons = `
-                        <button id="deletePost" onclick="deletePost()">Delete</button>
-                    `
-                } else if (userProfile.badges.moderator) {
-                    // show delete button for post owner and moderators:
-                    moderatorButtons = `
-                        <button id="deletePost" onclick="deletePost()">Delete</button>
-                    `
-                }
-
-                postDiv.innerHTML = `
-                    <a href="/profile/${booruImage.account_id}">
-                        <div id="postProfileDiv" class="postProfile">
-                            <img src="${postProfile.profileImg}" alt="Profile Image" class="postProfileImage" loading="lazy"/>
-                            <h1>${postProfile.ratings} ${postProfile.username}'s Post</h1>
-                        </div>
-                    </a>
-                                     
-                    <img class="postImage" src="${booruImage.content_url}" alt="Booru Image" style="max-width: 100%;"/>
-                    <div class="postButtons" id="postButtons">
-                        <button id="upvoteButton${booruImage.booru_id}" onclick="votePost('upvote', '${booruImage.booru_id}')">${booruImage.upvotes.length} ⬆️</button>
-                        ${moderatorButtons}
-                        ${postAccountIdButtons}
-                        <button onclick="exportAIData()">Export to .AIDATA</button>
-                        <button onclick="openInGenerator()">Open in Generator</button>
-                    </div>
-
-                    <details>
-
-                    <summary>Post Details (Click to Expand)</summary>
-                        <p>Prompt: ${booruImage.prompt}</p>
-                        <p>Negative Prompt: ${booruImage.negative_prompt}</p>
-                        <p>Model: ${booruImage.model}</p>
-                        <p>Aspect Ratio: ${booruImage.aspect_ratio}</p>
-                        <p>LoRAs: ${booruImage.loras}</p>
-                        <p>LoRA Strengths: ${booruImage.lora_strengths}</p>
-                        <p>Steps: ${booruImage.steps}</p>
-                        <p>CFG: ${booruImage.cfg}</p>
-                        <p>Seed: ${booruImage.seed}</p>
-                        <p>Timestamp: ${booruImage.timestamp}</p>
-                        <p>Safety: ${booruImage.safety}</p>
-                    </details>
-                `
-
-            }
-
         </script>
-
-        <style>
-            .commentDiv {
-                display: flex;
-                flex-direction: column;
-                margin-bottom: 20px;
-                padding: 10px;
-                background-color: rgba(0, 0, 0, 0.2);
-                border-radius: 5px;
-                }
-
-                .commentInfo {
-                display: flex;
-                align-items: center;
-                text-decoration: none;
-                color: #333;
-                margin-bottom: 5px;
-                }
-
-                .commentProfileImage {
-                width: 40px;
-                height: 40px;
-                border-radius: 50%;
-                object-fit: cover;
-                margin-right: 10px;
-                }
-
-                .commentInfo h1 {
-                font-size: 16px;
-                margin: 0;
-                font-weight: 600;
-                }
-
-                .commentContent {
-                font-size: 17px;
-                color: #ffffff;
-                margin: 5px 0;
-                }
-
-                .timestamp {
-                font-size: 12px;
-                color: #888;
-                margin-top: 5px;
-                }
-
-                .commentButtons {
-                    display: flex;
-                }
-
-        </style>
 
         <div class="searchDiv">
             <details id="autoCompleteDropdown" class="autoCompleteDropdown">
@@ -328,17 +633,141 @@
             </script>
         </div>
 
-        <div id="postDiv"></div>
-        <% if (session.loggedIn) { %>
-            <div id="submitComment">
-            </div>
-        <% } %>
+        <div id="postDiv" class="post-container"></div>
+        
+        <div class="comments-container">
+            <% if (session.loggedIn) { %>
+                <div id="submitComment" class="comment-form"></div>
+            <% } %>
 
-        <button id="commentsLoadButton">Click to Load Comments</button>
-        <div id="commentsDiv"></div>
+            <button id="commentsLoadButton">Load Comments</button>
+            <div id="commentsDiv"></div>
+        </div>
 
         <script>
-            
+            window.onload = () => {
+                const postDiv = document.getElementById("postDiv");
+                const booruImageSafety = booruImage.safety.toLowerCase();
+                
+                // Determine post title and description - fix the trim() function check
+                let hasTitle = booruImage.title && booruImage.title !== postProfile.username && booruImage.title.trim() !== '';
+                let hasDescription = booruImage.description && typeof booruImage.description === 'string' && booruImage.description.trim() !== '';
+                
+                // Generate safety badge class
+                const safetyClass = `safety-${booruImageSafety}`;
+                
+                // Check if user is owner or moderator
+                let postActionButtons = "";
+                if (userProfile.accountId === booruImage.account_id) {
+                    postActionButtons += `<button class="action-delete" id="deletePost" onclick="deletePost()">🗑️ Delete Post</button>`;
+                } else if (userProfile.badges.moderator) {
+                    postActionButtons += `<button class="action-delete" id="deletePost" onclick="deletePost()">🛡️ Moderator Delete</button>`;
+                }
+                
+                // Create HTML for post
+                postDiv.innerHTML = `
+                    <div class="post-header">
+                        <a href="/profile/${booruImage.account_id}" class="post-author">
+                            <img src="${postProfile.profileImg}" alt="${postProfile.username}'s Profile" onerror="this.src='https://www.jscammie.com/noimagefound.png'">
+                            <div class="post-author-info">
+                                <p class="post-author-name">${postProfile.username}</p>
+                                <span class="post-safety-badge ${safetyClass}">${booruImage.safety.toUpperCase()}</span>
+                            </div>
+                        </a>
+                    </div>
+                    
+                    ${hasTitle || hasDescription ? `
+                    <div class="post-title-container">
+                        ${hasTitle ? `<h1 class="post-title">${booruImage.title}</h1>` : ''}
+                        ${hasDescription ? `<p class="post-description">${booruImage.description}</p>` : ''}
+                    </div>
+                    ` : ''}
+                    
+                    <div class="post-image-container">
+                        <img class="post-image" src="${booruImage.content_url}" alt="${hasTitle ? booruImage.title : 'Booru Image'}" onerror="this.src='https://www.jscammie.com/noimagefound.png'">
+                    </div>
+                    
+                    <div class="post-actions">
+                        <button class="action-upvote" id="upvoteButton${booruImage.booru_id}" onclick="votePost('upvote', '${booruImage.booru_id}')">
+                            ⬆️ Upvote${booruImage.upvotes.length > 0 ? ` (${booruImage.upvotes.length})` : ''}
+                        </button>
+                        ${postActionButtons}
+                        <button onclick="exportAIData()">💾 Export to .AIDATA</button>
+                        <button onclick="openInGenerator()">🎨 Open in Generator</button>
+                    </div>
+                    
+                    <details class="post-details">
+                        <summary>Image Details</summary>
+                        <div class="post-details-content">
+                            <div class="detail-item">
+                                <span class="detail-label">Prompt:</span>
+                                <p class="detail-value">${booruImage.prompt}</p>
+                            </div>
+                            
+                            <div class="detail-item">
+                                <span class="detail-label">Negative Prompt:</span>
+                                <p class="detail-value">${booruImage.negative_prompt}</p>
+                            </div>
+                            
+                            <div class="detail-item">
+                                <span class="detail-label">Model:</span>
+                                <p class="detail-value">${booruImage.model}</p>
+                            </div>
+                            
+                            <div class="detail-item">
+                                <span class="detail-label">Aspect Ratio:</span>
+                                <p class="detail-value">${booruImage.aspect_ratio}</p>
+                            </div>
+                            
+                            <div class="detail-item">
+                                <span class="detail-label">Steps:</span>
+                                <p class="detail-value">${booruImage.steps}</p>
+                            </div>
+                            
+                            <div class="detail-item">
+                                <span class="detail-label">CFG:</span>
+                                <p class="detail-value">${booruImage.cfg}</p>
+                            </div>
+                            
+                            <div class="detail-item">
+                                <span class="detail-label">Seed:</span>
+                                <p class="detail-value">${booruImage.seed}</p>
+                            </div>
+                            
+                            ${booruImage.loras && booruImage.loras !== 'undefined' ? `
+                            <div class="detail-item">
+                                <span class="detail-label">LoRAs:</span>
+                                <p class="detail-value">${booruImage.loras}</p>
+                            </div>` : ''}
+                            
+                            ${booruImage.lora_strengths && booruImage.lora_strengths !== 'undefined' ? `
+                            <div class="detail-item">
+                                <span class="detail-label">LoRA Strengths:</span>
+                                <p class="detail-value">${booruImage.lora_strengths}</p>
+                            </div>` : ''}
+                            
+                            <div class="detail-item">
+                                <span class="detail-label">Upload Date:</span>
+                                <p class="detail-value">${new Date(parseInt(booruImage.timestamp)).toLocaleString()}</p>
+                            </div>
+                        </div>
+                    </details>
+                `;
+            };
+
+            // Update comment submission UI
+            document.addEventListener("DOMContentLoaded", () => {
+                const submitCommentDiv = document.getElementById("submitComment");
+                if (submitCommentDiv) {
+                    submitCommentDiv.innerHTML = `
+                        <input id="commentInput" type="text" placeholder="Add a comment..." />
+                        <button id="commentButton">Post</button>
+                    `;
+                }
+            });
+        </script>
+
+        <script>
             document.addEventListener("DOMContentLoaded", () => {
                 const commentsDiv = document.getElementById("commentsDiv");
                 const commentsLoadButton = document.getElementById("commentsLoadButton");
@@ -374,7 +803,7 @@
 
                 function renderComment(comment) {
                     const isOwner = userProfile.accountId === comment.accountId;
-                    const isMod = userProfile.badges?.moderator;
+                    const isMod = userProfile.badges.moderator;
                     
                     let commentButtons = `<button class="voteButton" data-id="${comment.commentId}">${comment.upvotes}⬆️</button>`;
 
