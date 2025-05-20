@@ -63,6 +63,9 @@ const userProfileSchema = new Schema({
         get: (v) => v ? parseFloat(v.toString()) : v,
         default: 500 
     },
+    variables: {
+        userHistoryLimit: { type: Number, default: 5000 }
+    },
     dailies: dailiesSchema,
     profileImg: { type: String, default: "http://www.jscammie.com/noimagefound.png" },
     booruPostBanned: { type: Boolean, default: false },
@@ -73,6 +76,7 @@ const userProfileSchema = new Schema({
     followedAccounts: { type: Array, default: [] },
     blockedAccounts: { type: Array, default: [] },
     favoriteLoras: { type: Array, default: [] },
+    favoriteBooruPosts: { type: Array, default: [] },
 })
 
 userProfileSchema.set('toObject', { getters: true });
