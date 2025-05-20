@@ -1,0 +1,216 @@
+<!-- setup basic html template with metadata etc: -->
+<html>
+<head>
+    <title>Set Booru Post Titles | JSCammie.com</title>
+    <link rel='stylesheet' href='/style.css'/>
+    
+    <%- include('../../partials/_headerAll') %>
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-K3KJJKS1R4"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-K3KJJKS1R4');
+    </script>
+    
+    <style>
+        .post-container {
+            display: none;
+            margin-bottom: 20px;
+        }
+        .post-container.active {
+            display: block;
+        }
+        .image-container {
+            max-width: 100%;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .image-container img {
+            max-width: 100%;
+            width: auto;
+            height: auto;
+            border-radius: 8px;
+            object-fit: contain;
+        }
+        .title-form {
+            margin-top: 15px;
+        }
+        .navigation-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        .progress-indicator {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #888;
+        }
+        .prompt-text {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: rgba(0,0,0,0.05);
+            border-radius: 5px;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- get partials/_navigation: -->
+    <%- include('../../partials/_navigation') %>
+
+    <div class="center-fully-no-flex" style="margin-bottom: 1rem;">
+        <%- include('../../partials/_bannerAdvert') %>
+    </div>
+
+    <div class="round-frosted page-content mw50-dynamic" style="padding: 40px; justify-content: center;">
+        <h1>Set Booru Post Titles</h1>
+
+        <% if (!userProfile?.badges?.moderator) { %>
+            <p>Only moderators can access this page.</p>
+        <% } else if (booruPosts.length === 0) { %>
+            <p>No booru posts without titles found.</p>
+            <div class="center-fully">
+                <button id="refreshButton" class="button-default">Refresh</button>
+            </div>
+        <% } else { %>
+            <p>Set titles for booru posts that don't have them yet.</p>
+            
+            <div id="postsContainer">
+                <% booruPosts.forEach((post, index) => { %>
+                    <div class="post-container <%= index === 0 ? 'active' : '' %>" data-index="<%= index %>" data-id="<%= post.booru_id %>">
+                        <div class="image-container">
+                            <img src="<%= post.content_url %>" alt="Booru post">
+                        </div>
+                        <div class="prompt-text">
+                            <strong>Prompt:</strong> <%= post.prompt || 'No prompt provided' %>
+                        </div>
+                        <div class="title-form">
+                            <div class="form-group">
+                                <label for="title-<%= post.booru_id %>">Title:</label>
+                                <input type="text" id="title-<%= post.booru_id %>" class="title-input" placeholder="Enter title for this post">
+                            </div>
+                            <div class="navigation-buttons">
+                                <button class="button-secondary prev-button" <%= index === 0 ? 'disabled' : '' %>>Previous</button>
+                                <button class="button-primary save-button">Save & Next</button>
+                                <button class="button-secondary skip-button">Skip</button>
+                            </div>
+                        </div>
+                    </div>
+                <% }); %>
+            </div>
+            
+            <div class="progress-indicator">
+                Post <span id="currentPost">1</span> of <span id="totalPosts"><%= booruPosts.length %></span>
+            </div>
+            
+        <% } %>
+    </div>
+
+    <!-- get partials/_footer: -->
+    <%- include('../../partials/_footer') %>
+    
+    <% if (userProfile?.badges?.moderator && booruPosts.length > 0) { %>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const posts = document.querySelectorAll('.post-container');
+            const currentPostEl = document.getElementById('currentPost');
+            const totalPosts = posts.length;
+            let currentIndex = 0;
+            
+            function showPost(index) {
+                posts.forEach(p => p.classList.remove('active'));
+                posts[index].classList.add('active');
+                currentPostEl.textContent = index + 1;
+                
+                // Enable/disable navigation buttons
+                document.querySelectorAll('.prev-button').forEach(btn => {
+                    btn.disabled = index === 0;
+                });
+            }
+            
+            // Previous button handler
+            document.querySelectorAll('.prev-button').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    if (currentIndex > 0) {
+                        currentIndex--;
+                        showPost(currentIndex);
+                    }
+                });
+            });
+            
+            // Save and next button handler
+            document.querySelectorAll('.save-button').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const container = btn.closest('.post-container');
+                    const postId = container.dataset.id;
+                    const titleInput = container.querySelector('.title-input');
+                    const title = titleInput.value.trim();
+                    
+                    if (!title) {
+                        alert('Please enter a title');
+                        return;
+                    }
+                    
+                    fetch('/booru-post-title-set', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            booru_id: postId,
+                            title: title
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            if (currentIndex < totalPosts - 1) {
+                                currentIndex++;
+                                showPost(currentIndex);
+                            } else {
+                                // All posts processed
+                                alert('All posts have been processed. The page will now refresh to load new posts.');
+                                window.location.reload();
+                            }
+                        } else {
+                            alert('Error: ' + data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('An error occurred while saving the title');
+                    });
+                });
+            });
+            
+            // Skip button handler
+            document.querySelectorAll('.skip-button').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    if (currentIndex < totalPosts - 1) {
+                        currentIndex++;
+                        showPost(currentIndex);
+                    } else {
+                        // All posts processed
+                        alert('All posts have been processed. The page will now refresh to load new posts.');
+                        window.location.reload();
+                    }
+                });
+            });
+        });
+    </script>
+    <% } else if (booruPosts.length === 0) { %>
+    <script>
+        document.getElementById('refreshButton').addEventListener('click', function() {
+            window.location.reload();
+        });
+    </script>
+    <% } %>
+</body>
+</html>
