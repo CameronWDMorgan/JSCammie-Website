@@ -33,6 +33,7 @@ const userBooruSchema = new Schema({
     downvotes: { type: Array, default: [] },
     reports: { type: Array, default: [] },
     comments: { type: [userBooruCommentSchema], default: [] },
+    title: { type: String, default: "" },
 })
 
 const name = 'userBooru'
