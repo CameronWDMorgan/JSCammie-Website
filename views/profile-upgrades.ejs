@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Upgrades | JSCammie.com</title>
+    <meta name="description" content="Enhance your experience with permanent profile upgrades!">
+    <link rel='stylesheet' href='/style.css'/>
+    <%- include('../partials/_headerAll') %>
+
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-K3KJJKS1R4"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'G-K3KJJKS1R4');
+    </script>
+</head>
+<body>
+
+    <%- include('../partials/_navigation') %>
+    
+    <div class="center-fully-no-flex" style="margin-bottom: 1rem;">
+        <%- include('../partials/_bannerAdvert') %>
+    </div>
+
+    <div class="round-frosted page-content upgrades-container">
+        <div class="upgrades-header">
+            <h1>Profile Upgrades</h1>
+            <p class="upgrades-tagline">Enhance your experience with permanent profile upgrades!</p>
+        </div>
+
+        <style>
+            .upgrades-container {
+                padding: 40px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                margin: 0 auto;
+                width: 95%;
+                max-width: 80%;
+                margin-left: auto;
+                margin-right: auto;
+            }
+
+            .upgrades-header {
+                text-align: center;
+                margin-bottom: 20px;
+                width: 100%;
+            }
+
+            .upgrades-header h1 {
+                font-size: 2.5rem;
+                margin-bottom: 10px;
+                background: linear-gradient(135deg, #a64dff, #7a00cc);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+            }
+
+            .upgrades-tagline {
+                font-size: 1.2rem;
+                opacity: 0.9;
+                max-width: 600px;
+                margin: 0 auto;
+            }
+
+            .user-status {
+                padding: 12px 24px;
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 50px;
+                margin: 10px 0 20px;
+                font-weight: 500;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .user-status:before {
+                content: "";
+                display: inline-block;
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                background: #4CAF50;
+            }
+
+            .not-logged-in .user-status:before {
+                background: #F44336;
+            }
+
+            .upgrades-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: 30px;
+                width: 100%;
+                max-width: 1200px;
+                margin-top: 20px;
+            }
+
+            .upgrade-item {
+                padding: 30px;
+                border-radius: 16px;
+                background: rgba(43, 0, 43, 0.4);
+                color: rgb(255, 255, 255);
+                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+                text-align: center;
+                transition: all 0.4s ease-in-out;
+                border: 2px solid rgba(255, 255, 255, 0.2);
+                position: relative;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+            }
+
+            .upgrade-item:before {
+                content: "";
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 100%);
+                pointer-events: none;
+                z-index: 1;
+            }
+
+            .upgrade-item:hover {
+                transform: translateY(-10px);
+                box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+                border-color: rgba(255, 255, 255, 0.5);
+            }
+
+            .upgrade-item h3 {
+                margin: 0 0 15px;
+                font-size: 1.8em;
+                font-weight: 700;
+                background: linear-gradient(135deg, #a64dff, #7a00cc);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                position: relative;
+                z-index: 2;
+            }
+
+            .upgrade-desc {
+                margin: 0 0 20px;
+                font-size: 1.1em;
+                opacity: 0.9;
+                position: relative;
+                z-index: 2;
+            }
+
+            .upgrade-current {
+                margin: 10px 0;
+                font-size: 1.2em;
+                font-weight: 600;
+                color: #4CAF50;
+            }
+
+            .upgrade-price {
+                margin: 15px 0;
+                font-size: 1.5em;
+                font-weight: 700;
+                color: #ffb84d;
+            }
+
+            .upgrade-button {
+                padding: 12px 24px;
+                background: linear-gradient(135deg, #a64dff, #7a00cc);
+                border: none;
+                border-radius: 50px;
+                color: white;
+                font-weight: 600;
+                font-size: 1.1em;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                position: relative;
+                z-index: 2;
+                margin-top: 15px;
+            }
+
+            .upgrade-button:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 8px 20px rgba(122, 0, 204, 0.4);
+            }
+
+            .upgrade-button:disabled {
+                background: #666;
+                cursor: not-allowed;
+                transform: none;
+                box-shadow: none;
+            }
+
+            .login-cta {
+                margin-top: 30px;
+                padding: 15px 30px;
+                background: linear-gradient(135deg, #a64dff, #7a00cc);
+                border-radius: 50px;
+                font-weight: 600;
+                font-size: 1.1em;
+                text-decoration: none;
+                display: inline-block;
+                transition: all 0.3s ease;
+                box-shadow: 0 5px 15px rgba(122, 0, 204, 0.4);
+            }
+
+            .login-cta:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 8px 20px rgba(122, 0, 204, 0.6);
+            }
+
+            #purchase-result {
+                margin-top: 20px;
+                padding: 15px;
+                border-radius: 10px;
+                text-align: center;
+                display: none;
+            }
+
+            #purchase-result.success {
+                background: rgba(76, 175, 80, 0.2);
+                border: 1px solid #4CAF50;
+            }
+
+            #purchase-result.error {
+                background: rgba(244, 67, 54, 0.2);
+                border: 1px solid #F44336;
+            }
+
+            .slider-container {
+                margin: 15px 0;
+                width: 100%;
+            }
+            
+            .slider {
+                width: 100%;
+                height: 8px;
+                background: rgba(122, 0, 204, 0.2);
+                outline: none;
+                border-radius: 5px;
+                margin: 15px 0;
+                -webkit-appearance: none;
+            }
+            
+            .slider::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                appearance: none;
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                background: #a64dff;
+                cursor: pointer;
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+            }
+            
+            .slider::-moz-range-thumb {
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                background: #a64dff;
+                cursor: pointer;
+                border: none;
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+            }
+
+            @media (max-width: 768px) {
+                .upgrades-container {
+                    padding: 20px;
+                    width: 95%;
+                }
+                
+                .upgrades-header h1 {
+                    font-size: 2rem;
+                }
+                
+                .upgrades-grid {
+                    grid-template-columns: 1fr;
+                }
+            }
+        </style>
+
+        <% if (session.accountId) { %>
+            <div class="user-status">Logged in as: <%= userProfile.username %></div>
+            <p>Current credits: <strong id="user-credits"><%= userProfile.credits %></strong></p>
+            
+            <div id="purchase-result"></div>
+            
+            <div class="upgrades-grid">
+                <!-- Image History Upgrade -->
+                <div class="upgrade-item">
+                    <div>
+                        <h3>Image History Expansion</h3>
+                        <p class="upgrade-desc">Increase the number of images saved in your history.</p>
+                        <p class="upgrade-current">Current limit: <span id="current-limit"><%= userProfile.variables.userHistoryLimit %></span> images</p>
+                        <p class="upgrade-desc">New limit: <span id="new-limit"><%= userProfile.variables.userHistoryLimit + 1000 %></span> images</p>
+                    </div>
+                    <div>
+                        <p class="upgrade-price">Price: <span id="upgrade-price">calculating...</span> credits</p>
+                        <button id="history-upgrade-btn" class="upgrade-button" disabled>
+                            Loading...
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Future upgrade options can be added here -->
+            </div>
+            
+            <script>
+                // Cache DOM elements
+                const userCreditsEl = document.getElementById('user-credits');
+                const currentLimitEl = document.getElementById('current-limit');
+                const newLimitEl = document.getElementById('new-limit');
+                const upgradePriceEl = document.getElementById('upgrade-price');
+                const upgradeBtn = document.getElementById('history-upgrade-btn');
+                const resultDiv = document.getElementById('purchase-result');
+                
+                // Get pricing from server
+                async function getPricing() {
+                    try {
+                        const response = await fetch('/profile-upgrades/price', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                upgrade: 'history-slots',
+                                amount: 1000
+                            })
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (result.status === 'success') {
+                            upgradePriceEl.textContent = result.price;
+                            
+                            // Enable/disable button based on available credits
+                            const userCredits = parseInt(userCreditsEl.textContent);
+                            if (userCredits < result.price) {
+                                upgradeBtn.disabled = true;
+                                upgradeBtn.textContent = 'Not enough credits';
+                            } else {
+                                upgradeBtn.disabled = false;
+                                upgradeBtn.textContent = 'Purchase Upgrade';
+                            }
+                        } else {
+                            upgradePriceEl.textContent = 'Error';
+                            upgradeBtn.disabled = true;
+                            upgradeBtn.textContent = 'Error';
+                        }
+                    } catch (error) {
+                        console.error('Error fetching price:', error);
+                        upgradePriceEl.textContent = 'Error';
+                        upgradeBtn.disabled = true;
+                        upgradeBtn.textContent = 'Error';
+                    }
+                }
+                
+                // Initialize pricing
+                getPricing();
+                
+                // Add event listener
+                upgradeBtn.addEventListener('click', async function() {
+                    if (this.disabled) return;
+                    
+                    try {
+                        this.disabled = true;
+                        this.textContent = 'Processing...';
+                        
+                        const response = await fetch('/profile-upgrades/purchase', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                upgrade: 'history-slots',
+                                amount: 1000
+                            })
+                        });
+                        
+                        const result = await response.json();
+                        
+                        resultDiv.textContent = result.message;
+                        resultDiv.className = result.status === 'success' ? 'success' : 'error';
+                        resultDiv.style.display = 'block';
+                        
+                        if (result.status === 'success') {
+                            // Update DOM
+                            userCreditsEl.textContent = result.newCredits;
+                            currentLimitEl.textContent = parseInt(currentLimitEl.textContent) + 1000;
+                            newLimitEl.textContent = parseInt(newLimitEl.textContent) + 1000;
+                            
+                            // Get updated price
+                            await getPricing();
+                            
+                            // Reset result message after 5 seconds
+                            setTimeout(() => {
+                                resultDiv.style.display = 'none';
+                            }, 5000);
+                        } else {
+                            this.disabled = false;
+                            this.textContent = 'Purchase Upgrade';
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        resultDiv.textContent = 'An error occurred. Please try again later.';
+                        resultDiv.className = 'error';
+                        resultDiv.style.display = 'block';
+                        this.disabled = false;
+                        this.textContent = 'Purchase Upgrade';
+                    }
+                });
+            </script>
+        <% } else { %>
+            <div class="not-logged-in">
+                <div class="user-status">Not logged in</div>
+                <p>You need to be logged in to purchase profile upgrades</p>
+                <a href="/login" class="login-cta">Log in to view upgrades</a>
+            </div>
+        <% } %>
+    </div>
+
+    <%- include('../partials/_footer') %>
+</body>
+</html> 
