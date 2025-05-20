@@ -27,13 +27,15 @@ let lastRecordedTime = null
 let lastPosition = null
 let stagnantPositionCount = 0
 let positionChangeCount = 0
-const MIN_POSITION_CHANGES_FOR_ETA = 2  // Only show ETA after 2 position changes
-const MAX_HISTORY_LENGTH = 10  // Shorter history length for more responsiveness
+const MIN_POSITION_CHANGES_FOR_ETA = 1  // Only show ETA after 1 position change instead of 2
+const MAX_HISTORY_LENGTH = 15  // Increased history length for better accuracy
 const POSITION_UPDATE_TIMEOUT = 10000  // 10 seconds max without position update
+const ETA_SAFETY_MULTIPLIER = 1.5  // Increased from 1.25 to 1.5 to avoid underestimation
+const ETA_FIXED_BUFFER = 30000  // Add 30 seconds fixed buffer to all estimates
 
 // Function to reset ETA calculation variables
 const resetETACalculation = () => {
-    timeForNextPositionLower = []
+    // Don't reset timeForNextPositionLower to preserve average time data between generations
     lastLowestPosition = 9999
     lastRecordedTime = null
     lastPosition = null
@@ -74,11 +76,35 @@ const UIState = {
         if (lastRecordedTime === null) {
             lastRecordedTime = currentTime;
             lastPosition = position;
-            timeForNextPositionLower = [];
             stagnantPositionCount = 0;
             lastLowestPosition = position;
             positionChangeCount = 0;
-            this.positionNumber.innerText = `${position}/${queueLength} - ETA: Calculating...`;
+            
+            // Use historical data if available to avoid showing "Calculating..."
+            if (timeForNextPositionLower.length > 0) {
+                // Calculate ETA using existing historical data
+                const avgTimePerPosition = timeForNextPositionLower.reduce((sum, time) => sum + time, 0) / 
+                    timeForNextPositionLower.length;
+                
+                const boundedTimePerPosition = Math.min(Math.max(avgTimePerPosition, 8000), 120000);
+                let estimatedTimeRemaining = (boundedTimePerPosition * position * ETA_SAFETY_MULTIPLIER) + ETA_FIXED_BUFFER;
+                
+                // For position 1, especially in fast queue, avoid adding too much buffer
+                if (position === 1) {
+                    // Fast queue should have minimal buffer - no artificial minimum
+                    estimatedTimeRemaining = position === 1 && queueLength === 1 ? 
+                        boundedTimePerPosition : // Only use actual processing time estimate for fast queue
+                        Math.max(estimatedTimeRemaining, 15000); // Reduced from 30s to 15s for other cases
+                }
+                
+                const etaMinutes = Math.floor(estimatedTimeRemaining / 60000);
+                const etaSeconds = Math.floor((estimatedTimeRemaining % 60000) / 1000);
+                
+                const etaString = etaMinutes > 0 ? `${etaMinutes}m ${etaSeconds}s` : `${etaSeconds}s`;
+                this.positionNumber.innerText = `ETA: ${etaString}`;
+            } else {
+                this.positionNumber.innerText = `ETA: Calculating...`;
+            }
             return;
         }
         
@@ -92,14 +118,11 @@ const UIState = {
             const positionDiff = lastPosition - position;
             const timePerPosition = timeDiff / positionDiff;
             
-            // Increment the position change counter
-            positionChangeCount += positionDiff;
+            // Increment the position change counter - only count distinct updates, not the difference
+            positionChangeCount += 1;
             
-            // Add weighted entry (more recent changes are more important)
-            timeForNextPositionLower.push({
-                time: timePerPosition,
-                weight: 1 + (0.1 * (MAX_HISTORY_LENGTH - timeForNextPositionLower.length))
-            });
+            // Add time entry - no weights, simple data collection
+            timeForNextPositionLower.push(timePerPosition);
             
             // Reset stagnant counter since queue moved
             stagnantPositionCount = 0;
@@ -113,15 +136,11 @@ const UIState = {
             // and we haven't added too many stagnant entries yet
             if (stagnantPositionCount <= 2 && timeForNextPositionLower.length > 0) {
                 // Calculate average from existing data
-                let avgTime = timeForNextPositionLower.reduce((sum, entry) => 
-                    sum + entry.time * entry.weight, 0) / 
-                    timeForNextPositionLower.reduce((sum, entry) => sum + entry.weight, 0);
+                let avgTime = timeForNextPositionLower.reduce((sum, time) => sum + time, 0) / 
+                    timeForNextPositionLower.length;
                 
                 // Add a slightly inflated entry
-                timeForNextPositionLower.push({
-                    time: avgTime * 1.2,  // 20% slower
-                    weight: 0.5  // Lower weight for these entries
-                });
+                timeForNextPositionLower.push(avgTime * 1.2);  // 20% slower
             }
             
             // Reset time counter for next check
@@ -133,23 +152,25 @@ const UIState = {
             timeForNextPositionLower.shift();
         }
         
-        // Calculate weighted average ETA only after sufficient position changes
+        // Calculate ETA using available data - even if we don't have enough position changes
         let etaString = "Calculating...";
-        if (timeForNextPositionLower.length > 0 && positionChangeCount >= MIN_POSITION_CHANGES_FOR_ETA) {
-            // Calculate weighted average
-            const totalWeight = timeForNextPositionLower.reduce((sum, entry) => sum + entry.weight, 0);
-            const weightedAvgTimePerPosition = timeForNextPositionLower.reduce((sum, entry) => 
-                sum + (entry.time * entry.weight), 0) / totalWeight;
+        if (timeForNextPositionLower.length > 0) {
+            // Calculate simple average
+            const avgTimePerPosition = timeForNextPositionLower.reduce((sum, time) => sum + time, 0) / 
+                timeForNextPositionLower.length;
             
-            // Apply some bounds to avoid unrealistic estimates
-            const boundedTimePerPosition = Math.min(Math.max(weightedAvgTimePerPosition, 1000), 60000);
-            let estimatedTimeRemaining = boundedTimePerPosition * (position - 1);
+            // Apply more realistic bounds to avoid underestimating
+            // Minimum 8 seconds per position, maximum 2 minutes per position
+            const boundedTimePerPosition = Math.min(Math.max(avgTimePerPosition, 8000), 120000);
             
-            // Add a small buffer for position 1 (currently generating)
-            if (position === 1) {
-                estimatedTimeRemaining = Math.max(estimatedTimeRemaining, 5000);
-            }
+            // Calculate estimated time remaining based on current position
+            // For fastqueue positions (where you might start at position 2), this is more accurate
+            let estimatedTimeRemaining = (boundedTimePerPosition * position * ETA_SAFETY_MULTIPLIER) + ETA_FIXED_BUFFER;
             
+            // provide more accurate estimate without buffers
+            estimatedTimeRemaining = boundedTimePerPosition * position;
+            
+
             const etaMinutes = Math.floor(estimatedTimeRemaining / 60000);
             const etaSeconds = Math.floor((estimatedTimeRemaining % 60000) / 1000);
             
@@ -159,12 +180,15 @@ const UIState = {
             } else {
                 etaString = `${etaSeconds}s`;
             }
+        } else if (positionChangeCount < MIN_POSITION_CHANGES_FOR_ETA) {
+            etaString = "Calculating...";
         }
         
         // Update for next iteration
         lastPosition = position;
         
-        this.positionNumber.innerText = `${position}/${queueLength} - ETA: ${etaString}`;
+        // Display ETA
+        this.positionNumber.innerText = `ETA: ${etaString}`;
     },
 
     hideQueuePosition() {
@@ -840,10 +864,56 @@ setInterval(async () => {
         }
 
         const queueLengths = await response.json();
+        
+        console.log("Queue lengths:", queueLengths);
 
-        funcElementById('queueGeneralInformation').innerText = `\nRegular Queue: ${queueLengths.data.queue_0} | Fast Queue: ${queueLengths.data.queue_1} | Total Queue: ${queueLengths.data.queue_0 + queueLengths.data.queue_1}`
+        // Use the historical ETA data if available, otherwise fall back to estimates
+        const calculateQueueETA = (queueLength) => {
+            // Ensure queue length is a valid number
+            let length = parseInt(queueLength) || 0;
 
+            // add +1 to the length
+            if (length == 0) {
+                length = 1;
+            }
+            
+            if (timeForNextPositionLower.length > 0) {
+                // Calculate using historical data like in updateQueuePosition
+                const avgTimePerPosition = timeForNextPositionLower.reduce((sum, time) => sum + time, 0) / 
+                    timeForNextPositionLower.length;
+                
+                // Apply realistic bounds like in the main ETA calculation
+                const boundedTimePerPosition = Math.min(Math.max(avgTimePerPosition, 8000), 120000);
+                
+                // Calculate estimated time in milliseconds
+                return boundedTimePerPosition * length;
+            } else {
+                // Fall back to the simple estimate if no historical data
+                return length * 11000; // 11 seconds per position estimate
+            }
+        };
 
+        // Check if data exists and has the expected format
+        if (queueLengths.status === 'success' && queueLengths.data) {
+            // Calculate ETAs for both queues
+            const normalQueueETA = calculateQueueETA(queueLengths.data.queue_0);
+            const fastQueueETA = calculateQueueETA(queueLengths.data.queue_1);
+
+            // Format the ETAs nicely in minutes and seconds
+            const formatETA = (ms) => {
+                if (!ms && ms !== 0) return "0s";
+                const minutes = Math.floor(ms / 60000);
+                const seconds = Math.floor((ms % 60000) / 1000);
+                return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+            };
+
+            funcElementById('bothQueueETA').innerHTML = `<a style="color: yellow;">Estimated Wait Times:</a><br>
+            <a style="color: white;">Regular Queue: ${formatETA(normalQueueETA)}</a><br>
+            <a style="color: lightblue; box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.5);">Fast Queue: ${formatETA(fastQueueETA)}</a>`;
+        } else {
+            console.warn('Invalid queue length data format');
+            funcElementById('bothQueueETA').innerText = 'Queue info unavailable';
+        }
     } catch (error) {
         console.error('Queue length fetch failed:', error);
     }

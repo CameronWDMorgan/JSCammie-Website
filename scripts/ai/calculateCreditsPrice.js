@@ -1,17 +1,15 @@
 function getFastqueuePrice(loraCount, model) {
-
-	let dynamicCreditsPrice = 0
 	const baseCreditsPrice = 18
+	let dynamicCreditsPrice = baseCreditsPrice
+	let loraModifier = 0
+	let priceBeforeLoras = 0
 
-	dynamicCreditsPrice = baseCreditsPrice
+	// Normalize model input - extract base model name
+	model = (model || '').split('-')[0] || 'sd15'
 
-	// split the model on the -, if there isnt a - then make it sd15:
-	model = model.split('-')[0] || 'sd15'
-
+	// Apply model-specific pricing adjustments
 	switch(model) {
-		case 'sd15':
-			loraModifier = 1.5
-			break
+
 		case 'pdxl':
 			dynamicCreditsPrice = dynamicCreditsPrice * 3.5
 			loraModifier = 5
@@ -28,19 +26,21 @@ function getFastqueuePrice(loraCount, model) {
 			loraModifier = 1.25
 	}
 
-	// credits price before loras
+	// Store base price before lora additions
 	priceBeforeLoras = dynamicCreditsPrice
 
+	// Scale lora modifier based on the base price
 	loraModifier = loraModifier * (priceBeforeLoras / 14)
 
+	// Add price for each lora used
 	if (loraCount > 0) {
 		dynamicCreditsPrice = dynamicCreditsPrice + (loraCount * loraModifier)
 	}
 
+	// Round to nearest whole number
 	dynamicCreditsPrice = Math.round(dynamicCreditsPrice)
 
 	return dynamicCreditsPrice
-
 }
 
 function getExtrasPrice(extras, model='') {
