@@ -26,6 +26,213 @@
     <!-- get partials/_navigation: -->
     <%- include('../partials/_navigation') %>
 
+    <!-- Add moderation modals -->
+    <div id="banModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeBanModal()">&times;</span>
+            <h3>Ban User from Booru</h3>
+            <label for="banReason">Reason for ban:</label>
+            <textarea id="banReason" rows="4" cols="50" placeholder="Enter the reason..."></textarea>
+            <br>
+            <button onclick="banUser()">Ban</button>
+            <button onclick="closeBanModal()">Cancel</button>
+        </div>
+    </div>
+
+    <div id="reportModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeReportModal()">&times;</span>
+            <h3>Report Post</h3>
+            <label for="reportReason">Reason for report:</label>
+            <textarea id="reportReason" rows="4" cols="50" placeholder="Enter the reason..."></textarea>
+            <br>
+            <button onclick="setReportReason('Incorrect Safety Rating')">Incorrect Safety Rating</button>
+            <button onclick="setReportReason('AI Errors')">AI Errors</button>
+            <button onclick="setReportReason('Character Belongs to someone else')">Character Belongs to someone else</button>
+            <button onclick="setReportReason('Breaks rules of the booru')">Breaks rules of the booru</button>
+            <br>
+            <button onclick="reportPost()">Report</button>
+            <button onclick="closeReportModal()">Cancel</button>
+        </div>
+    </div>
+
+    <div id="deleteModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeDeleteModal()">&times;</span>
+            <h3>Delete Post</h3>
+            <p>Are you sure you want to delete this post?</p>
+            <label for="deleteReason">Reason for deletion:</label>
+            <textarea id="deleteReason" rows="4" cols="50" placeholder="Enter the reason..."></textarea> <br> 
+            <button onclick="setDeleteReason('Improper Content')">Improper Content</button>
+            <button onclick="setDeleteReason('User Request')">User Request</button>
+            <button onclick="setDeleteReason('Violation of Terms')">Violation of Terms</button>
+            <br>
+            <button onclick="deletePost()">Delete</button>
+            <button onclick="closeDeleteModal()">Cancel</button>
+        </div>
+    </div>
+
+    <style>
+        /* Modal styling */
+        .modal {
+            display: none; /* Hidden by default */
+            position: absolute;
+            z-index: 9999; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+        }
+
+        .modal-content {
+            background-color: #3b0000;
+            margin: 15% auto; /* 15% from the top and centered */
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%; /* Could be more or less, depending on screen size */
+            display: none; /* Hidden by default */
+            border-radius: 10px;
+            flex-direction: column;
+            top: 0;
+        }
+
+        .close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            cursor: pointer;
+            font-size: 20px;
+        }
+
+        .profileProfileTop {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 16px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .profileProfileInfo {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            flex-grow: 1;
+            margin: 0 20px;
+        }
+
+        .profileProfileInfo h1 {
+            margin: 0 0 10px 0;
+            font-size: 2.2rem;
+            text-shadow: 0px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .profileProfileInfo p {
+            margin: 5px 0;
+            font-size: 1rem;
+        }
+
+        #actionButtons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        #actionButtons button {
+            padding: 8px 15px;
+            background-color: rgba(0, 132, 255, 0.6);
+            border: 1px solid rgba(0, 132, 255, 0.3);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        #actionButtons button:hover {
+            background-color: rgba(0, 132, 255, 0.8);
+            transform: translateY(-2px);
+        }
+        
+        .profile-tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+            background-color: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 12px;
+        }
+        
+        .tab-button {
+            padding: 12px 25px;
+            margin: 0 10px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background-color: rgba(30, 30, 30, 0.7);
+            color: white;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        
+        .tab-button:hover {
+            background-color: rgba(60, 60, 60, 0.9);
+            transform: translateY(-2px);
+        }
+        
+        .tab-button.active {
+            background-color: rgba(0, 132, 255, 0.7);
+            box-shadow: 0 4px 10px rgba(0, 102, 255, 0.3);
+        }
+
+        .profileImage {
+            border-radius: 50%;
+            width: 120px;
+            height: 120px;
+            object-fit: cover;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .profileImage:hover {
+            border-color: rgba(255, 255, 255, 0.7);
+            transform: scale(1.05);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .profileProfileTop {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .profileProfileInfo {
+                margin: 15px 0;
+                align-items: center;
+            }
+
+            .profile-tabs {
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            .tab-button {
+                margin: 5px;
+                flex-grow: 1;
+            }
+        }
+    </style>
+
     <div class="center-fully-no-flex" style="margin-bottom: 1rem;">
         <%- include('../partials/_bannerAdvert') %>
     </div>
@@ -34,6 +241,11 @@
     
     <script>
         var masterBooruData = {}
+        var masterLikedPosts = {}
+        var likedUsernames = {}
+        var likedProfilePics = {}
+        var masterUpvoteAccountData = {}
+        var masterDownvoteAccountData = {}
 
         var profileProfile = {
             accountId: `<%= profileProfile.accountId %>`,
@@ -46,6 +258,8 @@
             accountId: `<%= userProfile?.accountId %>`,
             followedAccounts: <%- JSON.stringify(userProfile?.followedAccounts? userProfile.followedAccounts : []) %>,
             blockedAccounts: <%- JSON.stringify(userProfile?.blockedAccounts? userProfile.blockedAccounts : []) %>,
+            badges: <%- JSON.stringify(userProfile?.badges || {}) %>,
+            favoriteBooruPosts: <%- JSON.stringify(userProfile?.favoriteBooruPosts || []) %>
             }
 
         <% userBooru.forEach(image => { %>
@@ -74,6 +288,24 @@
         // reverse the order of the booru posts
         masterBooruData = Object.fromEntries(Object.entries(masterBooruData).reverse())
 
+        <% if (userProfile && userProfile.accountId === profileProfile.accountId && likedPosts) { %>
+            <% likedPosts.posts.forEach(image => { %>
+                masterLikedPosts[`<%=image.booru_id%>`] = {
+                    booru_id: `<%=image.booru_id%>`,
+                    account_id: `<%=image.account_id%>`,
+                    image_id: `<%=image.image_id%>`,
+                    prompt: `<%=image.prompt%>`,
+                    content_url: `<%=image.content_url%>`,
+                    timestamp: `<%=image.timestamp%>`,
+                    safety: `<%=image.safety%>`
+                }
+            <% }) %>
+            
+            // Store usernames and profile pics
+            likedUsernames = <%- JSON.stringify(likedPosts.usernames || {}) %>;
+            likedProfilePics = <%- JSON.stringify(likedPosts.profilePics || {}) %>;
+        <% } %>
+
         var masterAccountData = {}
         <% booruAccounts.forEach(account => { %>
             masterAccountData[`<%=account.accountId%>`] = {
@@ -84,6 +316,13 @@
             }
         <% }) %>
 
+        // Add the profile owner to masterAccountData with EJS templating to ensure variables are available
+        masterAccountData['<%=profileProfile.accountId%>'] = {
+            accountId: '<%=profileProfile.accountId%>',
+            username: '<%=profileProfile.username%>',
+            profileImg: '<%=profileProfile.profileImg || "https://www.jscammie.com/noimagefound.png"%>',
+            level: '<%=profileProfile.level || "1"%>'
+        };
 
         var followedCount = `<%= followedCount ?? 0 %>`
         
@@ -143,23 +382,142 @@
         </script>
 
         <div id="profileProfileDiv"></div>
-        <div id="profileBooruDiv"></div>
+        
+        <div id="profileTabs" class="profile-tabs" style="display: none;">
+            <button id="postsTab" class="tab-button active">Posts</button>
+            <button id="likedPostsTab" class="tab-button">Liked Posts</button>
+            <button id="favoritesTab" class="tab-button">Favorites</button>
+        </div>
+        
+        <div id="profileBooruDiv">
+            <div id="booruPosts" class="booruPostsGrid"></div>
+            <div id="likedPosts" class="booruPostsGrid" style="display: none;"></div>
+            <div id="favoritePosts" class="booruPostsGrid" style="display: none;"></div>
+        </div>
 
     </div>
 
     <style>
         .profileProfileTop {
             display: flex;
-            justify-content: center;
+            justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 16px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
         }
 
         .profileProfileInfo {
             display: flex;
             flex-direction: column;
             justify-content: center;
-            align-items: center;
+            flex-grow: 1;
+            margin: 0 20px;
+        }
+
+        .profileProfileInfo h1 {
+            margin: 0 0 10px 0;
+            font-size: 2.2rem;
+            text-shadow: 0px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .profileProfileInfo p {
+            margin: 5px 0;
+            font-size: 1rem;
+        }
+
+        #actionButtons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        #actionButtons button {
+            padding: 8px 15px;
+            background-color: rgba(0, 132, 255, 0.6);
+            border: 1px solid rgba(0, 132, 255, 0.3);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        #actionButtons button:hover {
+            background-color: rgba(0, 132, 255, 0.8);
+            transform: translateY(-2px);
+        }
+        
+        .profile-tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+            background-color: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 12px;
+        }
+        
+        .tab-button {
+            padding: 12px 25px;
+            margin: 0 10px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background-color: rgba(30, 30, 30, 0.7);
+            color: white;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        
+        .tab-button:hover {
+            background-color: rgba(60, 60, 60, 0.9);
+            transform: translateY(-2px);
+        }
+        
+        .tab-button.active {
+            background-color: rgba(0, 132, 255, 0.7);
+            box-shadow: 0 4px 10px rgba(0, 102, 255, 0.3);
+        }
+
+        .profileImage {
+            border-radius: 50%;
+            width: 120px;
+            height: 120px;
+            object-fit: cover;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .profileImage:hover {
+            border-color: rgba(255, 255, 255, 0.7);
+            transform: scale(1.05);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .profileProfileTop {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .profileProfileInfo {
+                margin: 15px 0;
+                align-items: center;
+            }
+
+            .profile-tabs {
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            .tab-button {
+                margin: 5px;
+                flex-grow: 1;
+            }
         }
     </style>
 
@@ -192,6 +550,256 @@
                 createProfileTop()
             })
         }
+
+        // Moderation functions
+        function setDeleteReason(reason) {
+            document.getElementById("deleteReason").value = reason;
+            deletePost();
+        }
+
+        function setReportReason(reason) {
+            document.getElementById("reportReason").value = reason;
+        }
+
+        function showBanModal(accountId) {
+            document.getElementById("banModal").style.display = "flex";
+            document.querySelectorAll(".modal-content").forEach(modal => {
+                if (modal.parentElement.id == "banModal") {
+                    modal.style.display = "block";
+                }
+            });
+            window.banAccountId = accountId;
+        }
+
+        function closeBanModal() {
+            document.getElementById("banModal").style.display = "none";
+            document.querySelectorAll(".modal-content").forEach(modal => {
+                if (modal.parentElement.id == "banModal") {
+                    modal.style.display = "none";
+                }
+            });
+        }
+
+        function showReportModal(booruId) {
+            document.getElementById("reportModal").style.display = "flex";
+            document.querySelectorAll(".modal-content").forEach(modal => {
+                if (modal.parentElement.id == "reportModal") {
+                    modal.style.display = "block";
+                }
+            });
+            window.reportBooruId = booruId;
+        }
+
+        function closeReportModal() {
+            document.getElementById("reportModal").style.display = "none";
+            document.querySelectorAll(".modal-content").forEach(modal => {
+                if (modal.parentElement.id == "reportModal") {
+                    modal.style.display = "none";
+                }
+            });
+        }
+
+        function showDeleteModal(booruId) {
+            document.getElementById("deleteModal").style.display = "flex";
+            document.querySelectorAll(".modal-content").forEach(modal => {
+                if (modal.parentElement.id == "deleteModal") {
+                    modal.style.display = "block";
+                }
+            });
+            window.deleteBooruId = booruId;
+        }
+
+        function closeDeleteModal() {
+            document.getElementById("deleteModal").style.display = "none";
+            document.querySelectorAll(".modal-content").forEach(modal => {
+                if (modal.parentElement.id == "deleteModal") {
+                    modal.style.display = "none";
+                }
+            });
+        }
+
+        async function reportPost() {
+            const reason = document.getElementById("reportReason").value;
+            if (!reason) {
+                let response = await globalAlert({
+                    message: "Please provide a reason for the report.",
+                    question: true,
+                    options: { okay: function(){} }
+                });
+                return;
+            }
+
+            fetch(`/booru/report`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    reason: reason,
+                    booru_id: window.reportBooruId,
+                }),
+            })
+            .then(res => res.json())
+            .then(async (data) => {
+                if (data.status == "success") {
+                    let response = await globalAlert({
+                        message: "Post has been reported successfully.",
+                        question: true,
+                        options: { okay: function(){} }
+                    });
+                } else {
+                    let response = await globalAlert({
+                        message: "Failed to report post. Please try again later.",
+                        question: true,
+                        options: { okay: function(){} }
+                    });
+                }
+            })
+            .catch(async (err) => {
+                console.error(err);
+                let response = await globalAlert({
+                    message: "Failed to report post. Please try again later.",
+                    question: true,
+                    options: { okay: function(){} }
+                });
+            });
+
+            closeReportModal();
+        }
+
+        async function banUser() {
+            const reason = document.getElementById("banReason").value;
+            if (!reason) {
+                let response = await globalAlert({
+                    message: "Please provide a reason for the ban.",
+                    question: true,
+                    options: { okay: function(){} }
+                });
+                return;
+            }
+
+            if (confirm(`Are you sure you want to ban this user?`)) {
+                fetch(`/booru/ban/${window.banAccountId}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ reason: reason }),
+                })
+                .then(res => res.json())
+                .then(async (data) => {
+                    if (data.status == "success") {
+                        let response = await globalAlert({
+                            message: "User has been banned successfully.",
+                            question: true,
+                            options: { okay: function(){} }
+                        });
+                    } else {
+                        let response = await globalAlert({
+                            message: "Failed to ban user. Please try again later.",
+                            question: true,
+                            options: { okay: function(){} }
+                        });
+                    }
+                })
+                .catch(async (err) => {
+                    console.error(err);
+                    let response = await globalAlert({
+                        message: "Failed to ban user. Please try again later.",
+                        question: true,
+                        options: { okay: function(){} }
+                    });
+                });
+            }
+
+            closeBanModal();
+        }
+
+        async function deletePost() {
+            const reason = document.getElementById("deleteReason").value;
+            if (!reason) {
+                let response = await globalAlert({
+                    message: "Please provide a reason for the deletion.",
+                    question: true,
+                    options: { okay: function(){} }
+                });
+                return;
+            }
+
+            fetch(`/booru/delete`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    reason: reason,
+                    booru_id: window.deleteBooruId,
+                }),
+            })
+            .then(res => res.json())
+            .then(async (data) => {
+                if (data.status == "success") {
+                    let response = await globalAlert({
+                        message: "Post has been deleted successfully.",
+                        question: true,
+                        options: { okay: function(){} }
+                    });
+                    let postDiv = document.getElementById(`booruPostDiv-${window.deleteBooruId}`) || 
+                                 document.getElementById(`liked-post-${window.deleteBooruId}`);
+                    if (postDiv) postDiv.remove();
+                } else {
+                    let response = await globalAlert({
+                        message: "Failed to delete post. Please try again later.",
+                        question: true,
+                        options: { okay: function(){} }
+                    });
+                }
+            })
+            .catch(async (err) => {
+                console.error(err);
+                let response = await globalAlert({
+                    message: "Failed to delete post. Please try again later.",
+                    question: true,
+                    options: { okay: function(){} }
+                });
+            });
+
+            closeDeleteModal();
+        }
+
+        async function setRating(rating, booruId) {
+            body = {
+                rating: rating,
+                booru_id: booruId
+            }
+
+            let postDiv = document.getElementById(`booruPostDiv-${booruId}`) || 
+                          document.getElementById(`liked-post-${booruId}`);
+            
+            if (postDiv) postDiv.remove();
+
+            let response = await fetch(`/booru/setRating`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body)
+            });
+
+            let data = await response.json();
+
+            if (data.status !== "success") {
+                await globalAlert({
+                    message: "Failed to set rating. Please try again later.",
+                    question: true,
+                    options: { okay: function(){} }
+                });
+            }
+        }
+
+        function adjustModalPosition() {
+            let modals = document.querySelectorAll(".modal-content");
+            modals.forEach(modal => {
+                modal.style.position = "absolute";
+                modal.style.top = window.scrollY + "px";
+            });
+        }
+
+        window.onscroll = function() {
+            adjustModalPosition();
+        };
 
         async function createProfileTop() {
         
@@ -246,7 +854,6 @@
                     </div>
                     ${userProfile.accountId === profileProfile.accountId ? `<a href="/settings">Edit Profile</a>` : ""}
                 </div>
-                <div id="booruPosts" class="booruPostsGrid"></div>
             `;
 
             profileProfileDiv.innerHTML = profileProfileHTML;
@@ -257,47 +864,176 @@
             if (followButton) actionButtonsDiv.appendChild(followButton);
             if (blockButton) actionButtonsDiv.appendChild(blockButton);
 
+            // Show tabs if it's the user's own profile
+            if (userProfile.accountId === profileProfile.accountId) {
+                document.getElementById('profileTabs').style.display = 'flex';
+            }
 
-            createBooruPosts()
-
+            createBooruPosts();
+            if (userProfile.accountId === profileProfile.accountId) {
+                createLikedPosts();
+            }
         }
 
         let booruPostsDiv;
+        let likedPostsDiv;
         let postsPerPage = 20;
-        let currentPage = 0;
+        let currentPostsPage = 0;
+        let currentLikedPage = 0;
         let booruPostEntries = [];
+        let likedPostEntries = [];
         let loading = false; // Prevent multiple triggers
+
+        // Tab switching logic
+        document.getElementById('postsTab').addEventListener('click', function() {
+            this.classList.add('active');
+            document.getElementById('likedPostsTab').classList.remove('active');
+            document.getElementById('favoritesTab').classList.remove('active');
+            document.getElementById('booruPosts').style.display = 'grid';
+            document.getElementById('likedPosts').style.display = 'none';
+            document.getElementById('favoritePosts').style.display = 'none';
+        });
+
+        document.getElementById('likedPostsTab').addEventListener('click', function() {
+            this.classList.add('active');
+            document.getElementById('postsTab').classList.remove('active');
+            document.getElementById('favoritesTab').classList.remove('active');
+            document.getElementById('booruPosts').style.display = 'none';
+            document.getElementById('likedPosts').style.display = 'grid';
+            document.getElementById('favoritePosts').style.display = 'none';
+        });
+
+        document.getElementById('favoritesTab').addEventListener('click', function() {
+            this.classList.add('active');
+            document.getElementById('postsTab').classList.remove('active');
+            document.getElementById('likedPostsTab').classList.remove('active');
+            document.getElementById('booruPosts').style.display = 'none';
+            document.getElementById('likedPosts').style.display = 'none';
+            document.getElementById('favoritePosts').style.display = 'grid';
+        });
 
         async function loadMorePosts() {
             if (loading) return;
             loading = true;
 
-            let start = currentPage * postsPerPage;
+            let start = currentPostsPage * postsPerPage;
             let end = start + postsPerPage;
             let postsToLoad = booruPostEntries.slice(start, end);
 
             postsToLoad.forEach(value => {
-                const newContentUrl = value.thumbnailMade
-                    ? value.content_url.replace(".png", "-thumb.png")
-                    : value.content_url;
+                // Fix image URL construction
+                let newContentUrl = value.content_url;
+                
+                // Check if image is not a thumbnail but should be
+                if (value.thumbnailMade && !newContentUrl.includes('-thumb.png') && !newContentUrl.includes('/booruOriginal/')) {
+                    if (newContentUrl.toLowerCase().endsWith('.png')) {
+                        newContentUrl = newContentUrl.replace('.png', '-thumb.png');
+                    } else if (newContentUrl.toLowerCase().endsWith('.jpg')) {
+                        newContentUrl = newContentUrl.replace('.jpg', '-thumb.jpg');
+                    } else if (newContentUrl.toLowerCase().endsWith('.jpeg')) {
+                        newContentUrl = newContentUrl.replace('.jpeg', '-thumb.jpeg');
+                    }
+                }
 
-                const accountData = masterAccountData[value.account_id];
+                // Get account data with correction to use string keys
+                let accountData;
+                
+                // Use masterAccountData or fallback
+                if (masterAccountData[value.account_id]) {
+                    accountData = masterAccountData[value.account_id];
+                } else {
+                    accountData = {
+                        username: 'User ' + value.account_id,
+                        profileImg: 'https://www.jscammie.com/noimagefound.png'
+                    };
+                }
+                
                 const hasUpvoted = value.upvotes.some(upvote => upvote.accountId === userProfile.accountId);
+
+                // Determine if moderation options should be shown
+                let dropdownHTML = "";
+                if (userProfile?.badges?.moderator) {
+                    dropdownHTML = `
+                        <button class="dropdownButton" onclick="document.getElementById('dropdown${value.booru_id}')?.classList.toggle('show')">ℹ️</button>
+                        <div class="dropdown" id="dropdown${value.booru_id}">
+                            <button onclick="showDeleteModal('${value.booru_id}')">Delete Post</button>
+                            <button onclick="setRating('extreme', '${value.booru_id}')">Set EXTREME</button>
+                            <button onclick="setRating('nsfw', '${value.booru_id}')">Set NSFW</button>
+                            <button onclick="setRating('suggestive', '${value.booru_id}')">Set Suggestive</button>
+                            <button onclick="setRating('sfw', '${value.booru_id}')">Set SFW</button>
+                            <button onclick="showReportModal('${value.booru_id}')">Report Post</button>
+                            <button onclick="showBanModal('${value.account_id}')">Ban User</button>
+                        </div>
+                    `;
+                } else if (userProfile.accountId) {
+                    dropdownHTML = `
+                        <button class="dropdownButton" onclick="document.getElementById('dropdown${value.booru_id}')?.classList.toggle('show')">ℹ️</button>
+                        <div class="dropdown" id="dropdown${value.booru_id}">
+                            <button onclick="showReportModal('${value.booru_id}')">Report Post</button>
+                        </div>
+                    `;
+                }
 
                 let postDiv = document.createElement('div');
                 postDiv.classList.add('booruPost');
+                postDiv.id = `booruPostDiv-${value.booru_id}`;
+                
+                // Generate report display for moderators
+                let reportsHTML = '';
+                if (userProfile?.badges?.moderator && value.reports && value.reports.length > 0) {
+                    reportsHTML = `
+                        <div class="reportsDiv">
+                            <p>Reports:</p>
+                            <div class="reports">
+                                ${value.reports.map(report => `
+                                    <a href="https://www.jscammie.com/profile/${report.accountId}" target="_blank">
+                                        <span>${report.reason}</span>
+                                    </a>
+                                `).join("")}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                let onHoverUpvote = "";
+                if (value.upvotes && value.upvotes.length > 0) {
+                    onHoverUpvote = `
+                        <div class="upvoteHover hidden" id="upvoteHover${value.booru_id}">
+                            <p class="upvoteTitle">Upvoters:</p>
+                            <div class="upvoters">
+                                ${value.upvotes.map(upvote => {
+                                    // Check if masterUpvoteAccountData exists and has this account
+                                    const upvoteAccount = (typeof masterUpvoteAccountData !== 'undefined' && masterUpvoteAccountData[upvote.accountId]) 
+                                        ? masterUpvoteAccountData[upvote.accountId] 
+                                        : { username: upvote.accountId, profileImg: 'https://www.jscammie.com/noimagefound.png' };
+                                    
+                                    return `
+                                        <a class="upvoteUser" href="https://www.jscammie.com/profile/${upvote.accountId}" target="_blank">
+                                            <img class="postProfileImage" src="${upvoteAccount.profileImg}" alt="Upvote Profile Image" loading="lazy"/>
+                                            <span>${upvoteAccount.username}</span>
+                                        </a>
+                                    `;
+                                }).join("")}
+                            </div>
+                        </div>
+                    `;
+                }
+
                 postDiv.innerHTML = `
                     <div class="abovePost">
                         <a href="https://www.jscammie.com/profile/${value.account_id}" target="_blank">
-                            <img src="${accountData.profileImg}" alt="Profile Image" />
+                            <img src="${accountData.profileImg}" alt="Profile Image" onerror="this.src='https://www.jscammie.com/noimagefound.png'" />
                         </a>
                         <div class="userDetails">
                             <p class="username">${accountData.username}</p>
                             <p class="safety">${value.safety.toUpperCase()}</p>
                         </div>
                     </div>
+                    <div class="postButtons">
+                        ${dropdownHTML}
+                    </div>
                     <a href="/booru/post/${value.booru_id}">
-                        <img src="${newContentUrl}" alt="Booru Image" style="max-width: 100%;" loading="lazy"/>
+                        <img src="${newContentUrl}" alt="Booru Image" style="max-width: 100%;" loading="lazy" onerror="this.src='https://www.jscammie.com/noimagefound.png'" />
                     </a>
                     <div class="votesDiv">
                         <button id="upvoteButton${value.booru_id}" onclick="votePost('upvote', '${value.booru_id}')" class="${hasUpvoted ? 'voted' : ''}">
@@ -306,36 +1042,333 @@
                         <button id="commentButton${value.booru_id}" onclick="window.open('/booru/post/${value.booru_id}', '_blank')">
                             ${value.comments} 💬
                         </button>
+                        ${onHoverUpvote}
                     </div>
+                    ${reportsHTML}
+                    ${userProfile?.badges?.moderator ? `<p class="moderator-info">Score: ${value.score || 0}</p>` : ''}
+                    ${userProfile?.badges?.moderator ? `<p class="prompt-info">${value.prompt}</p>` : ''}
                 `;
                 booruPostsDiv.appendChild(postDiv);
             });
 
-            currentPage++;
+            currentPostsPage++;
             loading = false;
         }
 
+        async function loadMoreLikedPosts() {
+            if (loading) return;
+            loading = true;
+
+            let start = currentLikedPage * postsPerPage;
+            let end = start + postsPerPage;
+            let postsToLoad = likedPostEntries.slice(start, end);
+
+            postsToLoad.forEach(value => {
+                // Improve image URL construction for liked posts
+                let newContentUrl = value.content_url;
+                
+                // Check if image is not a thumbnail but should be
+                if (!newContentUrl.includes('-thumb.png') && !newContentUrl.includes('/booruOriginal/')) {
+                    if (newContentUrl.toLowerCase().endsWith('.png')) {
+                        newContentUrl = newContentUrl.replace('.png', '-thumb.png');
+                    } else if (newContentUrl.toLowerCase().endsWith('.jpg')) {
+                        newContentUrl = newContentUrl.replace('.jpg', '-thumb.jpg');
+                    } else if (newContentUrl.toLowerCase().endsWith('.jpeg')) {
+                        newContentUrl = newContentUrl.replace('.jpeg', '-thumb.jpeg');
+                    }
+                }
+
+                // Get account data with simpler approach
+                let accountData = {};
+                
+                // Check liked posts specific data first
+                if (likedUsernames[value.account_id]) {
+                    accountData.username = likedUsernames[value.account_id];
+                    accountData.profileImg = likedProfilePics[value.account_id] || 'https://www.jscammie.com/noimagefound.png';
+                }
+                // Then check master account data
+                else if (masterAccountData[value.account_id]) {
+                    accountData = masterAccountData[value.account_id];
+                }
+                // Last resort fallback
+                else {
+                    accountData.username = 'User ' + value.account_id;
+                    accountData.profileImg = 'https://www.jscammie.com/noimagefound.png';
+                }
+
+                // Default for hasUpvoted on liked posts
+                const hasUpvoted = value.upvotes ? value.upvotes.some(upvote => upvote.accountId === userProfile.accountId) : true;
+
+                // Determine if moderation options should be shown
+                let dropdownHTML = "";
+                if (userProfile?.badges?.moderator) {
+                    dropdownHTML = `
+                        <button class="dropdownButton" onclick="document.getElementById('dropdown-liked-${value.booru_id}')?.classList.toggle('show')">ℹ️</button>
+                        <div class="dropdown" id="dropdown-liked-${value.booru_id}">
+                            <button onclick="showDeleteModal('${value.booru_id}')">Delete Post</button>
+                            <button onclick="setRating('extreme', '${value.booru_id}')">Set EXTREME</button>
+                            <button onclick="setRating('nsfw', '${value.booru_id}')">Set NSFW</button>
+                            <button onclick="setRating('suggestive', '${value.booru_id}')">Set Suggestive</button>
+                            <button onclick="setRating('sfw', '${value.booru_id}')">Set SFW</button>
+                            <button onclick="showBanModal('${value.account_id}')">Ban User</button>
+                            <button onclick="showReportModal('${value.booru_id}')">Report Post</button>
+                        </div>
+                    `;
+                } else if (userProfile.accountId) {
+                    dropdownHTML = `
+                        <button class="dropdownButton" onclick="document.getElementById('dropdown-liked-${value.booru_id}')?.classList.toggle('show')">ℹ️</button>
+                        <div class="dropdown" id="dropdown-liked-${value.booru_id}">
+                            <button onclick="showReportModal('${value.booru_id}')">Report Post</button>
+                        </div>
+                    `;
+                }
+
+                let postDiv = document.createElement('div');
+                postDiv.classList.add('booruPost');
+                postDiv.id = `liked-post-${value.booru_id}`;
+                
+                postDiv.innerHTML = `
+                    <div class="abovePost">
+                        <a href="https://www.jscammie.com/profile/${value.account_id}" target="_blank">
+                            <img src="${accountData.profileImg}" alt="Profile Image" class="profile-img" onerror="this.src='https://www.jscammie.com/noimagefound.png'" />
+                        </a>
+                        <div class="userDetails">
+                            <p class="username">${accountData.username}</p>
+                            ${value.safety ? `<p class="safety">${value.safety.toUpperCase()}</p>` : ''}
+                        </div>
+                    </div>
+                    <div class="postButtons">
+                        ${dropdownHTML}
+                    </div>
+                    <a href="/booru/post/${value.booru_id}">
+                        <img src="${newContentUrl}" alt="Booru Image" style="max-width: 100%;" loading="lazy" onerror="this.src='https://www.jscammie.com/noimagefound.png'" />
+                    </a>
+                    ${userProfile?.badges?.moderator ? `<p class="prompt-info">${value.prompt || ''}</p>` : ''}
+                `;
+                likedPostsDiv.appendChild(postDiv);
+            });
+
+            currentLikedPage++;
+            loading = false;
+        }
+
+        
+
+        async function favoritePost(booruId) {
+
+                console.log("favoritePost", booruId)
+                console.log("userProfile.favoriteBooruPosts", userProfile.favoriteBooruPosts)
+
+                body = {
+                    booru_id: booruId
+                }
+
+                fetch(`/booru/favorite`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(body)
+                })
+                .then((res) => res.json())
+                .then((data) => {
+                    if (data.status == "success") {
+                        console.log("data.message", data.message)
+                        // update the favorite button text:
+                        let favoriteButton = document.getElementById(`favoriteButton${booruId}`)
+                        if (data.favorited) {
+                            favoriteButton.innerHTML = "Unfavorite"
+                        } else {
+                            favoriteButton.innerHTML = "Favorite"
+                        }
+                    }
+                })
+            }
+
         // **Initialize Booru Posts**
         async function createBooruPosts() {
-            booruPostsDiv = document.getElementById('booruPosts'); // Ensure this is set properly
+            booruPostsDiv = document.getElementById('booruPosts'); 
             booruPostEntries = Object.values(masterBooruData).filter(value =>
                 !(value.safety === "na" && userProfile.accountId !== profileProfile.accountId)
             );
-
+            
             booruPostsDiv.innerHTML = ""; // Clear previous content
-            currentPage = 0;
+            currentPostsPage = 0;
             loadMorePosts(); // Load initial batch
+        }
+
+        // **Initialize Liked Posts**
+        async function createLikedPosts() {
+            likedPostsDiv = document.getElementById('likedPosts');
+            likedPostEntries = Object.values(masterLikedPosts);
+
+            likedPostsDiv.innerHTML = ""; // Clear previous content
+            currentLikedPage = 0;
+            loadMoreLikedPosts(); // Load initial batch
         }
 
         // **Infinite Scrolling Event**
         window.addEventListener('scroll', () => {
             if (!loading && window.innerHeight + window.scrollY >= document.body.offsetHeight - 300) {
-                loadMorePosts();
+                // Determine which tab is active and load the corresponding posts
+                if (document.getElementById('postsTab').classList.contains('active')) {
+                    loadMorePosts();
+                } else if (document.getElementById('likedPostsTab').classList.contains('active')) {
+                    loadMoreLikedPosts();
+                } else if (document.getElementById('favoritesTab').classList.contains('active')) {
+                    loadMoreFavoritePosts();
+                }
             }
         });
 
         // **Start the Process**
         createProfileTop();
+
+        var masterFavoritePosts = {}
+        var favoritesUsernames = {}
+        var favoritesProfilePics = {}
+        
+        <% if (userProfile && userProfile.accountId === profileProfile.accountId && favoriteBooruPosts) { %>
+            <% favoriteBooruPosts.posts.forEach(image => { %>
+                masterFavoritePosts[`<%=image.booru_id%>`] = {
+                    booru_id: `<%=image.booru_id%>`,
+                    account_id: `<%=image.account_id%>`,
+                    image_id: `<%=image.image_id%>`,
+                    prompt: `<%=image.prompt%>`,
+                    content_url: `<%=image.content_url%>`,
+                    timestamp: `<%=image.timestamp%>`,
+                    safety: `<%=image.safety%>`
+                }
+            <% }) %>
+            
+            // Store usernames and profile pics for favorite posts
+            favoritesUsernames = <%- JSON.stringify(favoriteBooruPosts.usernames || {}) %>;
+            favoritesProfilePics = <%- JSON.stringify(favoriteBooruPosts.profilePics || {}) %>;
+        <% } %>
+
+        let favoritePostsDiv;
+        let currentFavoritesPage = 0;
+        let favoritePostEntries = [];
+
+        async function loadMoreFavoritePosts() {
+            if (loading) return;
+            loading = true;
+
+            let start = currentFavoritesPage * postsPerPage;
+            let end = start + postsPerPage;
+            let postsToLoad = favoritePostEntries.slice(start, end);
+
+            postsToLoad.forEach(value => {
+                // Improve image URL construction for favorited posts
+                let newContentUrl = value.content_url;
+                
+                // Check if image is not a thumbnail but should be
+                if (!newContentUrl.includes('-thumb.png') && !newContentUrl.includes('/booruOriginal/')) {
+                    if (newContentUrl.toLowerCase().endsWith('.png')) {
+                        newContentUrl = newContentUrl.replace('.png', '-thumb.png');
+                    } else if (newContentUrl.toLowerCase().endsWith('.jpg')) {
+                        newContentUrl = newContentUrl.replace('.jpg', '-thumb.jpg');
+                    } else if (newContentUrl.toLowerCase().endsWith('.jpeg')) {
+                        newContentUrl = newContentUrl.replace('.jpeg', '-thumb.jpeg');
+                    }
+                }
+
+                // Get account data with simpler approach
+                let accountData = {};
+                
+                // First check favorites specific data
+                if (favoritesUsernames && favoritesUsernames[value.account_id]) {
+                    accountData.username = favoritesUsernames[value.account_id];
+                    accountData.profileImg = favoritesProfilePics && favoritesProfilePics[value.account_id] || 'https://www.jscammie.com/noimagefound.png';
+                }
+                // Then check master account data
+                else if (masterAccountData[value.account_id]) {
+                    accountData = masterAccountData[value.account_id];
+                }
+                // Last resort fallback
+                else {
+                    accountData.username = 'User ' + value.account_id;
+                    accountData.profileImg = 'https://www.jscammie.com/noimagefound.png';
+                }
+
+                // Default for hasUpvoted
+                const hasUpvoted = value.upvotes ? value.upvotes.some(upvote => upvote.accountId === userProfile.accountId) : false;
+
+                // Determine if moderation options should be shown
+                let dropdownHTML = "";
+                if (userProfile?.badges?.moderator) {
+                    dropdownHTML = `
+                        <button class="dropdownButton" onclick="document.getElementById('dropdown-favorite-${value.booru_id}')?.classList.toggle('show')">ℹ️</button>
+                        <div class="dropdown" id="dropdown-favorite-${value.booru_id}">
+                            <button onclick="showDeleteModal('${value.booru_id}')">Delete Post</button>
+                            <button onclick="setRating('extreme', '${value.booru_id}')">Set EXTREME</button>
+                            <button onclick="setRating('nsfw', '${value.booru_id}')">Set NSFW</button>
+                            <button onclick="setRating('suggestive', '${value.booru_id}')">Set Suggestive</button>
+                            <button onclick="setRating('sfw', '${value.booru_id}')">Set SFW</button>
+                            <button onclick="showBanModal('${value.account_id}')">Ban User</button>
+                            <button onclick="showReportModal('${value.booru_id}')">Report Post</button>
+                            <button id="favoriteButton${value.booru_id}" onclick="favoritePost('${value.booru_id}')">${userProfile.favoriteBooruPosts.some(post => post.booru_id === value.booru_id) ? "Unfavorite" : "Favorite"}</button>
+                        </div>
+                    `;
+                } else if (userProfile.accountId) {
+                    dropdownHTML = `
+                        <button class="dropdownButton" onclick="document.getElementById('dropdown-favorite-${value.booru_id}')?.classList.toggle('show')">ℹ️</button>
+                        <div class="dropdown" id="dropdown-favorite-${value.booru_id}">
+                            <button onclick="showReportModal('${value.booru_id}')">Report Post</button>
+                            <button id="favoriteButton${value.booru_id}" onclick="favoritePost('${value.booru_id}')">${userProfile.favoriteBooruPosts.some(post => post.booru_id === value.booru_id) ? "Unfavorite" : "Favorite"}</button>
+                        </div>
+                    `;
+                }
+
+                let postDiv = document.createElement('div');
+                postDiv.classList.add('booruPost');
+                postDiv.id = `favorite-post-${value.booru_id}`;
+                
+                postDiv.innerHTML = `
+                    <div class="abovePost">
+                        <a href="https://www.jscammie.com/profile/${value.account_id}" target="_blank">
+                            <img src="${accountData.profileImg}" alt="Profile Image" class="profile-img" onerror="this.src='https://www.jscammie.com/noimagefound.png'" />
+                        </a>
+                        <div class="userDetails">
+                            <p class="username">${accountData.username}</p>
+                            ${value.safety ? `<p class="safety">${value.safety.toUpperCase()}</p>` : ''}
+                        </div>
+                    </div>
+                    <div class="postButtons">
+                        ${dropdownHTML}
+                    </div>
+                    <a href="/booru/post/${value.booru_id}">
+                        <img src="${newContentUrl}" alt="Booru Image" style="max-width: 100%;" loading="lazy" onerror="this.src='https://www.jscammie.com/noimagefound.png'" />
+                    </a>
+                    ${userProfile?.badges?.moderator ? `<p class="prompt-info">${value.prompt || ''}</p>` : ''}
+                `;
+                favoritePostsDiv.appendChild(postDiv);
+            });
+
+            currentFavoritesPage++;
+            loading = false;
+        }
+
+        // **Initialize Favorite Posts**
+        async function createFavoritePosts() {
+            favoritePostsDiv = document.getElementById('favoritePosts');
+            favoritePostEntries = Object.values(masterFavoritePosts);
+
+            favoritePostsDiv.innerHTML = ""; // Clear previous content
+            currentFavoritesPage = 0;
+            loadMoreFavoritePosts(); // Load initial batch
+        }
+
+        // **Start the Process**
+        createProfileTop();
+        // Always create booru posts 
+        createBooruPosts();
+        
+        // Create other tabs only if needed
+        if (userProfile.accountId === profileProfile.accountId) {
+            createLikedPosts();
+            createFavoritePosts();
+        }
 
     
     </script>
