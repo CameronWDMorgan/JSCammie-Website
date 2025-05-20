@@ -77,6 +77,14 @@
         <h1>Image History</h1>
     
         <script>  
+            // Helper function to handle image click based on delete mode
+            function handleImageClick(image_id, event) {
+                if (deleteMode) {
+                    toggleImageSelection(image_id, event);
+                } else {
+                    showGenerationPopup(image_id);
+                }
+            }
 
             function openInGenerator(image_id) {
                 // `https://jscammie.com/?prompt=${booruImage.prompt}&negativeprompt=${booruImage.negative_prompt}&aspectRatio=${booruImage.aspect_ratio}&model=${booruImage.model}&steps=${booruImage.steps}&cfguidance=${booruImage.cfg}&seed=${booruImage.seed}&loras=[${booruImage.loras}]&lora_strengths=[${booruImage.lora_strengths}]`
@@ -542,140 +550,35 @@
             display: block;
         }
 
-    </style>
-
-    <script>
-        function toggleDropdown(id) {
-            const dropdown = document.getElementById(`dropdown-${id}`);
-            dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
-        }
-    </script>
-
-    <!-- Search Box -->
-    <details open>
-        <summary style="font-size: xx-large;">Search for images by prompt or model</summary>
-        <br>
-        <input type="text" id="searchInputPrompt" placeholder="Search for prompts.." value="<%= search %>" 
-            onkeydown="if (event.keyCode == 13) { search() }" />
-        <br><br>
-        <select id="searchInputModel" name="model">
-            <option value="all" <%= model === 'all' ? 'selected' : '' %>>All Models</option>
-            <option value="fluffysonic" <%= model === 'fluffysonic' ? 'selected' : '' %>>(SD 1.5) FluffySonic (Sonic the Hedgehog by kitsune_sage)</option>
-            <option value="realisticVision" <%= model === 'realisticVision' ? 'selected' : '' %>>(SD 1.5) realisticVision (Realstic)</option>    
-            <option value="furryblend" <%= model === 'furryblend' ? 'selected' : '' %>>(SD 1.5) FurryBlend (Furry/Anime)</option>
-            <option value="sdxl-autismmix" <%= model === 'sdxl-autismmix' ? 'selected' : '' %>>(SDXL) Autism Mix ("Better" PonyXL, uses PonyXL Prompting)</option>
-            <option value="sdxl-sonichasautismmix" <%= model === 'sdxl-sonichasautismmix' ? 'selected' : '' %>>(SDXL) SonicHasAutismMix (SonicDiffusionXL & AutismMix merge, uses PonyXL Prompting)</option>
-            <option value="sdxl-ponyrealism" <%= model === 'sdxl-ponyrealism' ? 'selected' : '' %>>(SDXL) Pony Realism (Realistic, uses PonyXL Prompting)</option>
-            <option value="flux-unchained" <%= model === 'flux-unchained' ? 'selected' : '' %>>(FLUX) Unchained (Everything, natural language prompting)</option>
-        </select>
-        <br><br>
-        <button onclick="search()">Search</button>
-    </details>
-
-    <!-- if the totalUserImages is more than 15000 display a message that future generated images wont be saved: -->
-
-    <% if (totalUserImages >= 5000) { %>
-        <h2>You have <%= totalUserImages %> / 5000</h2>
-        <p>Future generated images will not be saved to your history, please delete some images to make room for more.</p>
-    <% } else { %>
-        <h2>You have <%= totalUserImages %> / 5000</h2>
-        <p>Once you reach 5000 images, future generated images will not be saved to your history.</p>
-    <% } %>
-
-    <div class="generationsGrid">
-        <% userHistory.forEach((imageData, index) => { %>
-            <div id="<%= imageData.image_id %><%= imageData.account_id %>" class="generationDiv">
-                <% const thumbImage = imageData.thumbnailMade 
-                    ? imageData.image_url.replace('.png', '-thumb.png') 
-                    : imageData.image_url; %>
-                <img class="generatedImage" loading="lazy" src="<%= thumbImage %>" 
-                    onclick="showGenerationPopup('<%= imageData.image_id %><%= imageData.account_id %>')" />
-
-                <!-- Dropdown toggle button -->
-                <button class="dropdownToggle" onclick="toggleDropdown('<%= imageData.image_id %><%= imageData.account_id %>')">⋮</button>
-
-                <!-- Dropdown menu -->
-                <div id="dropdown-<%= imageData.image_id %><%= imageData.account_id %>" class="dropdown">
-                    <button onclick="deleteImage('<%= imageData.image_id %>-<%= imageData.account_id %>')">Delete</button>
-                    <a href="<%= imageData.image_url %>" download>
-                        <button>Download</button>
-                    </a>
-                    <button onclick="openInGenerator('<%= imageData.image_id %><%= imageData.account_id %>')">Open In Generator</button>
-                    <button onclick="exportAIData('<%= imageData.image_id %><%= imageData.account_id %>')">Export .aidata</button>
-                </div>
-            </div>
-        <% }); %>
-    </div>
-
-    <style>
-    
-        .pagination {
-            text-align: center;
-            margin-top: 20px;
+        .generationDiv.selected {
+            border: 4px solid #ff0000 !important;
         }
 
-        .pagination a, .pagination span {
-            display: inline-block;
-            background-color: #f1f1f11f;
+        .generationDiv.in-delete-mode {
+            cursor: pointer;
+            position: relative;
+        }
+
+        .generationDiv.in-delete-mode::after {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #fff;
+            border-radius: 3px;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .generationDiv.in-delete-mode.selected::after {
+            content: '✓';
+            background-color: #ff0000;
             color: #fff;
-            border: 1px solid #ddd;
-            padding: 8px 16px;
-            margin: 0 5px;
-            text-decoration: none;
-            font-size: 16px;
-            border-radius: 5px;
-            transition: background-color 0.3s, color 0.3s;
+            text-align: center;
+            line-height: 20px;
+            font-weight: bold;
         }
-
-        .pagination a:hover {
-            background-color: #0084ff;
-        }
-
-        .pagination a.active, .pagination span.active {
-            background-color: #fff;
-            color: #000;
-        }
-
-        .pagination .disabled {
-            cursor: not-allowed;
-            opacity: 0.5;
-        }
-
-    
-    </style>
-
-    <div class="pagination">
-        <!-- Button to go to the first page -->
-        <% if (page > 1) { %>
-            <a href="?page=1&search=<%= encodeURIComponent(search) %>&model=<%= model %>">&laquo; First</a>
-        <% } %>
-
-        <!-- Button to skip 15 pages backward -->
-        <% if (page > 15) { %>
-            <a href="?page=<%= Math.max(page - 15, 1) %>&search=<%= encodeURIComponent(search) %>&model=<%= model %>"><%= page - 15 %></a>
-        <% } %>
-
-        <!-- Render pagination numbers -->
-        <% for (let i = Math.max(1, page - 5); i <= Math.min(totalPages, page + 5); i++) { %>
-            <a href="?page=<%= i %>&search=<%= encodeURIComponent(search) %>&model=<%= model %>" 
-            class="<%= i === page ? 'active' : '' %>">
-                <%= i %>
-            </a>
-        <% } %>
-
-        <!-- Button to skip 15 pages forward -->
-        <% if (page + 15 <= totalPages) { %>
-            <a href="?page=<%= Math.min(page + 15, totalPages) %>&search=<%= encodeURIComponent(search) %>&model=<%= model %>"><%= page + 15 %></a>
-        <% } %>
-
-        <!-- Button to go to the last page -->
-        <% if (page < totalPages) { %>
-            <a href="?page=<%= totalPages %>&search=<%= encodeURIComponent(search) %>&model=<%= model %>">Last &raquo;</a>
-        <% } %>
-    </div>
-
-
-    <style>
 
         .downloadCurrentPageButton {
             background-color: #0084ff;
@@ -704,56 +607,375 @@
         .deleteAllImagesButton:hover {
             background-color: #ff3333;
         }
-    
+
+        .deleteCurrentPageButton {
+            background-color: #ff6600;
+            color: #fff;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .deleteCurrentPageButton:hover {
+            background-color: #ff8533;
+        }
+
+        .sticky-menu:hover .menu-button span {
+            opacity: 1;
+        }
+        
+        .menu-button:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .download-button:hover {
+            background-color: #0056b3;
+        }
+
+        .delete-visible-button:hover {
+            background-color: #ff6600;
+        }
+
+        .delete-all-button:hover,
+        .delete-selected-button:hover {
+            background-color: #ff3333;
+        }
+
+        .toggle-delete-mode-button:hover {
+            background-color: #0084ff;
+        }
+
+        .generationDiv.selected {
+            border: 4px solid #ff0000 !important;
+        }
+
+        .generationDiv.in-delete-mode {
+            cursor: pointer;
+            position: relative;
+        }
+
+        .generationDiv.in-delete-mode::after {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #fff;
+            border-radius: 3px;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .generationDiv.in-delete-mode.selected::after {
+            content: '✓';
+            background-color: #ff0000;
+            color: #fff;
+            text-align: center;
+            line-height: 20px;
+            font-weight: bold;
+        }
+        
+        /* Add a responsive layout for smaller screens */
+        @media (max-width: 768px) {
+            .sticky-menu {
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: center;
+                max-width: 90%;
+                left: 0;
+                bottom: auto;
+                top: 30%;
+            }
+            
+            .menu-header {
+                width: 100%;
+                margin-bottom: 5px;
+            }
+            
+            .menu-button {
+                padding: 8px;
+            }
+            
+            .menu-button span {
+                display: none;
+            }
+        }
+
     </style>
 
-    <div>
-    
-        <!-- app.post('/image-history/delete-all-images -->
+    <script>
+        function toggleDropdown(id) {
+            const dropdown = document.getElementById(`dropdown-${id}`);
+            dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+        }
+    </script>
 
-        <button class="deleteAllImagesButton" onclick="deleteAllImages()">Delete All Images</button>
+    <!-- Search Box -->
+    <details open>
+        <summary style="font-size: xx-large;">Search for images by prompt or model</summary>
+        <br>
+        <input type="text" id="searchInputPrompt" placeholder="Search for prompts.." value="<%= search %>" 
+            onkeydown="if (event.keyCode == 13) { search() }" />
+        <br><br>
+        <select id="searchInputModel" name="model">
+            <option value="all" <%= model === 'all' ? 'selected' : '' %>>All Models</option>
+            <option value="fluffysonic" <%= model === 'fluffysonic' ? 'selected' : '' %>>(SD 1.5) FluffySonic (Sonic the Hedgehog)</option>
+            <option value="realisticVision" <%= model === 'realisticVision' ? 'selected' : '' %>>(SD 1.5) realisticVision (Realstic)</option>    
+            <option value="pdxl-autismmix" <%= model === 'pdxl-autismmix' ? 'selected' : '' %>>(PDXL) Autism Mix (2D, 3D)</option>
+            <option value="pdxl-sonichasautismmix" <%= model === 'pdxl-sonichasautismmix' ? 'selected' : '' %>>(PDXL) SonicHasAutismMix (SonicDiffusionXL & AutismMix merge)</option>
+            <option value="pdxl-ponyrealism" <%= model === 'pdxl-ponyrealism' ? 'selected' : '' %>>(PDXL) Pony Realism (Realistic)</option>
+            <option value="pdxl-fluffysonic" <%= model === 'pdxl-fluffysonic' ? 'selected' : '' %>>(PDXL) FluffySonic (Sonic the Hedgehog)</option>
+            <option value="illustrious-wai" <%= model === 'illustrious-wai' ? 'selected' : '' %>>(ILLUSTRIOUS) WAI (2d, Anime, Human)</option>
+            <option value="illustrious-novafurry" <%= model === 'illustrious-novafurry' ? 'selected' : '' %>>(ILLUSTRIOUS) Nova Furry (2d, 3d, Furry)</option>
+            <option value="illustrious-novaanimal" <%= model === 'illustrious-novaanimal' ? 'selected' : '' %>>(ILLUSTRIOUS) Nova Animal (Realistic, 3d, Animal)</option>
+        </select>
+        &nbsp;&nbsp;
+        <select id="searchInputSort" name="sort">
+            <option value="newest" <%= sort === 'newest' ? 'selected' : '' %>>Newest First</option>
+            <option value="oldest" <%= sort === 'oldest' ? 'selected' : '' %>>Oldest First</option>
+        </select>
+        <br><br>
+        <button onclick="search()">Search</button>
+    </details>
 
-        <button class="deleteCurrentPageButton" onclick="deleteCurrentPage()">Delete Current Page</button>
-    
-        <button class="downloadCurrentPageButton" onclick="downloadCurrentPage()">Download Current Page</button>
+    <!-- if the totalUserImages is more than 15000 display a message that future generated images wont be saved: -->
 
+    <% if (totalUserImages >= userProfile?.variables?.userHistoryLimit ?? 5000) { %>
+        <h2>You have <%= totalUserImages %> / <%= userProfile?.variables?.userHistoryLimit ?? 5000 %></h2>
+        <p>Future generated images will not be saved to your history, please delete some images to make room for more.</p>
+    <% } else { %>
+        <h2>You have <%= totalUserImages %> / <%= userProfile?.variables?.userHistoryLimit ?? 5000 %></h2>
+        <p>Once you reach <%= userProfile?.variables?.userHistoryLimit ?? 5000 %> images, future generated images will not be saved to your history.</p>
+    <% } %>
+
+    <div class="generationsGrid">
+        <% userHistory.forEach((imageData, index) => { %>
+            <div id="<%= imageData.image_id %><%= imageData.account_id %>" class="generationDiv">
+                <% const thumbImage = imageData.thumbnailMade 
+                    ? imageData.image_url.replace('.png', '-thumb.png') 
+                    : imageData.image_url; %>
+                <img class="generatedImage" loading="lazy" src="<%= thumbImage %>" 
+                    onclick="handleImageClick('<%= imageData.image_id %><%= imageData.account_id %>', event)" />
+
+                <!-- Dropdown toggle button -->
+                <button class="dropdownToggle" onclick="toggleDropdown('<%= imageData.image_id %><%= imageData.account_id %>')">⋮</button>
+
+                <!-- Dropdown menu -->
+                <div id="dropdown-<%= imageData.image_id %><%= imageData.account_id %>" class="dropdown">
+                    <button onclick="deleteImage('<%= imageData.image_id %>-<%= imageData.account_id %>')">Delete</button>
+                    <a href="<%= imageData.image_url %>" download>
+                        <button>Download</button>
+                    </a>
+                    <button onclick="openInGenerator('<%= imageData.image_id %><%= imageData.account_id %>')">Open In Generator</button>
+                    <button onclick="exportAIData('<%= imageData.image_id %><%= imageData.account_id %>')">Export .aidata</button>
+                </div>
+            </div>
+        <% }); %>
+        <!-- Infinite scroll sentinel -->
+        <div id="scroll-sentinel" style="height: 20px; grid-column: 1 / -1;"></div>
     </div>
+    
+    <!-- Loading indicator outside grid -->
+    <div id="loadingMoreIndicator" class="loading-indicator" style="display: none;">Loading more images...</div>
+    <div id="endMessage" class="end-message" style="display: none;">No more images to load</div>
+
+    <style>
+        .loading-indicator {
+            text-align: center;
+            padding: 20px;
+            color: #fff;
+            margin: 20px auto;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            max-width: 300px;
+        }
+        
+        .end-message {
+            text-align: center;
+            padding: 20px;
+            color: #aaa;
+            margin: 20px auto;
+            background-color: rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            max-width: 300px;
+        }
+
+        /* Sticky menu styling */
+        .sticky-menu {
+            position: fixed;
+            left: 0;
+            top: 30%;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 0 10px 10px 0;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 100;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease, opacity 0.5s ease;
+            min-width: 60px;
+            /* When not hovered, make it semi-transparent */
+            opacity: 0.6;
+        }
+
+        .sticky-menu:hover {
+            opacity: 1;
+        }
+
+        .menu-header {
+            color: white;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .menu-button {
+            background-color: transparent;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 8px 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background-color 0.3s;
+            white-space: nowrap;
+        }
+
+        .menu-button i {
+            font-size: 1.2rem;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        .menu-button span {
+            display: inline-block;
+            opacity: 1;
+            font-weight: 500;
+        }
+
+        .sticky-menu:hover .menu-button span {
+            opacity: 1;
+        }
+    </style>
+
+    <!-- Add Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
     <script>
+        // Add a flag to track if we're in delete mode
+        let deleteMode = false;
+        let selectedImages = [];
+        // Add variables for infinite scrolling
+        let currentPage = <%= page %>;
+        let totalPages = <%= totalPages %>;
+        let isLoading = false;
+        let hasReachedEnd = <%= page >= totalPages %>;
+        let currentSearch = "<%= search %>";
+        let currentModel = "<%= model %>";
+        let currentSort = "<%= sort || 'newest' %>";
+        let userHistoryLimit = <%= userProfile?.variables?.userHistoryLimit ?? 5000 %>;
 
-        async function downloadCurrentPage() {
-            const options = {
-                message: 'Are you sure you want to download all images on this page?',
-                question: true,
-                options: {
-                    yes: function() {
-                        console.log("Yes clicked");
-                    },
-                    no: function() {
-                        console.log("No clicked");
-                    }
+        function toggleDeleteMode() {
+            deleteMode = !deleteMode;
+            
+            // Update button text and icon
+            const toggleButton = document.getElementById('toggleDeleteModeButton');
+            if (deleteMode) {
+                toggleButton.querySelector('i').className = 'fas fa-times-circle';
+                toggleButton.querySelector('span').textContent = 'Exit Select';
+            } else {
+                toggleButton.querySelector('i').className = 'fas fa-check-square';
+                toggleButton.querySelector('span').textContent = 'Select Mode';
+            }
+            
+            // Show/hide buttons
+            document.getElementById('deleteSelectedButton').style.display = deleteMode ? 'flex' : 'none';
+            document.getElementById('downloadSelectedButton').style.display = deleteMode ? 'flex' : 'none';
+            document.getElementById('deleteAllButton').style.display = deleteMode ? 'none' : 'flex';
+            
+            // Reset selected images if exiting
+            if (!deleteMode) {
+                selectedImages = [];
+                updateSelectedCount();
+            }
+            
+            // Update all image divs, including those loaded dynamically
+            const imageDivs = document.querySelectorAll('.generationDiv');
+            imageDivs.forEach(div => {
+                if (deleteMode) {
+                    div.classList.add('in-delete-mode');
+                } else {
+                    div.classList.remove('in-delete-mode');
+                    div.classList.remove('selected');
                 }
-            };
+            });
+        }
 
-            const alertResponse = await globalAlert(options);
+        function toggleImageSelection(imageId, event) {
+            if (!deleteMode) return;
+            
+            // Prevent the popup from showing
+            event.preventDefault();
+            event.stopPropagation();
+            
+            const imageDiv = document.getElementById(imageId);
+            const index = selectedImages.indexOf(imageId);
+            
+            if (index === -1) {
+                // Add to selection
+                selectedImages.push(imageId);
+                imageDiv.classList.add('selected');
+            } else {
+                // Remove from selection
+                selectedImages.splice(index, 1);
+                imageDiv.classList.remove('selected');
+            }
+            
+            updateSelectedCount();
+        }
 
-            if (alertResponse === 'no') {
+        function updateSelectedCount() {
+            const count = selectedImages.length;
+            document.getElementById('selectedCount').textContent = count;
+            document.getElementById('downloadCount').textContent = count;
+            
+            // Enable/disable buttons based on selection count
+            const downloadButton = document.getElementById('downloadSelectedButton');
+            const deleteButton = document.getElementById('deleteSelectedButton');
+            
+            if (count > 0) {
+                downloadButton.disabled = false;
+                deleteButton.disabled = false;
+            } else {
+                downloadButton.disabled = true;
+                deleteButton.disabled = true;
+            }
+        }
+        
+        // Function to download selected images
+        async function downloadSelectedImages() {
+            if (selectedImages.length === 0) {
+                alert('No images selected. Please select images first.');
                 return;
             }
-
-            // Gather image IDs
-            const imageIds = Object.values(masterImageData).map(imageData => imageData.image_id);
-
-            if (imageIds.length === 0) {
-                console.log("No images to download");
-                return;
-            }
-
-            // Provide feedback during download
-            const button = document.querySelector('.downloadCurrentPageButton');
-            button.disabled = true;
-            button.textContent = 'Downloading...';
-
+            
+            // Extract the image IDs from the selected image divs
+            const imageIds = selectedImages.map(imageId => {
+                // Get the actual image_id from masterImageData
+                return masterImageData[imageId].image_id;
+            });
+            
+            // Show a loading indicator
+            const loadingIndicator = document.getElementById('loadingMoreIndicator');
+            loadingIndicator.innerHTML = `Preparing ${imageIds.length} images for download...`;
+            loadingIndicator.style.display = 'block';
+            
             try {
                 const response = await fetch('/image-history/download-page', {
                     method: 'POST',
@@ -762,14 +984,14 @@
                     },
                     body: JSON.stringify({ imageIds })
                 });
-
+                
                 if (response.ok) {
                     // Extract filename from response headers if possible
                     const disposition = response.headers.get('Content-Disposition');
                     const filename = disposition
                         ? disposition.split('filename=')[1].replace(/"/g, '')
-                        : 'download.zip';
-
+                        : 'jscammie-selected-images.zip';
+                    
                     // Convert response to blob and create a download link
                     const blob = await response.blob();
                     const downloadLink = document.createElement('a');
@@ -778,30 +1000,62 @@
                     document.body.appendChild(downloadLink);
                     downloadLink.click();
                     document.body.removeChild(downloadLink);
-                    // make sure its https:
-                    const downloadUrl = response.url.replace('http://', 'https://');
-
-                    console.log("Download complete");
+                    
+                    loadingIndicator.innerHTML = 'Download complete!';
+                    setTimeout(() => {
+                        loadingIndicator.style.display = 'none';
+                    }, 3000);
                 } else {
-                    console.error("Failed to download:", await response.json());
-                    alert("Failed to download images. Please try again.");
+                    loadingIndicator.innerHTML = 'Error preparing download. Please try again.';
+                    setTimeout(() => {
+                        loadingIndicator.style.display = 'none';
+                    }, 3000);
                 }
             } catch (error) {
-                console.error("Error during download:", error);
-                alert("An error occurred. Please try again.");
-            } finally {
-                // Re-enable button
-                button.disabled = false;
-                button.textContent = 'Download Current Page';
+                console.error('Error downloading images:', error);
+                loadingIndicator.innerHTML = 'Error downloading images. Please try again.';
+                setTimeout(() => {
+                    loadingIndicator.style.display = 'none';
+                }, 3000);
             }
         }
 
+        function search() {
+            const prompt = document.getElementById('searchInputPrompt').value;
+            const model = document.getElementById('searchInputModel').value;
+            const sort = document.getElementById('searchInputSort').value;
+            const query = new URLSearchParams({
+                search: prompt,
+                model,
+                sort,
+                page: 1, // Always reset to the first page
+            });
+            window.location.href = `/image-history?${query.toString()}`;
+        }
+        
+        // Helper function to get images currently visible in the viewport
+        function getVisibleImages() {
+            const imageDivs = document.querySelectorAll('.generationDiv');
+            const viewportHeight = window.innerHeight;
+            const viewportTop = window.scrollY;
+            const viewportBottom = viewportTop + viewportHeight;
+            
+            // Filter images that are visible in the viewport
+            return Array.from(imageDivs).filter(div => {
+                const rect = div.getBoundingClientRect();
+                const divTop = rect.top + viewportTop;
+                const divBottom = rect.bottom + viewportTop;
+                
+                // Check if at least part of the image is in the viewport
+                return (divTop < viewportBottom && divBottom > viewportTop);
+            });
+        }
 
-        async function deleteCurrentPage() {
-
-            // ask if they are sure they want to delete the current page:
+        // Function to delete visible images
+        async function deleteVisibleImages() {
+            // ask if they are sure they want to delete currently visible images:
             let options = {
-                message: 'Are you sure you want to delete all images on this page?',
+                message: 'Are you sure you want to delete all currently visible images?',
                 question: true,
                 options: {
                     yes: function() {
@@ -819,150 +1073,421 @@
                 return;
             }
             
+            // Get all visible images in the viewport
+            const visibleImages = getVisibleImages();
+            if (visibleImages.length === 0) {
+                alert('No visible images found');
+                return;
+            }
+            
+            // Show a loading indicator
+            const loadingIndicator = document.getElementById('loadingMoreIndicator');
+            loadingIndicator.innerHTML = `Deleting ${visibleImages.length} images...`;
+            loadingIndicator.style.display = 'block';
+            
             let promises = [];
 
-            // loop through all the images on the current page and delete them:
-            for (let image_id in masterImageData) {
-                let imageData = masterImageData[image_id];
-                let imageDiv = document.getElementById(image_id);
-                if (imageDiv) {
-                    // animate the image div disappearing:
-                    imageDiv.style.transition = 'opacity 0.5s';
-                    imageDiv.style.opacity = 0;
-                    setTimeout(() => {
-                        imageDiv.style.display = 'none';
-                    }, 500);
-                }
-                // add the promise to the promises array:
+            // Delete each visible image
+            visibleImages.forEach(imageDiv => {
+                const image_id = imageDiv.id.split(/(?=[A-Z])/)[0];
+                
+                // Animate the image div disappearing
+                imageDiv.style.transition = 'opacity 0.5s';
+                imageDiv.style.opacity = 0;
+                
+                // Add the deletion promise
                 promises.push(fetch('/image-history/delete-image', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        image_id: imageData.image_id,
+                        image_id: image_id,
                     })
                 }));
-            }
+            });
             
-            // wait for all the promises to resolve and then refresh the page after 1 second:
+            // Wait for all deletions to complete
             Promise.all(promises)
             .then(() => {
-                window.location.reload();
-            })
-
-        }
-
-        async function deleteAllImages() {
-    
-            // ask 3 times if they are sure they want to delete all images:
-            let options1 = {
-                message: 'Are you sure you want to delete all images?',
-                question: true,
-                options: {
-                    yes: function() {
-                        console.log("Yes clicked");
-                    },
-                    no: function() {
-                        console.log("No clicked");
-                    }
-                }
-            }
-
-            let alertResponse1 = await globalAlert(options1);
-
-            if (alertResponse1 == 'no') {
-                return;
-            }
-
-            let options2 = {
-                message: 'Are you REALLY sure you want to delete all images?',
-                question: true,
-                options: {
-                    yes: function() {
-                        console.log("Yes clicked");
-                    },
-                    no: function() {
-                        console.log("No clicked");
-                    }
-                }
-            }
-
-            let alertResponse2 = await globalAlert(options2);
-
-            if (alertResponse2 == 'no') {
-                return;
-            }
-
-            let options3 = {
-                message: 'Are you REALLY REALLY sure you want to delete ALL IMAGES? YOU CANNOT GO BACK FROM THIS!',
-                question: true,
-                options: {
-                    yes: function() {
-                        console.log("Yes clicked");
-                    },
-                    no: function() {
-                        console.log("No clicked");
-                    }
-                }
-            }
-
-            let alertResponse3 = await globalAlert(options3);
-
-            if (alertResponse3 == 'no') {
-                return;
-            }
-
-            // send a request to the server to delete all images from the database:
-            fetch('/image-history/delete-all-images', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({})
-            }).then(response => response.json())
-            .then(data => {
-                console.log(data);
-                // animate the image div disappearing:
-                let generationDivs = document.querySelectorAll('.generationDiv');
-                generationDivs.forEach((generationDiv) => {
-                    generationDiv.style.transition = 'opacity 0.5s';
-                    generationDiv.style.opacity = 0;
-                    setTimeout(() => {
-                        generationDiv.style.display = 'none';
-                    }, 500);
-                });
-                // after 1 second, reload the page:
+                // Remove the elements from the DOM
                 setTimeout(() => {
-                    window.location.reload();
-                }, 1000);
+                    visibleImages.forEach(imageDiv => {
+                        imageDiv.remove();
+                    });
+                    loadingIndicator.style.display = 'none';
+                }, 500);
             })
-
-        }
-    
-    </script>
-
-
-
-    <script>
-        function search() {
-            const prompt = document.getElementById('searchInputPrompt').value;
-            const model = document.getElementById('searchInputModel').value;
-            const query = new URLSearchParams({
-                search: prompt,
-                model,
-                page: 1, // Always reset to the first page
+            .catch(error => {
+                console.error('Error deleting images:', error);
+                loadingIndicator.innerHTML = 'Error deleting images';
+                setTimeout(() => {
+                    loadingIndicator.style.display = 'none';
+                }, 3000);
             });
-            window.location.href = `/image-history?${query.toString()}`;
         }
+        
+        // Function for improved infinite scrolling
+        async function loadMoreImages() {
+            if (isLoading || hasReachedEnd) return;
+            
+            isLoading = true;
+            currentPage++;
+            
+            // Show loading indicator
+            document.getElementById('loadingMoreIndicator').style.display = 'block';
+            
+            try {
+                const response = await fetch(`/image-history?page=${currentPage}&search=${encodeURIComponent(currentSearch)}&model=${currentModel}&sort=${currentSort}&ajax=true`);
+                const data = await response.json();
+                
+                if (data.images.length === 0) {
+                    hasReachedEnd = true;
+                    document.getElementById('loadingMoreIndicator').style.display = 'none';
+                    document.getElementById('endMessage').style.display = 'block';
+                    return;
+                }
+                
+                // Get the sentinel element
+                const sentinel = document.getElementById('scroll-sentinel');
+                
+                // Add images to the grid
+                data.images.forEach(imageData => {
+                    // Add to masterImageData
+                    const imageId = imageData.image_id + imageData.account_id;
+                    masterImageData[imageId] = {
+                        prompt: imageData.prompt,
+                        negative_prompt: imageData.negative_prompt,
+                        model: imageData.model,
+                        aspect_ratio: imageData.aspect_ratio,
+                        loras: imageData.loras,
+                        lora_strengths: imageData.lora_strengths,
+                        steps: imageData.steps,
+                        cfg: imageData.cfg,
+                        seed: imageData.seed,
+                        image_url: imageData.image_url,
+                        image_id: imageData.image_id,
+                        uploadedToBooru: imageData.uploadedToBooru,
+                        thumbnailMade: imageData.thumbnailMade,
+                    };
+                    
+                    // Create HTML for the new image
+                    const thumbImage = imageData.thumbnailMade 
+                        ? imageData.image_url.replace('.png', '-thumb.png') 
+                        : imageData.image_url;
+                    
+                    const div = document.createElement('div');
+                    div.id = imageId;
+                    div.className = 'generationDiv' + (deleteMode ? ' in-delete-mode' : '');
+                    div.innerHTML = `
+                        <img class="generatedImage" loading="lazy" src="${thumbImage}" 
+                            onclick="handleImageClick('${imageId}', event)" />
+                        <button class="dropdownToggle" onclick="toggleDropdown('${imageId}')">⋮</button>
+                        <div id="dropdown-${imageId}" class="dropdown">
+                            <button onclick="deleteImage('${imageData.image_id}-${imageData.account_id}')">Delete</button>
+                            <a href="${imageData.image_url}" download>
+                                <button>Download</button>
+                            </a>
+                            <button onclick="openInGenerator('${imageId}')">Open In Generator</button>
+                            <button onclick="exportAIData('${imageId}')">Export .aidata</button>
+                        </div>
+                    `;
+                    
+                    // Insert before the sentinel
+                    document.querySelector('.generationsGrid').insertBefore(div, sentinel);
+                });
+                
+            } catch (error) {
+                console.error('Error loading more images:', error);
+                document.getElementById('loadingMoreIndicator').innerHTML = 'Error loading images. <button onclick="loadMoreImages()">Retry</button>';
+            } finally {
+                isLoading = false;
+                document.getElementById('loadingMoreIndicator').style.display = 'none';
+                
+                // If we still have more pages, preload more when appropriate
+                if (!hasReachedEnd && document.documentElement.scrollHeight - window.innerHeight - window.scrollY < 1000) {
+                    // If we're still close to the bottom after loading, load more
+                    setTimeout(loadMoreImages, 500);
+                }
+            }
+        }
+        
+        // Intersection Observer for infinite scrolling
+        function setupInfiniteScroll() {
+            const sentinel = document.getElementById('scroll-sentinel');
+            
+            const observer = new IntersectionObserver((entries) => {
+                if (entries[0].isIntersecting && !isLoading && !hasReachedEnd) {
+                    loadMoreImages();
+                }
+            }, {
+                // Start loading when the sentinel is 2000px away from viewport
+                rootMargin: '2000px 0px'
+            });
+            
+            observer.observe(sentinel);
+            
+            // Also check on scroll to handle cases where the content might not be tall enough
+            window.addEventListener('scroll', () => {
+                const scrollPosition = window.scrollY + window.innerHeight;
+                const documentHeight = document.documentElement.scrollHeight;
+                
+                // If we're within 2500px of the bottom, load more
+                if (documentHeight - scrollPosition < 2500 && !isLoading && !hasReachedEnd) {
+                    loadMoreImages();
+                }
+            });
+        }
+        
+        // Setup scroll detection on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            setupInfiniteScroll();
+            updateMenuPosition();
+            
+            // Make sure the menu is initially visible
+            setTimeout(updateMenuPosition, 500);
+        });
+        
+        // Function to update the vertical position of the sticky menu on scroll
+        function updateMenuPosition() {
+            const stickyMenu = document.querySelector('.sticky-menu');
+            if (!stickyMenu) return;
+            
+            const viewportHeight = window.innerHeight;
+            const scrollY = window.scrollY;
+            
+            // Calculate ideal position (center of viewport)
+            let idealPosition = scrollY + (viewportHeight / 2);
+            
+            // Apply the transform to keep it vertically centered in the current viewport
+            stickyMenu.style.top = '50%';
+            stickyMenu.style.transform = 'translateY(-50%)';
+        }
+
+        // Add scroll listener for menu positioning
+        window.addEventListener('scroll', updateMenuPosition);
+        window.addEventListener('resize', updateMenuPosition);
     </script>
 
-
-    
     <div class="generationsControls" id="generationsControls"></div>
 
     <!-- get partials/_footer: -->
     <%- include('../partials/_footer') %>
     
+    <!-- Sticky menu at the end of the body for better positioning -->
+    </div>
+    <div class="sticky-menu">
+        <div class="menu-header">Actions</div>
+        <button id="downloadSelectedButton" class="menu-button download-button" onclick="downloadSelectedImages()" title="Download selected images" style="display: none;">
+            <i class="fas fa-download"></i>
+            <span>Download (<span id="downloadCount">0</span>)</span>
+        </button>
+        <button id="deleteAllButton" class="menu-button delete-all-button" onclick="deleteAllImages()" title="Delete all your images">
+            <i class="fas fa-trash-alt"></i>
+            <span>Delete All</span>
+        </button>
+        <button id="toggleDeleteModeButton" class="menu-button toggle-delete-mode-button" onclick="toggleDeleteMode()" title="Select multiple images">
+            <i class="fas fa-check-square"></i>
+            <span>Select Mode</span>
+        </button>
+        <button id="deleteSelectedButton" class="menu-button delete-selected-button" style="display: none;" onclick="deleteSelectedImages()" title="Delete selected images">
+            <i class="fas fa-trash"></i>
+            <span>Delete (<span id="selectedCount">0</span>)</span>
+        </button>
+    </div>
+    
+    <script>
+        // Position the sticky menu based on scroll
+        let lastKnownScrollPosition = 0;
+        let ticking = false;
+        
+        function positionMenu(scrollPos) {
+            const menu = document.querySelector('.sticky-menu');
+            if (!menu) return;
+            
+            // Get the window height and set position at 30% down from the top of the viewport
+            const windowHeight = window.innerHeight;
+            const topPosition = Math.floor(windowHeight * 0.8);
+            
+            menu.style.top = topPosition + 'px';
+            menu.style.position = 'fixed';
+        }
+        
+        // Run on scroll
+        document.addEventListener('scroll', function(e) {
+            lastKnownScrollPosition = window.scrollY;
+            
+            if (!ticking) {
+                window.requestAnimationFrame(function() {
+                    positionMenu(lastKnownScrollPosition);
+                    ticking = false;
+                });
+                
+                ticking = true;
+            }
+        });
+        
+        // Run on resize
+        window.addEventListener('resize', function() {
+            positionMenu(window.scrollY);
+        });
+        
+        // Initial positioning
+        document.addEventListener('DOMContentLoaded', function() {
+            positionMenu(window.scrollY);
+            // Run it again after a short delay to ensure everything is loaded
+            setTimeout(function() {
+                positionMenu(window.scrollY);
+            }, 500);
+        });
+        
+        // Call it once right away
+        positionMenu(window.scrollY);
+    </script>
+
+    <script>
+        async function deleteSelectedImages() {
+            if (selectedImages.length === 0) {
+                return;
+            }
+            
+            const options = {
+                message: `Are you sure you want to delete ${selectedImages.length} selected images?`,
+                question: true,
+                options: {
+                    yes: function() { console.log("Yes clicked"); },
+                    no: function() { console.log("No clicked"); }
+                }
+            };
+            
+            const alertResponse = await globalAlert(options);
+            if (alertResponse === 'no') {
+                return;
+            }
+            
+            // Show loading state
+            const deleteButton = document.getElementById('deleteSelectedButton');
+            const originalText = deleteButton.innerHTML;
+            deleteButton.innerHTML = 'Deleting...';
+            deleteButton.disabled = true;
+            
+            // Create an array of promises for each deletion
+            const promises = selectedImages.map(imageId => {
+                // Get the actual image_id from masterImageData
+                const image_id = masterImageData[imageId].image_id;
+                
+                // Animate the div fading out
+                const imageDiv = document.getElementById(imageId);
+                if (imageDiv) {
+                    imageDiv.style.transition = 'opacity 0.5s';
+                    imageDiv.style.opacity = 0;
+                }
+                
+                // Return the promise for the fetch request
+                return fetch('/image-history/delete-image', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        image_id: image_id
+                    })
+                });
+            });
+            
+            // Wait for all deletions to complete
+            Promise.all(promises)
+                .then(() => {
+                    // Exit delete mode and remove elements
+                    deleteMode = false;
+                    toggleDeleteMode();
+                    
+                    // Remove deleted elements from DOM after animation
+                    setTimeout(() => {
+                        selectedImages.forEach(imageId => {
+                            const element = document.getElementById(imageId);
+                            if (element) element.remove();
+                        });
+                        selectedImages = [];
+                        updateSelectedCount();
+                        deleteButton.innerHTML = originalText;
+                        deleteButton.disabled = false;
+                    }, 500);
+                })
+                .catch(error => {
+                    console.error('Error deleting images:', error);
+                    // Reset button state
+                    deleteButton.innerHTML = originalText;
+                    deleteButton.disabled = false;
+                });
+        }
+    </script>
+
+    <script>
+        async function deleteAllImages() {
+            // Show confirmation dialog
+            const options = {
+                message: 'Are you sure you want to delete ALL of your images? This action cannot be undone.',
+                question: true,
+                options: {
+                    yes: function() { console.log("Yes clicked"); },
+                    no: function() { console.log("No clicked"); }
+                }
+            };
+            
+            const alertResponse = await globalAlert(options);
+            if (alertResponse === 'no') {
+                return;
+            }
+            
+            // Show loading indicator
+            const loadingIndicator = document.getElementById('loadingMoreIndicator');
+            loadingIndicator.innerHTML = 'Deleting all images...';
+            loadingIndicator.style.display = 'block';
+            
+            try {
+                // Send request to delete all images
+                const response = await fetch('/image-history/delete-all-images', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    // Clear the grid
+                    const generationsGrid = document.querySelector('.generationsGrid');
+                    const sentinel = document.getElementById('scroll-sentinel');
+                    
+                    // Keep only the sentinel element
+                    generationsGrid.innerHTML = '';
+                    generationsGrid.appendChild(sentinel);
+                    
+                    // Reset masterImageData
+                    masterImageData = {};
+                    
+                    loadingIndicator.innerHTML = 'All images deleted successfully';
+                    
+                    // Update image count display
+                    const countDisplay = document.querySelector('h2');
+                    if (countDisplay) {
+                        countDisplay.textContent = 'You have 0 / ' + userHistoryLimit;
+                    }
+                } else {
+                    loadingIndicator.innerHTML = 'Error deleting images: ' + (data.message || 'Unknown error');
+                }
+            } catch (error) {
+                console.error('Error deleting all images:', error);
+                loadingIndicator.innerHTML = 'Error deleting images. Please try again.';
+            } finally {
+                // Hide loading indicator after 3 seconds
+                setTimeout(() => {
+                    loadingIndicator.style.display = 'none';
+                }, 3000);
+            }
+        }
+    </script>
 </body>
 </html>
