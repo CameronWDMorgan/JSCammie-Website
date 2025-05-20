@@ -47,6 +47,9 @@ async function createUserNotification(accountId, message, type) {
 async function modifyUserCredits(accountId, amount, operation, message, testMode=false) {
 	
 	let UserProfile = await getSchemaDocumentOnce('userProfile', {accountId: accountId})
+	if (!UserProfile) {
+		return null
+	}
 	if (UserProfile.status === 'error') {
 		return null
 	}
