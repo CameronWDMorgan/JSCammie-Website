@@ -32,16 +32,28 @@
 	align-items: center;
 	justify-content: center;
 	padding: 0px;
-	border-radius: 10px;
-	background-color: rgba(0, 0, 0, 0.25);
-	box-shadow: 0px 0px 10px rgba(0, 0, 0, 1);
+	border-radius: 16px;
+	background-color: rgba(0, 0, 0, 0.35);
+	box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.6);
 	min-width: 300px;
 	min-height: 300px;
+	overflow: hidden;
+	transition: transform 0.2s ease, box-shadow 0.2s ease;
+	position: relative;
 }
 
-/* sizes of the booruPost needs to be the same for all posts: */
+.booruPost:hover {
+	transform: translateY(-5px);
+	box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.8);
+}
+
 .booruPost img {
-	border-radius: 10px;
+	border-radius: 0;
+	transition: transform 0.3s ease;
+}
+
+.booruPost > a:hover img {
+	transform: scale(1.03);
 }
 
 .booruPost .postInfo {
@@ -66,60 +78,71 @@
 	height: auto;
 }
 
-
 .votesDiv {
 	display: flex;
-	justify-content: space-between;
-	width: 50%;
-	border-radius: 10px;
-	padding: 5px;
-	text-decoration: none !important;
-}
-
-.votesDiv a {
-	text-decoration: none !important;
+	justify-content: space-around;
+	width: 100%;
+	background-color: rgba(0, 0, 0, 0.2);
+	padding: 10px 0;
+	margin-top: 5px;
 }
 
 .votesDiv button {
-	background-color: rgba(255, 255, 255, 0.1);
-	border: 1px solid rgba(0, 0, 0, 0.5);
-	border-radius: 5px;
-	padding: 5px;
-	font-size: 1.5rem;
+	background-color: rgba(30, 30, 30, 0.7);
+	border: 1px solid rgba(255, 255, 255, 0.3);
+	border-radius: 8px;
+	padding: 8px 15px;
+	font-size: 1.1rem;
 	font-weight: bold;
 	color: rgb(255, 255, 255);
-	cursor: default;
-	text-decoration: none !important;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	text-shadow: 0px 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+.votesDiv button:hover {
+	background-color: rgba(60, 60, 60, 0.9);
+	border-color: rgba(255, 255, 255, 0.7);
+	transform: translateY(-2px);
 }
 
 .votesDiv button.voted {
-	background-color: rgba(0, 132, 255, 0.25) !important;
-	border: 1px solid rgba(0, 132, 255) !important;
+	background-color: rgba(0, 132, 255, 0.6) !important;
+	border: 1px solid rgba(0, 162, 255, 0.8) !important;
 	color: rgb(255, 255, 255);
+	box-shadow: 0 0 10px rgba(0, 132, 255, 0.3);
 }
 
 /* Position the postButtons container to the top right */
 .postButtons {
-	position: relative;
+	display: flex;
+	justify-content: center;
+	gap: 0.8rem;
+	position: absolute;
+	top: 5px;
+	right: 5px;
+	z-index: 10;
 }
 
 /* Initially hide the dropdown */
 .dropdown {
 	display: none;
 	position: absolute;
-	right: -135px;
-	top: -5px;
-	/* background-color: rgba(0, 0, 0, 0.8);  */
-	border-radius: 5px;
-	padding: 10px;
-	z-index: 10;
+	right: 0;
+	top: 40px;
+	background-color: rgba(20, 20, 20, 0.95) !important;
+	border-radius: 8px;
+	padding: 5px;
+	z-index: 11;
+	box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+	min-width: 160px;
 }
 
 /* Make dropdown visible when the 'show' class is added */
 .dropdown.show {
 	display: block;
+	animation: fadeIn 0.2s ease-in-out;
 }
-
 
 .dropdown a {
 	color: white;
@@ -134,34 +157,47 @@
 	background-color: rgba(255, 255, 255, 0.1);
 }
 
-
 .dropdown button {
 	color: white;
-	background-color: rgba(0, 0, 0, 0.8) !important;
-	border: 2px solid white !important;
+	background-color: transparent !important;
+	border: none !important;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+	border-radius: 0 !important;
 	width: 100%;
-	padding: 5px;
-	display: block;
-	text-decoration: none;
+	padding: 8px;
+	text-align: left;
+	font-size: 0.9rem;
+	transition: background-color 0.2s ease;
 }
+
+.dropdown button:last-child {
+	border-bottom: none !important;
+}
+
 .dropdown button:hover {
-	background-color: rgba(255, 255, 255, 0.1);
+	background-color: rgba(255, 255, 255, 0.1) !important;
 }
-
-
 
 .dropdownButton {
-	position: absolute !important;
-	right: -135px;
-	top: -60px;
-	background-color: rgba(0, 0, 0, 0) !important;
+	position: relative !important;
+	background-color: rgba(0, 0, 0, 0.5) !important;
 	color: white;
 	padding: 5px !important;
-	font-size: 1.5rem !important;
-	border: 2px solid white !important;
+	font-size: 1.2rem !important;
+	border: 2px solid rgba(255, 255, 255, 0.3) !important;
+	border-radius: 50% !important;
+	width: 35px !important;
+	height: 35px !important;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
-
+.dropdownButton:hover {
+	background-color: rgba(50, 50, 50, 0.8) !important;
+	transform: scale(1.1);
+}
 
 .pageButtons {
 	display: flex;
@@ -192,27 +228,6 @@
 	color: rgb(255, 255, 255);
 }
 
-
-
-.postButtons {
-	display: flex;
-	justify-content: center;
-	gap: 0.8rem;
-}
-
-.postButtons button {
-	background-color: rgba(0, 0, 0, 0.1);
-	border: 1px solid rgba(0, 0, 0, 0.5);
-	border-radius: 5px;
-	padding: 10px;
-	font-size: 1rem;
-	font-weight: bold;
-	color: rgb(255, 255, 255);
-	cursor: pointer;
-	text-decoration: none !important;
-	margin: 5px;
-}
-
 .postProfile {
 	display: flex;
 	justify-content: center;
@@ -220,96 +235,309 @@
 }
 
 .abovePost {
-    display: flex;
-    align-items: center;
-    gap: 15px; /* Spacing between items */
-    padding: 10px;
-	width: 80%
+	display: flex;
+	align-items: center;
+	gap: 15px;
+	padding: 12px 15px;
+	width: 100%;
+	background-color: rgba(0, 0, 0, 0.2);
+	margin-bottom: 5px;
 }
 
 .abovePost a img {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    border: 2px solid #ddd; /* Adds a subtle border around the image */
-    object-fit: cover; /* Ensures image fits well in its container */
+	width: 48px;
+	height: 48px;
+	border-radius: 50%;
+	border: 2px solid rgba(255, 255, 255, 0.5);
+	object-fit: cover;
+	transition: border-color 0.3s ease, transform 0.3s ease;
+}
+
+.abovePost a:hover img {
+	border-color: rgba(255, 255, 255, 0.9);
+	transform: scale(1.1);
 }
 
 .userDetails {
-    display: flex;
-    flex-direction: column; /* Stack username and safety vertically */
-    gap: 5px;
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	flex-grow: 1;
 }
 
 .username {
-    font-size: 1.1rem;
-    font-weight: bold;
-    color: #ffffff;
-    margin: 0;
+	font-size: 1.1rem;
+	font-weight: bold;
+	color: #ffffff;
+	margin: 0;
+	text-shadow: 0px 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 .safety {
-    font-size: 0.9rem;
-    color: #b4b4b4; /* Lighter color for safety level */
-    margin: 0;
-    text-transform: uppercase; /* Already uppercase for consistency */
+	font-size: 0.8rem;
+	padding: 2px 6px;
+	border-radius: 4px;
+	display: inline-block;
+	max-width: fit-content;
+	margin: 0;
+	text-transform: uppercase;
 }
 
+/* Different colors for different safety levels */
+.safety:contains("SFW") {
+	background-color: rgba(0, 128, 0, 0.5);
+}
+
+.safety:contains("SUGGESTIVE") {
+	background-color: rgba(255, 165, 0, 0.5);
+}
+
+.safety:contains("NSFW") {
+	background-color: rgba(255, 0, 0, 0.5);
+}
+
+.safety:contains("EXTREME") {
+	background-color: rgba(128, 0, 128, 0.5);
+}
 
 .hidden {
-    display: none;
+	display: none;
 }
 
 .upvoteHover {
-    position: absolute;
-    background: rgba(20, 20, 20, 0.85);
-    backdrop-filter: blur(5px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    padding: 10px;
-    border-radius: 8px;
-    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);
-    z-index: 10;
-    transition: opacity 0.5s ease-in-out;
+	position: absolute;
+	background: rgba(20, 20, 20, 0.85);
+	backdrop-filter: blur(5px);
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	padding: 10px;
+	border-radius: 8px;
+	box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);
+	z-index: 10;
+	transition: opacity 0.5s ease-in-out;
 }
 
 .upvoteTitle {
-    font-weight: bold;
-    color: #ffffff;
-    margin-bottom: 4px;
-    font-size: 14px;
-    text-transform: uppercase;
+	font-weight: bold;
+	color: #ffffff;
+	margin-bottom: 4px;
+	font-size: 14px;
+	text-transform: uppercase;
 }
 
 .upvoters {
-    display: grid;
-    grid-template-columns: 1fr; /* Start with 1 column */
-    gap: 6px;
-    max-height: 300px; /* Prevent it from getting too tall */
-    overflow-y: auto;
-    transition: grid-template-columns 0.2s ease-in-out;
+	display: grid;
+	grid-template-columns: 1fr; /* Start with 1 column */
+	gap: 6px;
+	max-height: 300px; /* Prevent it from getting too tall */
+	overflow-y: auto;
+	transition: grid-template-columns 0.2s ease-in-out;
 }
 
 .upvoteUser {
-    display: flex;
-    align-items: center;
-    text-decoration: none;
-    color: #ddd;
-    font-size: 13px;
-    transition: color 0.2s ease-in-out;
+	display: flex;
+	align-items: center;
+	text-decoration: none;
+	color: #ddd;
+	font-size: 13px;
+	transition: color 0.2s ease-in-out;
 }
 
 .upvoteUser:hover {
-    color: #fff;
+	color: #fff;
 }
 
 .postProfileImage {
-    width: 50px;
+	width: 50px;
 	height: 50px;
-    border-radius: 50%;
-    border: 2px solid rgb(255, 255, 255);
-    transition: transform 0.2s ease-in-out;
+	border-radius: 50%;
+	border: 2px solid rgb(255, 255, 255);
+	transition: transform 0.2s ease-in-out;
 }
 
 .upvoteUser:hover .postProfileImage {
-    transform: scale(1.1);
+	transform: scale(1.1);
+}
+
+/* Enhanced Search Styling */
+.searchDiv {
+	background-color: rgba(0, 0, 0, 0.2);
+	padding: 20px;
+	border-radius: 12px;
+	margin-bottom: 30px;
+	box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.searchDiv input[type="text"] {
+	padding: 12px 15px;
+	border-radius: 8px;
+	border: 1px solid rgba(255, 255, 255, 0.3);
+	background-color: rgba(0, 0, 0, 0.4);
+	color: white;
+	font-size: 1rem;
+	transition: all 0.3s ease;
+}
+
+.searchDiv input[type="text"]:focus {
+	border-color: rgba(0, 132, 255, 0.8);
+	box-shadow: 0 0 10px rgba(0, 132, 255, 0.3);
+	background-color: rgba(0, 0, 0, 0.6);
+}
+
+.searchDiv select {
+	padding: 12px 15px;
+	border-radius: 8px;
+	border: 1px solid rgba(255, 255, 255, 0.3);
+	background-color: rgba(0, 0, 0, 0.4);
+	color: white;
+	font-size: 1rem;
+	margin: 10px 0;
+	cursor: pointer;
+}
+
+.searchDiv select:focus {
+	border-color: rgba(0, 132, 255, 0.8);
+}
+
+#safetyCheckboxes {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	margin: 15px 0;
+	align-items: center;
+}
+
+#safetyCheckboxes label {
+	margin-right: 5px;
+	font-size: 0.9rem;
+}
+
+#safetyCheckboxes input[type="checkbox"] {
+	transform: scale(1.2);
+	margin-right: 15px;
+}
+
+#searchButton {
+	background-color: rgba(0, 132, 255, 0.6);
+	border: 1px solid rgba(0, 132, 255, 0.3);
+	color: white;
+	padding: 12px 20px;
+	font-size: 1rem;
+	border-radius: 8px;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	margin-top: 10px;
+	font-weight: bold;
+	letter-spacing: 0.5px;
+}
+
+#searchButton:hover {
+	background-color: rgba(0, 132, 255, 0.8);
+	transform: translateY(-2px);
+	box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+/* Auto-complete styling */
+.autoCompleteDropdown {
+	padding: 15px;
+	border-radius: 8px;
+	margin-bottom: 20px;
+	border: 1px solid rgba(100, 100, 255, 0.3);
+	background-color: rgba(0, 0, 0, 0.4);
+	transition: all 0.3s ease;
+}
+
+.autoCompleteDropdown summary {
+	cursor: pointer;
+	background-color: rgba(100, 100, 255, 0.3);
+	border-radius: 6px;
+	padding: 8px 12px;
+	font-weight: bold;
+	transition: all 0.3s ease;
+}
+
+.autoCompleteDropdown summary:hover {
+	background-color: rgba(100, 100, 255, 0.5);
+}
+
+.autoCompleteDropdown:hover {
+	border: 1px solid rgba(255, 255, 255, 0.7);
+	box-shadow: 0 0 10px rgba(100, 100, 255, 0.2);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+	.booruPostsGrid {
+		grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+	}
+	
+	.votesDiv {
+		flex-direction: column;
+		align-items: center;
+		gap: 10px;
+	}
+	
+	.votesDiv button {
+		width: 90%;
+	}
+}
+
+/* Moderation specific styles */
+.reportsDiv {
+	background-color: rgba(255, 50, 50, 0.2);
+	padding: 10px;
+	margin: 10px 0;
+	border-radius: 8px;
+	width: 90%;
+}
+
+.reportsDiv p {
+	font-weight: bold;
+	margin: 0 0 5px 0;
+}
+
+.reports {
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+}
+
+.reports a {
+	text-decoration: none;
+	color: white;
+	background-color: rgba(0, 0, 0, 0.3);
+	padding: 5px;
+	border-radius: 4px;
+}
+
+.reports a:hover {
+	background-color: rgba(0, 0, 0, 0.5);
+}
+
+.moderator-info, .prompt-info {
+	padding: 8px;
+	background-color: rgba(0, 0, 0, 0.3);
+	border-radius: 6px;
+	margin: 5px 0;
+	font-size: 0.9rem;
+	width: 90%;
+	text-align: center;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.prompt-info:hover {
+	white-space: normal;
+	overflow: visible;
+}
+
+/* Animation for dropdown */
+@keyframes fadeIn {
+	from { opacity: 0; transform: translateY(-10px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+
+/* Focus on accessible style for checkboxes */
+input[type=checkbox]:focus {
+	outline: 2px solid rgba(0, 132, 255, 0.8);
 }
