@@ -790,18 +790,7 @@
                 author: "Crody",
                 authorLink: 'https://civitai.com/models/784543/nova-animal-xl',
                 image: 'https://www.jscammie.com/modelImages/illustrious-novaanimal.png'
-            },
-
-            {
-                id: 'illustrious-kiwimix',
-                name: 'ILLUSTRIOUS | Kiwi Mix',
-                description: 'Kiwi Mix is a model that is based on 2d, Cute, images.',
-                author: "changkiwi",
-                authorLink: 'https://civitai.com/models/264709/kiwimix-xl',
-                image: 'https://www.jscammie.com/modelImages/illustrious-kiwimix.png'
-            },
-
-
+            }
 
 
         ];
@@ -1418,8 +1407,7 @@
 
                         async function updateSlot(slotId) {
                             // add a popup asking for confirmation to update the slot:
-                            const summaryElement = document.getElementById(`saveSlot-${slotId}`).getElementsByTagName('summary')[0];
-                            const slotName = summaryElement.innerText.split('\n')[0].trim(); // Get only the name part before the buttons
+                            slotName = document.getElementById(`saveSlot-${slotId}`).getElementsByTagName('summary')[0].innerText
 
                             let options = {
                                 message: `Are you sure you want to update the slot: ${slotName}?`,
@@ -1616,8 +1604,7 @@
                         async function deleteSlot(slotId) {
                             event.preventDefault();
 
-                            const summaryElement = document.getElementById(`saveSlot-${slotId}`).getElementsByTagName('summary')[0];
-                            const slotName = summaryElement.innerText.split('\n')[0].trim(); // Get only the name part before the buttons
+                            slotName = document.getElementById(`saveSlot-${slotId}`).getElementsByTagName('summary')[0].innerText
 
                             let options = {
                                 message: `Are you sure you want to DELETE the slot: "${slotName}"?`,
@@ -2232,11 +2219,12 @@
                             <option value="fluffysonic">(SD 1.5) FluffySonic (Sonic the Hedgehog)</option>
                             <option value="realisticVision">(SD 1.5) realisticVision (Realstic)</option>
                             <option value="pdxl-autismmix">(PDXL) Autism Mix (2D, 3D)</option>
+                            <!-- <option value="pdxl-sonichasautismmix">(PDXL) SonicHasAutismMix (SonicDiffusionXL & AutismMix merge)</option> -->
                             <option value="pdxl-ponyrealism">(PDXL) Pony Realism (Realistic)</option>
+                            <!-- <option value="pdxl-fluffysonic">(PDXL) FluffySonic (Sonic the Hedgehog)</option> -->
                             <option value="illustrious-wai">BEST (ILLUSTRIOUS) WAI (2d, Anime, Human)</option>
                             <option value="illustrious-novafurry" selected>(ILLUSTRIOUS) Nova Furry (2d, 3d, Furry)</option>
                             <option value="illustrious-novaanimal">(ILLUSTRIOUS) Nova Animal (Realistic, 3d, Animal)</option>
-                            <option value="illustrious-kiwimix">(ILLUSTRIOUS) Kiwi Mix (2d, Cute)</option>
                         </select>
 
                         <button onclick="openModelSelectionPopup()" class="model-select-button">Open Model Selection</button>
@@ -2949,168 +2937,12 @@
                                 masterLoraData[loraId].strength = strength;
                             }
 
-                            // Function to detect if device is phone
-                            function isPhoneDevice() {
-                                return window.innerWidth < 768; // Common breakpoint for phones
-                            }
-
-                            // Function to show lora popup with traditional detailed information
-                            function showLoraPopup(loraId, loraData) {
-                                const popup = document.getElementById('loraPopupOverlay');
-                                const content = document.getElementById('loraPopupContent');
-                                
-                                let wordsFormatted = "";
-                                
-                                // Format words (same as traditional layout)
-                                loraData.words = loraData.words.replace(/&#39;/g, "'");
-                                loraData.words = loraData.words.replace(/&quot;/g, '"');
-                                loraData.words = loraData.words.replace(/&lt;/g, '<');
-                                loraData.words = loraData.words.replace(/&gt;/g, '>');
-                                loraData.words = loraData.words.replace(/&amp;/g, '&');
-
-                                loraData.words.split(';').map((word, index) => {
-                                    let noWhitespaceWord = word.trim();
-                                    if (noWhitespaceWord.startsWith(',')) {
-                                        noWhitespaceWord = noWhitespaceWord.slice(1);
-                                    }
-                                    if (noWhitespaceWord.endsWith(',')) {
-                                        noWhitespaceWord = noWhitespaceWord.slice(0, -1);
-                                    }
-                                    if (noWhitespaceWord.toLowerCase() === "n/a") {
-                                        wordsFormatted += `<a class="lora-words"></a>`;
-                                    } else {
-                                        wordsFormatted += `<a class="lora-words">
-                                            Words ${index + 1}: ${noWhitespaceWord}<br>
-                                            <button class="lora-words-copy-button" onclick="copyXWordsToClipboard('${noWhitespaceWord}')">Copy Words</button>
-                                        </a><br>`;
-                                    }
-                                });
-
-                                let loraIdFormatted = "";
-                                const allowedUsers = ['1039574722163249233', '550239177837379594'];
-                                if (allowedUsers.includes(document.getElementById('user-session').value)) {
-                                    loraIdFormatted = `<a class="lora-id"><strong>ID:</strong> ${loraId}<br><button class="lora-words-copy-button" onclick="copyXWordsToClipboard('${loraId}')">Copy ID</button></a>`;
-                                }
-
-                                const lastUsed = loraData.lastUsed == '0' ? 'Never Used' : new Date(parseFloat(loraData.lastUsed)).toLocaleString();
-
-                                // Create traditional detailed layout in popup
-                                content.innerHTML = `
-                                    <div class="lora-popup-header">
-                                        <h3>${loraData.name || 'Null'}</h3>
-                                        <button class="close-popup-btn" onclick="closeLoraPopup()">×</button>
-                                    </div>
-                                    <div class="lora-popup-body">
-                                        <div class="lora-toggle">
-                                            <input id="popup-enable-${loraId}" type="checkbox" value="${loraId}" checked onchange="masterLoraData['${loraId}'].selected = this.checked; loadLoras(); updateLoraSelectionsSummary();">
-                                            <label for="popup-enable-${loraId}">
-                                                <span class="lora-category">${loraId.split('-')[0].charAt(0).toUpperCase() + loraId.split('-')[0].slice(1)}</span> | ${loraData.name || 'Null'} | Uses: ${loraData.usesCount}
-                                            </label>
-                                        </div>
-                                        <div class="lora-info">
-                                            ${loraIdFormatted}
-                                            <p class="lora-description"><strong>Description:</strong> ${loraData.description || 'Null'}</p>
-                                            <p class="lora-strength"><strong>Default Strength:</strong> ${loraData.strength || 'Null'}</p>
-                                            ${wordsFormatted}
-                                            <p class="lora-strength-slider"> 
-                                                <input type="range" id="popup-strength-${loraId}" name="popup-strength-${loraId}" min="-3" max="3" step="0.05" value="${loraData.strength}" style="width: 90%;">
-                                                <a id="popup-strength-${loraId}-value" style="transform: translateY(-32px) !important; margin: 4px; font-size: 28px">${loraData.strength}</a>
-                                            </p>
-                                            <button class="lora-reset-strength-button" onclick="setStrength('${loraId}', '${loraData.defaultStrength}')">Reset Strength</button>
-                                            <p class="lora-date"><strong>Date Created/Updated:</strong> ${new Date(parseFloat(loraData.dateCreated)).toLocaleString()} | Last Used: ${lastUsed}</p>
-                                            <p class="lora-link"><strong>Link:</strong> <a href="${loraData.link || '#'}">Clickable Link</a></p>
-                                        </div>
-                                    </div>
-                                `;
-
-                                // Add event listener for strength slider in popup
-                                const slider = document.getElementById(`popup-strength-${loraId}`);
-                                slider.addEventListener('input', function() {
-                                    setStrength(loraId, slider.value);
-                                    document.getElementById(`popup-strength-${loraId}-value`).innerText = slider.value;
-                                    // Also update the main slider if it exists
-                                    const mainSlider = document.getElementById(`strength-${loraId}`);
-                                    if (mainSlider) {
-                                        mainSlider.value = slider.value;
-                                        const mainValueSpan = document.getElementById(`strength-${loraId}-value`);
-                                        if (mainValueSpan) mainValueSpan.innerText = slider.value;
-                                    }
-                                });
-
-                                popup.style.display = 'block';
-                                document.body.style.overflow = 'hidden';
-                            }
-
-                            // Function to close lora popup
-                            function closeLoraPopup() {
-                                const popup = document.getElementById('loraPopupOverlay');
-                                popup.style.display = 'none';
-                                document.body.style.overflow = 'auto';
-                            }
-
-                            // Function to position lora buttons near prompt box
-                            function positionLoraButtonsNearPrompt() {
-                                const promptBox = document.getElementById('prompt');
-                                const loraButtonsContainer = document.getElementById('loraButtonsFloatingContainer');
-                                
-                                if (promptBox && loraButtonsContainer) {
-                                    const promptRect = promptBox.getBoundingClientRect();
-                                    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-                                    const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
-                                    const containerWidth = loraButtonsContainer.offsetWidth || 80; // Fallback width
-                                    
-                                    // Position containers properties
-                                    loraButtonsContainer.style.position = 'absolute';
-                                    loraButtonsContainer.style.top = (promptRect.top + scrollTop) + 'px';
-                                    loraButtonsContainer.style.zIndex = '999';
-                                    loraButtonsContainer.style.transition = 'left 0.3s ease-in-out';
-                                    
-                                    // Check if prompt is hovered/focused OR lora buttons are hovered
-                                    const isPromptActive = promptBox.matches(':hover, :focus');
-                                    const isLoraContainerHovered = loraButtonsContainer.matches(':hover');
-                                    
-                                    if (isPromptActive || isLoraContainerHovered) {
-                                        // Move to the right of the prompt box when active
-                                        loraButtonsContainer.style.left = (promptRect.right + scrollLeft + 10) + 'px';
-                                        loraButtonsContainer.classList.add('lora-buttons-visible');
-                                    } else {
-                                        // Position on top of the prompt box, offset by lora buttons width so they're mostly hidden
-                                        loraButtonsContainer.style.left = (promptRect.left + scrollLeft + promptRect.width - containerWidth + 20) + 'px';
-                                        loraButtonsContainer.classList.remove('lora-buttons-visible');
-                                    }
-                                }
-                            }
-
-                            // Function to setup prompt box event listeners
-                            function setupPromptBoxListeners() {
-                                const promptBox = document.getElementById('prompt');
-                                
-                                if (promptBox) {
-                                    // Add event listeners for hover and focus on prompt
-                                    promptBox.addEventListener('mouseenter', positionLoraButtonsNearPrompt);
-                                    promptBox.addEventListener('mouseleave', positionLoraButtonsNearPrompt);
-                                    promptBox.addEventListener('focus', positionLoraButtonsNearPrompt);
-                                    promptBox.addEventListener('blur', positionLoraButtonsNearPrompt);
-                                }
-                            }
-
-                            // Function to setup lora container event listeners (called after container is created)
-                            function setupLoraContainerListeners() {
-                                const loraButtonsContainer = document.getElementById('loraButtonsFloatingContainer');
-                                
-                                if (loraButtonsContainer) {
-                                    // Add event listeners for hover on lora buttons container
-                                    loraButtonsContainer.addEventListener('mouseenter', positionLoraButtonsNearPrompt);
-                                    loraButtonsContainer.addEventListener('mouseleave', positionLoraButtonsNearPrompt);
-                                }
-                            }
-
                             function updateLoraSelectionsSummary() {
                                 loraSelectionsSummary = document.getElementById('loraSelectionsSummary');
                                 loraSelectionsSummary.innerHTML = '';
                                 selectedLoras = Object.entries(masterLoraData).filter(([key, value]) => value.selected);
-                                
-                                // total loras needs to respect the model type
+                                // total loras needs to respect the model type ("doesnt have pdxl or flux in the key", "pdxl in key", "flux in key")
+
                                 totalLoras = Object.entries(masterLoraData).filter(([key, value]) => {
                                     if (document.getElementById('model').value.startsWith("pdxl")) {
                                         return key.includes("-pdxl");
@@ -3123,36 +2955,42 @@
                                     }
                                 }).length;
 
+                                totalRatingLoraCount = 0
+
+                                // now have a seperate totalLoras for the safety ratings checkboxes, make sure it also follows the model:
+                                totalRatingLoraCount = Object.entries(masterLoraData).filter(([key, value]) => {
+                                    if (document.getElementById('model').value.startsWith("pdxl")) {
+                                        return key.includes("-pdxl");
+                                    } else if (document.getElementById('model').value.startsWith("flux")) {
+                                        return key.includes("-flux");
+                                    } else if (document.getElementById('model').value.startsWith("illustrious")) {
+                                        return key.includes("-illustrious");
+                                    } else {
+                                        return !key.includes("-pdxl") && !key.includes("-flux") && !key.includes("-illustrious");
+                                    }
+                                }).filter(([key, value]) => {
+                                    if (document.getElementById('showSafeCheckbox').checked && value.rating === 'safe') {
+                                        return true;
+                                    } else if (document.getElementById('showSuggestiveCheckbox').checked && value.rating === 'suggestive') {
+                                        return true;
+                                    } else if (document.getElementById('showNSFWCheckbox').checked && value.rating === 'nsfw') {
+                                        return true;
+                                    } else if (document.getElementById('showNACheckbox').checked && value.rating === 'n/a') {
+                                        return true;
+                                    } else {
+                                        return false;
+                                    }
+                                }).length;
+
+
                                 document.getElementById('totalLorasSelected').innerText = selectedLoras.length;
-                                document.getElementById('totalLoras').innerText = totalLoras;
+                                document.getElementById('totalLoras').innerText = `${totalRatingLoraCount} (${totalLoras})`;
 
                                 if (selectedLoras.length === 0) {
                                     loraSelectionsSummary.innerHTML = '<p>No Loras selected</p>';
-                                    // Remove floating buttons if no loras selected
-                                    const floatingContainer = document.getElementById('loraButtonsFloatingContainer');
-                                    if (floatingContainer) {
-                                        floatingContainer.remove();
-                                    }
                                     return;
                                 }
 
-                                // Check if device is phone to determine layout
-                                if (isPhoneDevice()) {
-                                    // Traditional layout for phones
-                                    renderTraditionalLoraLayout(selectedLoras, loraSelectionsSummary);
-                                    // Remove floating buttons on phones
-                                    const floatingContainer = document.getElementById('loraButtonsFloatingContainer');
-                                    if (floatingContainer) {
-                                        floatingContainer.remove();
-                                    }
-                                } else {
-                                    // Show traditional layout in summary AND create floating buttons for PC/Tablet
-                                    renderTraditionalLoraLayout(selectedLoras, loraSelectionsSummary);
-                                    createFloatingLoraButtons(selectedLoras);
-                                }
-                            }
-
-                            function renderTraditionalLoraLayout(selectedLoras, container) {
                                 selectedLoras.forEach(([key, value]) => {
                                     loraSummary = document.createElement('div');
                                     loraSummary.classList.add('lora-details');
@@ -3227,7 +3065,7 @@
                                             <p class="lora-link"><strong>Link:</strong> <a href="${value.link || '#'}">Clickable Link</a></p>
                                         </div>
                                     `;
-                                    container.appendChild(loraSummary);
+                                    loraSelectionsSummary.appendChild(loraSummary);
                                 });
 
                                 // Add event listeners for the strength sliders
@@ -3238,55 +3076,31 @@
                                         document.getElementById(`strength-${loraId}-value`).innerText = slider.value;
                                     })
                                 })
+                                
+                                            
+
                             }
 
-                            function createFloatingLoraButtons(selectedLoras) {
-                                // Remove existing floating container
-                                const existingContainer = document.getElementById('loraButtonsFloatingContainer');
-                                if (existingContainer) {
-                                    existingContainer.remove();
+                            function copyXWordsToClipboard(words) {
+                                // Prevent default button behavior
+                                event.preventDefault();
+                                event.stopPropagation();
+
+                                // Ensure navigator.clipboard is available; it might not be available in non-secure contexts
+                                if (!navigator.clipboard) {
+                                    console.error('Clipboard API not available. Please use a secure context (HTTPS).');
+                                    return;
                                 }
 
-                                // Create floating container
-                                const floatingContainer = document.createElement('div');
-                                floatingContainer.id = 'loraButtonsFloatingContainer';
-                                floatingContainer.className = 'lora-floating-buttons-container';
-                                
-                                selectedLoras.forEach(([key, value]) => {
-                                    const loraButton = document.createElement('div');
-                                    loraButton.className = 'lora-floating-button';
-                                    loraButton.onclick = () => showLoraPopup(key, value);
-                                    
-                                    // Clean the lora name by removing model prefixes
-                                    let cleanName = value.name || key;
-                                    cleanName = cleanName.replace(/^(illustrious|pdxl|flux)\s*/i, '');
-                                    
-                                    loraButton.innerHTML = `
-                                        <img src="${value.image}" alt="${cleanName}" class="lora-floating-image">
-                                        <div class="lora-floating-overlay">
-                                            <span class="lora-floating-name">${cleanName}</span>
-                                        </div>
-                                    `;
-                                    
-                                    floatingContainer.appendChild(loraButton);
-                                });
-                                
-                                // Add to document body
-                                document.body.appendChild(floatingContainer);
-                                
-                                // Setup event listeners for prompt box interactions
-                                setupPromptBoxListeners();
-                                
-                                // Setup event listeners for lora container interactions (after it's in DOM)
-                                setTimeout(() => {
-                                    setupLoraContainerListeners();
-                                    positionLoraButtonsNearPrompt();
-                                }, 100);
+                                // Attempt to copy the words to the clipboard
+                                navigator.clipboard.writeText(words).then(
+                                    function() {
+                                    },
+                                    function(err) {
+                                        console.error('Async: Could not copy text: ', err);
+                                    }
+                                );
                             }
-
-                            // Reposition on window resize and scroll
-                            window.addEventListener('resize', positionLoraButtonsNearPrompt);
-                            window.addEventListener('scroll', positionLoraButtonsNearPrompt);
                         </script>
 
                         <!-- <button type="button" id="loadAllLoras" onclick="loadLoras()">Load All Loras</button> -->
@@ -3809,6 +3623,11 @@
 
         <div class="flex-under-div" style="margin: 20px;">
 
+            <!-- <center>
+                <h2>We are hosting a <a style="color: gold;">$100</a> AI Contest to celebrate the new year! So be sure to check the <a href="https://discord.gg/AvbQuRmh7t" style="color:rgb(69, 196, 255)f;">discord</a> for more information!</h2>
+                <br>
+            </center> -->
+
             <style>
                 /* remove the up down arrows */
                 .sliderInputBox {
@@ -4101,324 +3920,117 @@
                             You can earn credits for free by participating in the community, posting on the booru, liking booru posts, posting suggestions, and more!
                         </div>
                 </label>
-                
-                <!-- Credits Shop with ETA-style design -->
-                <div class="credits-shop-container" id="creditsShop">
+                <details class="loggedOutCreditsShop" id="creditsShop">
                     <% if (session.loggedIn) { %>
-                        <div class="credits-shop-header">
-                            <div class="credits-total-cost">
-                                💳 Total Cost: <span class="credits-price-highlight" id="currentCreditsPrice">0</span> Credits
-                            </div>
-                        </div>
+                        <summary><a class="costPElement">Cost: <span class="creditsPriceStyling"><span class="creditsPriceStyling" id="currentCreditsPrice">25</span> Credits</span></a></summary>
                     <% } else { %>
-                        <div class="credits-shop-header">
-                            <div class="credits-total-cost">
-                                💳 Total Cost: <span class="credits-price-highlight" id="currentCreditsPrice">0</span> Credits
-                                <span class="login-required">(Login Required)</span>
-                            </div>
-                        </div>
+                        <summary><a class="costPElement">Cost: <span class="creditsPriceStyling"><span class="creditsPriceStyling" id="currentCreditsPrice">25</span> Credits</span> (Login Required)</a></summary>
                     <% } %>
 
-                    <div class="credits-shop-content">
-                        <!-- Remove Watermark -->
-                        <div class="credit-option<% if (!session.loggedIn) { %> disabled<% } %>" data-checkbox="removeWatermarkCheckbox">
-                            <input type="checkbox" id="removeWatermarkCheckbox" class="credit-checkbox"<% if (!session.loggedIn) { %> disabled<% } %>>
-                            <span class="credit-option-title">🏷️ Remove Watermark</span>
-                            <span class="credit-option-price"><span class="credits-price-highlight" id="removeWatermarkCreditsPrice">25</span> Credits</span>
-                        </div>
+                    <label>
+                        Remove Watermark: <span><a id="removeWatermarkCreditsPrice">25</a> Credits
+                        <span class="tooltip" onclick="showTooltip(this)">❓</span>
+                            <div class="tooltiptext">
+                                Use this checkbox to remove the watermark from the generated image<br>
+                                The watermark is a small text in the bottom right corner of the image
+                            </div>
+                    </label>
+                    <input type="checkbox" id="removeWatermarkCheckbox" name="removeWatermarkCheckbox"<% if (!session.loggedIn) { %> disabled<% } %>>
 
-                        <!-- Upscale Image -->
-                        <div class="credit-option<% if (!session.loggedIn) { %> disabled<% } %>" data-checkbox="upscaleCheckbox">
-                            <input type="checkbox" id="upscaleCheckbox" class="credit-checkbox"<% if (!session.loggedIn) { %> disabled<% } %>>
-                            <span class="credit-option-title">📈 Upscale Image</span>
-                            <span class="credit-option-price"><span class="credits-price-highlight" id="upscaleCreditsPrice">25</span> Credits</span>
-                        </div>
 
-                        <!-- Double Images -->
-                        <div class="credit-option<% if (!session.loggedIn) { %> disabled<% } %>" data-checkbox="doubleImagesCheckbox">
-                            <input type="checkbox" id="doubleImagesCheckbox" class="credit-checkbox"<% if (!session.loggedIn) { %> disabled<% } %>>
-                            <span class="credit-option-title">🖼️ 2× Images</span>
-                            <span class="credit-option-price"><span class="credits-price-highlight" id="doubleImagesCreditsPrice">25</span> Credits</span>
-                        </div>
+                    <label>
+                        Upscale Image: <span><a id="upscaleCreditsPrice">25</a> Credits
+                        <span class="tooltip" onclick="showTooltip(this)">❓</span>
+                            <div class="tooltiptext">
+                                Use this checkbox to upscale the generated image<br>
+                                Upscaling the image will make it larger, but may reduce the quality
+                            </div>
+                    </label>
+                    <input type="checkbox" id="upscaleCheckbox" name="upscaleCheckbox"<% if (!session.loggedIn) { %> disabled<% } %>>
 
-                        <!-- Remove Background -->
-                        <div class="credit-option<% if (!session.loggedIn) { %> disabled<% } %>" data-checkbox="removeBackgroundCheckbox">
-                            <input type="checkbox" id="removeBackgroundCheckbox" class="credit-checkbox"<% if (!session.loggedIn) { %> disabled<% } %>>
-                            <span class="credit-option-title">🎭 Remove Background</span>
-                            <span class="credit-option-price"><span class="credits-price-highlight" id="removeBackgroundCreditsPrice">25</span> Credits</span>
-                        </div>
+                    <label>
+                        2x Images: <span><a id="doubleImagesCreditsPrice">25</a> Credits
+                        <span class="tooltip" onclick="showTooltip(this)">❓</span>
+                            <div class="tooltiptext">
+                                Use this checkbox to generate double the images!<br>
+                                SD 1.5: 8 images<br>
+                                PDXL: 8 images<br>
+                                FLUX: 4 images
+                            </div>
+                    </label>
+                    <input type="checkbox" id="doubleImagesCheckbox" name="doubleImagesCheckbox"<% if (!session.loggedIn) { %> disabled<% } %>>
 
-                        <!-- Fast Queue  -->
-                        <% if (session.loggedIn) { %>
-                        <div class="credit-option fast-queue-option" id="fastqueueCard">
-                            <span class="credit-option-title">⚡ Fast Queue</span>
-                            <span class="credit-option-price"><span class="credits-price-highlight" id="fastqueueCreditsPrice">25</span> Credits</span>
-                            <button class="fastqueue-toggle-button" id="fastqueueButton" type="button"><span class="toggle-text">Enable</span></button>
-                        </div>
-                        <% } else { %>
-                        <div class="credit-option fast-queue-option disabled">
-                            <span class="credit-option-title">⚡ Fast Queue</span>
-                            <span class="credit-option-price"><span class="credits-price-highlight" id="fastqueueCreditsPrice">25</span> Credits</span>
-                            <button class="fastqueue-toggle-button disabled" disabled>Login Required</button>
-                        </div>
-                        <% } %>
-                    </div>
-                </div>
+                    <label>
+                        Remove Background: <span><a id="removeBackgroundCreditsPrice">25</a> Credits
+                        <span class="tooltip" onclick="showTooltip(this)">❓</span>
+                            <div class="tooltiptext">
+                                Use this checkbox to remove the background from the generated image<br>
+                                The background will be replaced with a transparent background
+                            </div>
+                    </label>
+                    <input type="checkbox" id="removeBackgroundCheckbox" name="removeBackgroundCheckbox"<% if (!session.loggedIn) { %> disabled<% } %>>
 
-                <% if (!session.loggedIn) { %>
-                <script>
-                    // disable the checkboxes when the user is logged out:
-                    document.querySelectorAll('.credit-checkbox').forEach(checkbox => {
-                        checkbox.disabled = true;
-                    });
-                </script>
-                <% } %>
+                    <% if (session.loggedIn) { %>
+                    <label>
+                        Fast Queue: <span><a id="fastqueueCreditsPrice">25</a> Credits
+                        <span class="tooltip" onclick="showTooltip(this)">❓</span>
+                            <div class="tooltiptext">
+                                Use this checkbox to enable the fast queue for the AI Image Generator<br>
+                                The fast queue will prioritize your image in the queue, massively reducing the time it takes to generate the image
+                            </div>
+                    </label>
+                    <button class="fastqueueButton" form="generatorForm" id="fastqueueButton" type="submit">Fast Queue</button>
 
-                <style>
-                    /* Credits Shop Container - matching ETA display style */
-                    .credits-shop-container {
-                        background: linear-gradient(135deg, #1a1a2e, #16213e);
-                        padding: 15px;
-                        border-radius: 10px;
-                        border: 1px solid #333;
-                        margin: 10px 0;
-                        color: #e2e8f0;
-                    }
-
-                    .credits-shop-header {
-                        text-align: center;
-                        margin-bottom: 15px;
-                        padding-bottom: 10px;
-                        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-                    }
-
-                    .credits-total-cost {
-                        color: #ffd700;
-                        font-weight: bold;
-                        font-size: 16px;
-                    }
-
-                    .credits-price-highlight {
-                        color: #00ff88;
-                        font-weight: bold;
-                        text-shadow: 0 0 5px rgba(0, 255, 136, 0.3);
-                    }
-
-                    .login-required {
-                        color: #ff8844;
-                        font-size: 14px;
-                        font-weight: normal;
-                    }
-
-                    .credits-shop-content {
-                        display: flex;
-                        flex-direction: column;
-                        gap: 10px;
-                    }
-
-                    .credit-option {
-                        background: rgba(255, 255, 255, 0.05);
-                        padding: 12px;
-                        border-radius: 8px;
-                        border-left: 3px solid #60a5fa;
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                        transition: all 0.3s ease;
-                    }
-
-                    .credit-option:hover {
-                        background: rgba(255, 255, 255, 0.08);
-                        transform: translateY(-1px);
-                    }
-
-                    .credit-option.fast-queue-option {
-                        border-left-color: #fbbf24;
-                    }
-
-                    .credit-option.disabled {
-                        opacity: 0.6;
-                        border-left-color: #64748b;
-                    }
-
-                    .credit-option-info {
-                        display: flex;
-                        flex-direction: column;
-                        gap: 4px;
-                    }
-
-                    .credit-option-title {
-                        color: #e2e8f0;
-                        font-weight: 500;
-                        font-size: 14px;
-                    }
-
-                    .credit-option-price {
-                        font-size: 12px;
-                        color: #94a3b8;
-                    }
-
-                    .credit-option-controls {
-                        display: flex;
-                        align-items: center;
-                        gap: 8px;
-                    }
-
-                    .credit-checkbox {
-                        width: 18px;
-                        height: 18px;
-                        cursor: pointer;
-                        accent-color: #00ff88;
-                    }
-
-                    .credit-checkbox:disabled {
-                        opacity: 0.5;
-                        cursor: not-allowed;
-                    }
-
-                    .fastqueue-toggle-button {
-                        background: linear-gradient(135deg, #fbbf24, #f59e0b);
-                        color: white;
-                        border: none;
-                        padding: 6px 12px;
-                        border-radius: 6px;
-                        font-size: 12px;
-                        font-weight: bold;
-                        cursor: pointer;
-                        transition: all 0.3s ease;
-                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-                    }
-
-                    .fastqueue-toggle-button:hover {
-                        transform: translateY(-1px);
-                        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-                    }
-
-                    .fastqueue-toggle-button.active {
-                        background: linear-gradient(135deg, #10b981, #059669);
-                        box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
-                    }
-
-                    .fastqueue-toggle-button.disabled {
-                        background: #64748b;
-                        cursor: not-allowed;
-                        transform: none;
-                    }
-
-                    .fastqueue-toggle-button.disabled:hover {
-                        transform: none;
-                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-                    }
-
-                    /* Responsive design */
-                    @media (max-width: 1080px) {
-                        .credit-option {
-                            flex-direction: column;
-                            align-items: flex-start;
-                            gap: 8px;
-                        }
-
-                        .credit-option-controls {
-                            align-self: flex-end;
-                        }
-                    }
-
-                    /* Legacy compatibility - keep old classes but hide them */
-                    .costPElement,
-                    .creditsPriceStyling {
-                        display: none;
-                    }
-                </style>
-
-                <style>
-                    /* Grid layout for options */
-                    .credits-shop-content{
-                        display:grid;
-                        grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
-                        gap:12px;
-                    }
-
-                    .credit-option{
-                        position:relative;
-                        background:rgba(255,255,255,0.05);
-                        padding:16px 10px 14px;
-                        border-radius:10px;
-                        border:2px solid transparent;
-                        cursor:pointer;
-                        display:flex;
-                        flex-direction:column;
-                        align-items:flex-start;
-                        gap:6px;
-                        transition:all .25s ease;
-                    }
-                    .credit-option:hover{background:rgba(255,255,255,0.08);transform:translateY(-2px);}
-                    .credit-option.selected{border-color:#00ff88;box-shadow:0 0 8px rgba(0,255,136,.4);}
-                    .credit-option.fast-queue-option{border-left:3px solid #fbbf24;}
-                    .credit-option.disabled{opacity:.5;cursor:not-allowed;}
-
-                    /* Hide actual checkboxes */
-                    .credit-checkbox{display:none;}
-
-                    /* Tooltip always on top */
-                    .tooltiptext{z-index:99999;}
-                    
-                    /* FORCE HIDE ALL CHECKBOXES IN CREDIT OPTIONS */
-                    .credit-checkbox,
-                    .credit-option input[type="checkbox"],
-                    input[type="checkbox"].credit-checkbox,
-                    #removeWatermarkCheckbox,
-                    #upscaleCheckbox, 
-                    #doubleImagesCheckbox,
-                    #removeBackgroundCheckbox {
-                        display: none !important;
-                        visibility: hidden !important;
-                        position: absolute !important;
-                        left: -9999px !important;
-                        top: -9999px !important;
-                        opacity: 0 !important;
-                        width: 0 !important;
-                        height: 0 !important;
-                        margin: 0 !important;
-                        padding: 0 !important;
-                        border: none !important;
-                        outline: none !important;
-                        pointer-events: none !important;
-                        z-index: -9999 !important;
-                        clip: rect(0 0 0 0) !important;
-                        overflow: hidden !important;
-                        max-width: 0 !important;
-                        max-height: 0 !important;
-                    }
-                </style>
-
-                <script>
-                    // Toggle card selection & hidden checkbox
-                    document.querySelectorAll('.credit-option').forEach(card=>{
-                        if(card.classList.contains('disabled')) return;
-                        card.addEventListener('click',e=>{
-                            // Ignore when clicking on internal button / checkbox or tooltip
-                            if(e.target.closest('button')||e.target.classList.contains('tooltip')) return;
-                            const checkboxId=card.dataset.checkbox;
-                            if(!checkboxId) return;
-                            const cb=document.getElementById(checkboxId);
-                            cb.checked=!cb.checked;
-                            card.classList.toggle('selected',cb.checked);
-                            prepareData();
+                    <script>
+                        // even default button press:
+                        // for the fastqueueButton:
+                        document.getElementById('fastqueueButton').addEventListener('click', function() {
+                            event.preventDefault();
+                            if (this.classList.contains('active')) {
+        
+                                this.classList.remove('active');
+        
+                            } else {
+                                this.classList.add('active');
+                            }
                         });
-                        // Sync initial state
-                        const cb=document.getElementById(card.dataset.checkbox);
-                        if(cb && cb.checked){card.classList.add('selected');}
-                    });
+                    </script>
+                    <% } else { %>
+                    <button class="fastqueueButton" form="generatorForm" id="fastqueueButton" type="submit">Fast Queue | Cost: <span id="fastqueueCreditsPrice"></span> Credits (Login Required)</button>
 
-                    // Keep fastqueue button card highlight in sync
-                    const fastqueueCardOld=document.getElementById('fastqueueCard');
-                    if(fastqueueCardOld){
-                        document.getElementById('fastqueueButton').addEventListener('click',()=>{
-                            fastqueueCardOld.classList.toggle('selected',document.getElementById('fastqueueButton').classList.contains('active'));
-                            prepareData();
+                    <script>
+                        // even default button press:
+                        // for the fastqueueButton:
+                        document.getElementById('fastqueueButton').addEventListener('click', function() {
+                            event.preventDefault();
                         });
-                    }
-                </script>
+                    </script>
+
+                    <% } %>
+
+                </details>
+
+                <% if (session.loggedIn) { %>
+                    <% } else { %>
+                        <!-- class="loggedOutCreditsShop" for creditsShop -->
+                        <style>
+                            .loggedOutCreditsShop {
+                                color: rgb(32, 32, 32) !important;
+                            }
+                            /* set the checkboxes to be disabled and red: */
+                            .loggedOutCreditsShop input[type="checkbox"] {
+                                color: red !important;
+                                background-color: gray !important;
+                            }
+                        </style>
+    
+                        <script>
+                            // disable the checkboxes when the user is logged out:
+                            document.querySelectorAll('.loggedOutCreditsShop input[type="checkbox"]').forEach(checkbox => {
+                                checkbox.disabled = true;
+                            });
+                        </script>
+                    <% } %>
 
                 <style>
                     /* have it be centered, text-align doesnt work */
@@ -4720,11 +4332,6 @@
                         generateButton.innerText = `Generate Image | Cost: ${runningCost} Credits`
                     } else {
                         generateButton.innerText = `Generate Image for Free`
-                    }
-                    
-                    // Update queue ETA display to show new costs
-                    if (typeof updateQueueETA === 'function') {
-                        updateQueueETA();
                     }
             
                 }
@@ -5190,776 +4797,6 @@
     <script>
         <%- scripts.imageGeneratorTour %>
     </script>
-
-    <script>
-        // Handle fast queue button functionality first
-        const fastqueueButton = document.getElementById('fastqueueButton');
-        const fastqueueCard = document.getElementById('fastqueueCard');
-        
-        if (fastqueueButton && fastqueueCard) {
-            fastqueueButton.addEventListener('click', function(event) {
-                event.preventDefault();
-                event.stopPropagation(); // Prevent card click
-                
-                const toggleText = this.querySelector('.toggle-text');
-                if (this.classList.contains('active')) {
-                    this.classList.remove('active');
-                    toggleText.textContent = 'Enable Fast Queue ⚡';
-                    fastqueueCard.classList.remove('selected');
-                } else {
-                    this.classList.add('active');
-                    toggleText.textContent = 'Disable Fast Queue ⚡';
-                    fastqueueCard.classList.add('selected');
-                }
-                // Trigger prepareData to update costs
-                if (typeof prepareData === 'function') {
-                    prepareData();
-                }
-            });
-        }
-    </script>
-
-    <!-- Lora Popup Overlay -->
-    <div class="lora-popup-overlay" id="loraPopupOverlay">
-        <div class="lora-popup-container" id="loraPopupContent">
-            <!-- Content will be dynamically inserted here -->
-        </div>
-    </div>
-
-    <!-- CSS for Lora Image Buttons and Popup -->
-    <style>
-        /* Lora Image Buttons Container */
-        .lora-buttons-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-            gap: 15px;
-            background: linear-gradient(135deg, #1a1a2e, #16213e);
-            padding: 20px;
-            border-radius: 12px;
-            border: 1px solid #333;
-            margin: 10px 0;
-        }
-
-        /* Individual Lora Image Button */
-        .lora-image-button {
-            position: relative;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 10px;
-            border: 2px solid rgba(255, 255, 255, 0.1);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            overflow: hidden;
-            aspect-ratio: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .lora-image-button:hover {
-            transform: translateY(-2px);
-            border-color: #60a5fa;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
-        }
-
-        /* Image Container */
-        .lora-button-image-container {
-            position: relative;
-            flex: 1;
-            overflow: hidden;
-            border-radius: 8px 8px 0 0;
-        }
-
-        .lora-button-image {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            object-position: center;
-            transition: transform 0.3s ease;
-        }
-
-        .lora-image-button:hover .lora-button-image {
-            transform: scale(1.05);
-        }
-
-        /* Overlay on image */
-        .lora-button-overlay {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
-            padding: 8px;
-            color: white;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .lora-image-button:hover .lora-button-overlay {
-            opacity: 1;
-        }
-
-        .lora-button-name {
-            display: block;
-            font-size: 11px;
-            font-weight: bold;
-            color: #e2e8f0;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .lora-button-strength {
-            display: block;
-            font-size: 10px;
-            color: #94a3b8;
-            margin-top: 2px;
-        }
-
-        /* Controls section */
-        .lora-button-controls {
-            padding: 8px;
-            background: rgba(0, 0, 0, 0.3);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .lora-button-checkbox {
-            width: 16px;
-            height: 16px;
-            accent-color: #00ff88;
-            cursor: pointer;
-        }
-
-        /* Popup Overlay */
-        .lora-popup-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 10000;
-            backdrop-filter: blur(5px);
-        }
-
-        /* Popup Container */
-        .lora-popup-container {
-            background: linear-gradient(135deg, #1a1a2e, #16213e);
-            border-radius: 15px;
-            border: 1px solid #333;
-            max-width: 600px;
-            max-height: 80vh;
-            width: 90%;
-            overflow-y: auto;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
-            animation: popupSlideIn 0.3s ease-out;
-        }
-
-        @keyframes popupSlideIn {
-            from {
-                opacity: 0;
-                transform: scale(0.9) translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1) translateY(0);
-            }
-        }
-
-        /* Popup Header */
-        .lora-popup-header {
-            display: flex;
-            align-items: center;
-            padding: 20px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            position: relative;
-        }
-
-        .lora-popup-image {
-            width: 60px;
-            height: 60px;
-            border-radius: 8px;
-            object-fit: cover;
-            object-position: center;
-            margin-right: 15px;
-            border: 2px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .lora-popup-title h3 {
-            margin: 0;
-            color: #e2e8f0;
-            font-size: 18px;
-            font-weight: bold;
-        }
-
-        .lora-popup-category {
-            color: #94a3b8;
-            font-size: 14px;
-            margin-top: 4px;
-        }
-
-        .close-popup-btn {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            background: rgba(255, 255, 255, 0.1);
-            border: none;
-            color: #e2e8f0;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            font-size: 18px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s ease;
-        }
-
-        .close-popup-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
-            transform: scale(1.1);
-        }
-
-        /* Popup Body */
-        .lora-popup-body {
-            padding: 20px;
-            color: #e2e8f0;
-        }
-
-        .lora-popup-body > div {
-            margin-bottom: 20px;
-        }
-
-        .lora-popup-body > div:last-child {
-            margin-bottom: 0;
-        }
-
-        /* ID Section */
-        .lora-popup-id {
-            background: rgba(242, 144, 255, 0.1);
-            padding: 10px 15px;
-            border-radius: 8px;
-            border-left: 3px solid #f290ff;
-        }
-
-        .id-label, .desc-label, .strength-label, .words-label, .meta-label {
-            font-weight: bold;
-            color: #ffd700;
-            margin-right: 10px;
-        }
-
-        .id-text {
-            color: #f290ff;
-            font-family: monospace;
-            margin-right: 10px;
-        }
-
-        /* Description Section */
-        .lora-popup-description {
-            background: rgba(255, 216, 144, 0.1);
-            padding: 15px;
-            border-radius: 8px;
-            border-left: 3px solid #ffd890;
-        }
-
-        .lora-popup-description p {
-            margin: 8px 0 0 0;
-            color: #ffd890;
-            line-height: 1.4;
-        }
-
-        /* Strength Section */
-        .lora-popup-strength {
-            background: rgba(150, 255, 144, 0.1);
-            padding: 15px;
-            border-radius: 8px;
-            border-left: 3px solid #96ff90;
-        }
-
-        .strength-controls {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        .strength-controls input[type="range"] {
-            flex: 1;
-            accent-color: #96ff90;
-        }
-
-        .strength-value {
-            color: #96ff90;
-            font-weight: bold;
-            min-width: 40px;
-            text-align: center;
-        }
-
-        .reset-strength-btn {
-            background: linear-gradient(135deg, #96ff90, #7dd87a);
-            color: #1a1a2e;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .reset-strength-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(150, 255, 144, 0.3);
-        }
-
-        /* Words Section */
-        .lora-popup-words {
-            background: rgba(144, 225, 255, 0.1);
-            padding: 15px;
-            border-radius: 8px;
-            border-left: 3px solid #90e1ff;
-        }
-
-        .lora-popup-word {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin: 8px 0;
-            padding: 8px;
-            background: rgba(144, 225, 255, 0.05);
-            border-radius: 6px;
-        }
-
-        .word-label {
-            font-weight: bold;
-            color: #90e1ff;
-            min-width: 80px;
-        }
-
-        .word-text {
-            flex: 1;
-            color: #90e1ff;
-            font-family: monospace;
-        }
-
-        .copy-word-btn {
-            background: linear-gradient(135deg, #90e1ff, #5db9ff);
-            color: #1a1a2e;
-            border: none;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .copy-word-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(144, 225, 255, 0.3);
-        }
-
-        /* Meta Section */
-        .lora-popup-meta {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 15px;
-            border-radius: 8px;
-            border-left: 3px solid #94a3b8;
-        }
-
-        .meta-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin: 8px 0;
-            padding: 4px 0;
-        }
-
-        .meta-item:not(:last-child) {
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            padding-bottom: 8px;
-        }
-
-        .meta-item span:last-child,
-        .meta-item a {
-            color: #94a3b8;
-            text-decoration: none;
-        }
-
-        .meta-item a:hover {
-            color: #60a5fa;
-            text-decoration: underline;
-        }
-
-        /* Responsive Design */
-        @media (max-width: 1080px) {
-            .lora-buttons-container {
-                grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-                gap: 10px;
-                padding: 15px;
-            }
-
-            .lora-popup-container {
-                width: 95%;
-                max-height: 90vh;
-            }
-
-            .lora-popup-header {
-                padding: 15px;
-            }
-
-            .lora-popup-body {
-                padding: 15px;
-            }
-
-            .strength-controls {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 8px;
-            }
-
-            .lora-popup-word {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 5px;
-            }
-
-            .word-label {
-                min-width: auto;
-            }
-
-            .meta-item {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 4px;
-            }
-        }
-
-        /* Ensure traditional layout is hidden on non-phones when image layout is active */
-        @media (min-width: 1080px) {
-            /* .lora-details {
-                display: none;
-            }
-            
-            .lora-buttons-container + .lora-details {
-                display: none;
-            } */
-        }
-
-        /* Click outside to close popup */
-        .lora-popup-overlay {
-            cursor: pointer;
-        }
-
-        .lora-popup-container {
-            cursor: default;
-        }
-    </style>
-
-    <script>
-        // Close popup when clicking outside
-        document.addEventListener('click', function(event) {
-            const popup = document.getElementById('loraPopupOverlay');
-            const popupContainer = document.getElementById('loraPopupContent');
-            
-            if (popup && popup.style.display === 'flex' && !popupContainer.contains(event.target)) {
-                closeLoraPopup();
-            }
-        });
-
-        // Close popup with Escape key
-        document.addEventListener('keydown', function(event) {
-            const popup = document.getElementById('loraPopupOverlay');
-            
-            if (event.key === 'Escape' && popup && popup.style.display === 'flex') {
-                closeLoraPopup();
-            }
-        });
-
-        // Function to copy text to clipboard (redefining to ensure it's available)
-        function copyXWordsToClipboard(words) {
-            event.preventDefault();
-            event.stopPropagation();
-
-            if (!navigator.clipboard) {
-                console.error('Clipboard API not available. Please use a secure context (HTTPS).');
-                return;
-            }
-
-            navigator.clipboard.writeText(words).then(
-                function() {
-                    // Optional: Show a brief success message
-                    console.log('Copied to clipboard:', words);
-                },
-                function(err) {
-                    console.error('Could not copy text: ', err);
-                }
-            );
-        }
-    </script>
-
-    <!-- CSS for Lora Image Buttons and Popup -->
-    <style>
-        /* Floating Lora Buttons Container */
-        .lora-floating-buttons-container {
-            position: absolute;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            max-height: 300px;
-            overflow-y: auto;
-            z-index: 999;
-            padding: 10px;
-            background: linear-gradient(135deg, rgba(26, 26, 46, 0.7), rgba(22, 33, 62, 0.7));
-            border-radius: 10px;
-            border: 1px solid rgba(51, 51, 51, 0.7);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
-        }
-
-        /* Individual Floating Lora Button */
-        .lora-floating-button {
-            position: relative;
-            width: 60px;
-            height: 60px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 8px;
-            border: 2px solid rgba(255, 255, 255, 0.1);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0.3;
-        }
-
-        .lora-floating-button:hover {
-            transform: scale(1.05);
-            border-color: #60a5fa;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
-            opacity: 1;
-        }
-
-        /* Make buttons fully opaque when container is visible */
-        .lora-buttons-visible .lora-floating-button {
-            opacity: 1;
-        }
-
-        /* Individual button hover still applies for extra emphasis */
-        .lora-buttons-visible .lora-floating-button:hover {
-            transform: scale(1.1);
-        }
-
-        .lora-floating-image {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            object-position: center;
-            border-radius: 6px;
-        }
-
-        .lora-floating-overlay {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: linear-gradient(transparent, rgba(0, 0, 0, 0.9));
-            padding: 4px;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .lora-floating-button:hover .lora-floating-overlay {
-            opacity: 1;
-        }
-
-        .lora-floating-name {
-            display: block;
-            font-size: 8px;
-            font-weight: bold;
-            color: #e2e8f0;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            text-align: center;
-        }
-
-        /* Popup Overlay with high z-index */
-        .lora-popup-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            display: none;
-            z-index: 9999;
-            backdrop-filter: blur(5px);
-            overflow-y: auto;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-
-        /* Popup Container */
-        .lora-popup-container {
-            background: linear-gradient(135deg, #1a1a2e, #16213e);
-            border-radius: 15px;
-            border: 1px solid #333;
-            max-width: 600px;
-            margin: 0 auto;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
-            animation: popupSlideIn 0.3s ease-out;
-            position: relative;
-            top: 50px;
-        }
-
-        @keyframes popupSlideIn {
-            from {
-                opacity: 0;
-                transform: scale(0.9) translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1) translateY(0);
-            }
-        }
-
-        /* Popup Header */
-        .lora-popup-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .lora-popup-header h3 {
-            margin: 0;
-            color: #e2e8f0;
-            font-size: 18px;
-            font-weight: bold;
-        }
-
-        .close-popup-btn {
-            background: rgba(255, 255, 255, 0.1);
-            border: none;
-            color: #e2e8f0;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            font-size: 18px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s ease;
-        }
-
-        .close-popup-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
-            transform: scale(1.1);
-        }
-
-        /* Popup Body */
-        .lora-popup-body {
-            padding: 20px;
-            color: #e2e8f0;
-        }
-
-        .lora-popup-body .lora-details {
-            background: none;
-            border: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        /* Style the traditional lora layout within popup */
-        .lora-popup-body .lora-toggle {
-            margin-bottom: 15px;
-        }
-
-        .lora-popup-body .lora-info {
-            padding: 0;
-        }
-
-        .lora-popup-body .lora-info > p {
-            margin: 10px 0;
-        }
-
-        /* Responsive Design for floating buttons */
-        @media (max-width: 1080px) {
-            .lora-floating-buttons-container {
-                display: none !important;
-            }
-        }
-
-        /* Ensure popup is responsive */
-        @media (max-width: 1080px) {
-            .lora-popup-container {
-                margin: 10px;
-                max-width: calc(100% - 20px);
-                top: 20px;
-            }
-
-            .lora-popup-header {
-                padding: 15px;
-            }
-
-            .lora-popup-body {
-                padding: 15px;
-            }
-        }
-
-        /* Custom scrollbar for floating container */
-        .lora-floating-buttons-container::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .lora-floating-buttons-container::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 3px;
-        }
-
-        .lora-floating-buttons-container::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 3px;
-        }
-
-        .lora-floating-buttons-container::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.5);
-        }
-    </style>
-
-    <style>
-        /* Enhanced disabled styling for credit options */
-        .credit-option.disabled {
-            border-left-color: #64748b !important;
-            position: relative;
-        }
-        .credit-option.disabled:hover {
-            background: rgba(255,255,255,0.05) !important;
-            transform: none !important;
-        }
-        .credit-option.disabled::after {
-            content: 'Login Required';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.8);
-            color: #ff8844;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 10px;
-            font-weight: bold;
-            pointer-events: none;
-            z-index: 10;
-        }
-    </style>
 
 </body>
 </html>

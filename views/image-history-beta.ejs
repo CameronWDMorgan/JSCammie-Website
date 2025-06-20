@@ -336,26 +336,64 @@
 
         </script>
     
-        <script>
-            var masterImageData = {} 
-
-            <% userHistory.forEach(imageData => { %>
-                masterImageData["<%=imageData.image_id%><%=imageData.account_id%>"] = {
-                    prompt: `<%=imageData.prompt%>`,
-                    negative_prompt: `<%=imageData.negative_prompt%>`,
-                    model: "<%=imageData.model%>",
-                    aspect_ratio: "<%=imageData.aspect_ratio%>",
-                    loras: "<%=imageData.loras%>",
-                    lora_strengths: "<%=imageData.lora_strengths%>",
-                    steps: "<%=imageData.steps%>",
-                    cfg: "<%=imageData.cfg%>",
-                    seed: "<%=imageData.seed%>",
-                    image_url: "<%=imageData.image_url%>",
-                    image_id: "<%=imageData.image_id%>",
-                    uploadedToBooru: <%=imageData.uploadedToBooru%>,
-                    thumbnailMade: <%=imageData.thumbnailMade%>,
+        <% /* Prepare data for client-side scripts to avoid EJS-in-JS issues */ %>
+        <% 
+            const clientMasterImageData = {};
+            userHistory.forEach(imgData => {
+                clientMasterImageData[`${imgData.image_id}${imgData.account_id}`] = {
+                    prompt: imgData.prompt || "",
+                    negative_prompt: imgData.negative_prompt || "",
+                    model: imgData.model || "",
+                    aspect_ratio: imgData.aspect_ratio || "",
+                    loras: Array.isArray(imgData.loras) ? imgData.loras : (imgData.loras ? String(imgData.loras).split(',').map(s => s.trim()).filter(s => s) : []),
+                    lora_strengths: Array.isArray(imgData.lora_strengths) ? imgData.lora_strengths : (imgData.lora_strengths ? String(imgData.lora_strengths).split(',').map(s => s.trim()).filter(s => s) : []),
+                    steps: Number(imgData.steps || 0),
+                    cfg: Number(imgData.cfg || 0),
+                    seed: Number(imgData.seed || -1),
+                    image_url: imgData.image_url || "",
+                    image_id: imgData.image_id || "",
+                    uploadedToBooru: Boolean(imgData.uploadedToBooru || false),
+                    thumbnailMade: Boolean(imgData.thumbnailMade || false),
                 };
-            <% }); %>
+            });
+
+            const clientPageData = {
+                currentPage: Number(page || 1),
+                totalPages: Number(totalPages || 1),
+                hasReachedEnd: Boolean(page >= totalPages),
+                currentSearch: search || "",
+                currentModel: model || "all",
+                currentSort: sort || "newest",
+                userHistoryLimit: Number(userProfile?.variables?.userHistoryLimit ?? 5000),
+                loraData: loraData || {}
+            };
+        %>
+
+        <script>
+            var masterImageData = <%- JSON.stringify(clientMasterImageData) %>;
+            var loraData = <%- JSON.stringify(clientPageData.loraData) %>;
+            
+            // Initialize other page variables from clientPageData
+            let selectedImages = [];
+            let currentPage = <%- clientPageData.currentPage %>;
+            let totalPages = <%- clientPageData.totalPages %>;
+            let isLoading = false;
+            let hasReachedEnd = <%- clientPageData.hasReachedEnd %>;
+            let currentSearch = <%- JSON.stringify(clientPageData.currentSearch) %>;
+            let currentModel = <%- JSON.stringify(clientPageData.currentModel) %>;
+            let currentSort = <%- JSON.stringify(clientPageData.currentSort) %>;
+            let userHistoryLimit = <%- clientPageData.userHistoryLimit %>;
+
+            // DEBUG: Log a specific problematic entry from masterImageData after initialization
+            // Replace 'EXPECTED_IMAGE_ID' and 'EXPECTED_ACCOUNT_ID' with actual IDs from your failing test case
+            // For example, if image_id is "12345" and account_id is "67890"
+            // const debugCompositeId = "1234567890"; 
+            // if (masterImageData[debugCompositeId]) {
+            //    console.log('DEBUG masterImageData entry for', debugCompositeId, JSON.parse(JSON.stringify(masterImageData[debugCompositeId])));
+            //    console.log('DEBUG masterImageData LORAs type:', typeof masterImageData[debugCompositeId].loras, 'Is Array:', Array.isArray(masterImageData[debugCompositeId].loras));
+            // } else {
+            //    console.log('DEBUG masterImageData entry NOT FOUND for', debugCompositeId);
+            // }
         </script>
 
         <script>
@@ -770,6 +808,21 @@
                     </a>
                     <button onclick="openInGenerator('<%= imageData.image_id %><%= imageData.account_id %>')">Open In Generator</button>
                     <button onclick="exportAIData('<%= imageData.image_id %><%= imageData.account_id %>')">Export .aidata</button>
+                    <% 
+                        let hasLoras = false;
+                        let lorasType = typeof imageData.loras;
+                        let lorasValue = JSON.stringify(imageData.loras);
+                        if (Array.isArray(imageData.loras)) {
+                            hasLoras = imageData.loras.length > 0;
+                        } else if (typeof imageData.loras === 'string' && imageData.loras.trim() !== '') {
+                            const loraArrayFromString = imageData.loras.split(',').map(s => s.trim()).filter(s => s);
+                            hasLoras = loraArrayFromString.length > 0;
+                        }
+                    %>
+                    <!-- Debug Lora: Type=<%- lorasType %>, Value=<%- lorasValue %>, HasLoras=<%- hasLoras %> -->
+                    <% if (hasLoras) { %>
+                        <button onclick="showLoraPreviewPopup('<%- imageData.image_id %><%- imageData.account_id %>')">Submit Lora Preview</button>
+                    <% } %>
                 </div>
             </div>
         <% }); %>
@@ -870,16 +923,19 @@
     <script>
         // Add a flag to track if we're in delete mode
         let deleteMode = false;
-        let selectedImages = [];
-        // Add variables for infinite scrolling
-        let currentPage = <%= page %>;
-        let totalPages = <%= totalPages %>;
-        let isLoading = false;
-        let hasReachedEnd = <%= page >= totalPages %>;
-        let currentSearch = "<%= search %>";
-        let currentModel = "<%= model %>";
-        let currentSort = "<%= sort || 'newest' %>";
-        let userHistoryLimit = <%= userProfile?.variables?.userHistoryLimit ?? 5000 %>;
+        // The following variables are REDECLARED and should be commented out 
+        // as they are already declared and initialized earlier using clientPageData
+        /*
+        let selectedImages = []; 
+        let currentPage = <%- Number(page || 1) %>; 
+        let totalPages = <%- Number(totalPages || 1) %>; 
+        let isLoading = false; 
+        let hasReachedEnd = <%- Boolean(page >= totalPages) %>; 
+        let currentSearch = <%- JSON.stringify(search || "") %>; 
+        let currentModel = <%- JSON.stringify(model || "all") %>; 
+        let currentSort = <%- JSON.stringify(sort || 'newest') %>; 
+        let userHistoryLimit = <%- Number(userProfile?.variables?.userHistoryLimit ?? 5000) %>;
+        */
 
         function toggleDeleteMode() {
             deleteMode = !deleteMode;
@@ -901,9 +957,12 @@
             
             // Reset selected images if exiting
             if (!deleteMode) {
-                selectedImages = [];
+                // selectedImages = [];
                 updateSelectedCount();
             }
+            
+            // Always update the selected count when toggling modes
+            updateSelectedCount();
             
             // Update all image divs, including those loaded dynamically
             const imageDivs = document.querySelectorAll('.generationDiv');
@@ -941,20 +1000,41 @@
         }
 
         function updateSelectedCount() {
-            const count = selectedImages.length;
-            document.getElementById('selectedCount').textContent = count;
-            document.getElementById('downloadCount').textContent = count;
+            let count = selectedImages.length;
+            // count will be null if the images have been deleted
+            if (count == null) {
+                count = 0;
+            }
+            
+            // Add null checks before accessing elements
+            const selectedCountElement = document.getElementById('selectedCount');
+            const downloadCountElement = document.getElementById('downloadCount');
+            
+            if (selectedCountElement) {
+                selectedCountElement.textContent = count;
+            }
+            if (downloadCountElement) {
+                downloadCountElement.textContent = count;
+            }
             
             // Enable/disable buttons based on selection count
             const downloadButton = document.getElementById('downloadSelectedButton');
             const deleteButton = document.getElementById('deleteSelectedButton');
             
-            if (count > 0) {
-                downloadButton.disabled = false;
-                deleteButton.disabled = false;
-            } else {
-                downloadButton.disabled = true;
-                deleteButton.disabled = true;
+            if (downloadButton) {
+                if (count > 0) {
+                    downloadButton.disabled = false;
+                } else {
+                    downloadButton.disabled = true;
+                }
+            }
+            
+            if (deleteButton) {
+                if (count > 0) {
+                    deleteButton.disabled = false;
+                } else {
+                    deleteButton.disabled = true;
+                }
             }
         }
         
@@ -1155,13 +1235,25 @@
                 data.images.forEach(imageData => {
                     // Add to masterImageData
                     const imageId = imageData.image_id + imageData.account_id;
+                    let lorasForMasterData = [];
+                    if (Array.isArray(imageData.loras)) {
+                        lorasForMasterData = imageData.loras;
+                    } else if (typeof imageData.loras === 'string' && imageData.loras.trim() !== '') {
+                        lorasForMasterData = imageData.loras.split(',').map(s => s.trim()).filter(s => s);
+                    } else if (imageData.loras && typeof imageData.loras === 'object' && !Array.isArray(imageData.loras)) {
+                        // Handle cases where it might be an object from the server {0: "lora1", 1: "lora2"}
+                        lorasForMasterData = Object.values(imageData.loras).map(s => String(s).trim()).filter(s => s);
+                    } else {
+                        lorasForMasterData = []; // Default to empty array if null, undefined, or unhandled type
+                    }
+
                     masterImageData[imageId] = {
                         prompt: imageData.prompt,
                         negative_prompt: imageData.negative_prompt,
                         model: imageData.model,
                         aspect_ratio: imageData.aspect_ratio,
-                        loras: imageData.loras,
-                        lora_strengths: imageData.lora_strengths,
+                        loras: lorasForMasterData, // Use the processed array
+                        lora_strengths: imageData.lora_strengths, // Assuming this is already an array or handled similarly if needed
                         steps: imageData.steps,
                         cfg: imageData.cfg,
                         seed: imageData.seed,
@@ -1179,6 +1271,17 @@
                     const div = document.createElement('div');
                     div.id = imageId;
                     div.className = 'generationDiv' + (deleteMode ? ' in-delete-mode' : '');
+                    
+                    let hasLorasForButton = false;
+                    if (Array.isArray(lorasForMasterData) && lorasForMasterData.length > 0) {
+                        hasLorasForButton = true;
+                    } // No need for string check here as lorasForMasterData is now guaranteed to be an array
+
+                    let submitLoraButtonHTML = '';
+                    if (hasLorasForButton) {
+                        submitLoraButtonHTML = `<button onclick="showLoraPreviewPopup('${imageId}')">Submit Lora Preview</button>`;
+                    }
+
                     div.innerHTML = `
                         <img class="generatedImage" loading="lazy" src="${thumbImage}" 
                             onclick="handleImageClick('${imageId}', event)" />
@@ -1190,6 +1293,7 @@
                             </a>
                             <button onclick="openInGenerator('${imageId}')">Open In Generator</button>
                             <button onclick="exportAIData('${imageId}')">Export .aidata</button>
+                            ${submitLoraButtonHTML}
                         </div>
                     `;
                     
@@ -1371,8 +1475,11 @@
             deleteButton.innerHTML = 'Deleting...';
             deleteButton.disabled = true;
             
+            // Store the selected images before clearing the array
+            const imagesToDelete = [...selectedImages];
+            
             // Create an array of promises for each deletion
-            const promises = selectedImages.map(imageId => {
+            const promises = imagesToDelete.map(imageId => {
                 // Get the actual image_id from masterImageData
                 const image_id = masterImageData[imageId].image_id;
                 
@@ -1395,20 +1502,21 @@
                 });
             });
             
+            // Clear the selected images array immediately
+            selectedImages = [];
+            
+            // Exit delete mode and update the count
+            toggleDeleteMode();
+            
             // Wait for all deletions to complete
             Promise.all(promises)
                 .then(() => {
-                    // Exit delete mode and remove elements
-                    deleteMode = false;
-                    toggleDeleteMode();
-                    
                     // Remove deleted elements from DOM after animation
                     setTimeout(() => {
-                        selectedImages.forEach(imageId => {
+                        imagesToDelete.forEach(imageId => {
                             const element = document.getElementById(imageId);
                             if (element) element.remove();
                         });
-                        selectedImages = [];
                         updateSelectedCount();
                         deleteButton.innerHTML = originalText;
                         deleteButton.disabled = false;
@@ -1488,6 +1596,287 @@
                 }, 3000);
             }
         }
+    </script>
+
+    <div class="loraPreviewPopupContent" id="loraPreviewPopupContent">
+        <button class="closeButton" onclick="closeLoraPreviewPopup()">×</button>
+        <h2>Select a Lora for Preview Submission</h2>
+        <p class="lora-submission-warning"><b>Important:</b> You can only submit one preview image per Lora. If your submission is rejected, you may submit another.</p>
+        <input type="text" id="loraSearchInput" onkeyup="filterLoraList()" placeholder="Search for Lora by name...">
+        <div class="loraListContainer" id="loraListContainer">
+            <!-- Loras will be populated here by JavaScript -->
+        </div>
+    </div>
+
+    <style>
+        .loraPreviewPopupContent {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgb(0, 0, 0);
+            background-image: linear-gradient(315deg, #006de2 0%, #000000 74%);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            z-index: 2000;
+            max-width: 90%;
+            width: 500px; /* Or a suitable width */
+            max-height: 80vh;
+            overflow-y: auto;
+            display: none; /* Hidden by default */
+            color: #fff;
+        }
+        .loraPreviewPopupContent h2 {
+            margin-top: 0;
+        }
+        .loraPreviewPopupContent #loraListContainer ul li {
+            display: flex; /* For aligning image and text */
+            align-items: center; /* Vertically align items */
+            margin-bottom: 10px;
+            background-color: rgba(255,255,255,0.05);
+            padding: 8px;
+            border-radius: 5px;
+        }
+        .loraPreviewPopupContent #loraListContainer ul li img {
+            max-width: 80px;
+            height: auto;
+            margin-right: 10px;
+            border-radius: 4px;
+            border: 1px solid #444;
+        }
+        .loraPreviewPopupContent #loraListContainer ul li .lora-info {
+            flex-grow: 1; /* Allow text content to take remaining space */
+        }
+         .loraPreviewPopupContent #loraListContainer ul li .lora-info p {
+            font-size: 0.85em;
+            color: #bbb;
+            margin-top: 4px;
+            margin-bottom: 0;
+            max-height: 60px; /* Limit description height */
+            overflow-y: auto; /* Scroll for long descriptions */
+        }
+        .loraPreviewPopupContent #loraListContainer ul li button {
+            width: auto; /* Fit content */
+            padding: 8px 12px;
+            margin-left: 10px; /* Space button from text */
+            flex-shrink: 0; /* Prevent button from shrinking */
+        }
+    </style>
+
+    <script>
+        function showLoraPreviewPopup(compositeImageId) {
+            console.log('[showLoraPreviewPopup] Called for compositeImageId:', compositeImageId);
+            const imageDataForPopup = masterImageData[compositeImageId]; 
+            
+            if (!imageDataForPopup) {
+                console.error("[showLoraPreviewPopup] Image data not found in masterImageData for:", compositeImageId);
+                globalAlert({ message: "Error: Image data not found.", question: false });
+                return;
+            }
+            // Deep clone for logging to avoid issues with console showing later states of objects
+            console.log('[showLoraPreviewPopup] imageDataForPopup:', JSON.parse(JSON.stringify(imageDataForPopup)));
+
+            const image_id_for_submission = imageDataForPopup.image_id; 
+            const lorasUsedArray = imageDataForPopup.loras; 
+            console.log('[showLoraPreviewPopup] lorasUsedArray extracted:', JSON.parse(JSON.stringify(lorasUsedArray)));
+            console.log('[showLoraPreviewPopup] Type of lorasUsedArray:', typeof lorasUsedArray, 'Is Array:', Array.isArray(lorasUsedArray));
+
+            const loraPopupContent = document.getElementById('loraPreviewPopupContent');
+            const overlay = document.getElementById('overlay');
+            const loraListContainer = document.getElementById('loraListContainer');
+            document.getElementById('loraSearchInput').value = '';
+
+            loraListContainer.innerHTML = ''; 
+
+            if (!lorasUsedArray || lorasUsedArray.length === 0) {
+                loraListContainer.innerHTML = '<p>No LORAs were used for this image.</p>';
+            } else if (Object.keys(loraData || {}).length === 0) {
+                loraListContainer.innerHTML = '<p>Global Lora model data is not available or failed to load.</p>';
+            } else {
+                const loraSubList = document.createElement('ul');
+                loraSubList.style.listStyle = 'none';
+                loraSubList.style.paddingLeft = '0';
+                let foundLorasCount = 0;
+
+                for (const loraIdFromImage of lorasUsedArray) {
+                    let loraDetailsFound = false;
+                    for (const category in loraData) {
+                        if (loraData.hasOwnProperty(category) && typeof loraData[category] === 'object' && loraData[category][loraIdFromImage]) {
+                            const loraDetail = loraData[category][loraIdFromImage];
+                            const listItem = document.createElement('li');
+                            
+                            // Lora Preview Image
+                            if (loraDetail.image && !loraDetail.image.endsWith('default.png')) {
+                                const imgElement = document.createElement('img');
+                                imgElement.src = loraDetail.image;
+                                imgElement.alt = loraDetail.name || loraIdFromImage;
+                                listItem.appendChild(imgElement);
+                            } else {
+                                const placeholder = document.createElement('div');
+                                placeholder.style.width = '80px'; // Match image width for alignment
+                                placeholder.style.height = '80px';
+                                placeholder.style.marginRight = '10px';
+                                placeholder.style.border = '1px dashed #555';
+                                placeholder.style.display = 'flex';
+                                placeholder.style.alignItems = 'center';
+                                placeholder.style.justifyContent = 'center';
+                                placeholder.style.fontSize = '0.8em';
+                                placeholder.style.color = '#888';
+                                placeholder.textContent = 'No Preview';
+                                listItem.appendChild(placeholder);
+                            }
+
+                            const infoDiv = document.createElement('div');
+                            infoDiv.className = 'lora-info';
+                            
+                            const nameHeader = document.createElement('h4');
+                            nameHeader.textContent = `${loraDetail.name || loraIdFromImage}`;
+                            nameHeader.style.margin = '0 0 5px 0';
+                            infoDiv.appendChild(nameHeader);
+
+                            // Lora Description
+                            if (loraDetail.description) {
+                                const descElement = document.createElement('p');
+                                descElement.textContent = loraDetail.description;
+                                infoDiv.appendChild(descElement);
+                            }
+                            const categorySpan = document.createElement('span');
+                            categorySpan.textContent = `(Category: ${category})`;
+                            categorySpan.style.fontSize = '0.8em';
+                            categorySpan.style.color = '#999';
+                            infoDiv.appendChild(categorySpan);
+                            
+                            listItem.appendChild(infoDiv);
+
+                            const button = document.createElement('button');
+                            button.textContent = 'Submit This';
+                            button.onclick = function() { submitSelectedLora(image_id_for_submission, loraIdFromImage); };
+                            listItem.appendChild(button);
+                            
+                            loraSubList.appendChild(listItem);
+                            loraDetailsFound = true;
+                            foundLorasCount++;
+                            break; 
+                        }
+                    }
+                    if (!loraDetailsFound) {
+                        const listItem = document.createElement('li');
+                        listItem.style.justifyContent = 'space-between'; // Align items
+                        const infoDiv = document.createElement('div');
+                        infoDiv.className = 'lora-info';
+                        const nameHeader = document.createElement('h4');
+                        nameHeader.textContent = `${loraIdFromImage} (Details not found)`;
+                        nameHeader.style.margin = '0';
+                        infoDiv.appendChild(nameHeader);
+                        listItem.appendChild(infoDiv);
+
+                        const button = document.createElement('button');
+                        button.textContent = 'Submit Anyway?';
+                        button.style.backgroundColor = '#5a3e3e';
+                        button.onclick = function() { submitSelectedLora(image_id_for_submission, loraIdFromImage); };
+                        listItem.appendChild(button);
+                        loraSubList.appendChild(listItem);
+                        foundLorasCount++;
+                    }
+                }
+                
+                if (foundLorasCount > 0) {
+                    loraListContainer.appendChild(loraSubList);
+                } else {
+                    loraListContainer.innerHTML = '<p>Could not find details for the LORAs used in this image.</p>';
+                }
+            }
+
+            overlay.style.display = 'block';
+            loraPopupContent.style.display = 'block';
+            overlay.onclick = function() {
+                closeLoraPreviewPopup();
+            }
+            document.addEventListener('keydown', escCloseLoraPreviewPopup);
+        }
+
+        function closeLoraPreviewPopup() {
+            document.getElementById('loraPreviewPopupContent').style.display = 'none';
+            document.getElementById('overlay').style.display = 'none';
+            document.removeEventListener('keydown', escCloseLoraPreviewPopup);
+        }
+
+        function escCloseLoraPreviewPopup(event) {
+            if (event.key === 'Escape') {
+                closeLoraPreviewPopup();
+            }
+        }
+        
+        function filterLoraList() {
+            const input = document.getElementById('loraSearchInput');
+            const filter = input.value.toLowerCase();
+            const loraListContainer = document.getElementById('loraListContainer');
+            const categories = loraListContainer.getElementsByTagName('h3');
+            const lists = loraListContainer.getElementsByTagName('ul');
+
+            for (let i = 0; i < lists.length; i++) {
+                const items = lists[i].getElementsByTagName('li');
+                let categoryVisible = false;
+                for (let j = 0; j < items.length; j++) {
+                    const button = items[j].getElementsByTagName('button')[0];
+                    const txtValue = button.textContent || button.innerText;
+                    if (txtValue.toLowerCase().indexOf(filter) > -1) {
+                        items[j].style.display = "";
+                        categoryVisible = true;
+                    } else {
+                        items[j].style.display = "none";
+                    }
+                }
+                if (categories[i]) {
+                     categories[i].style.display = categoryVisible ? "" : "none";
+                }
+                lists[i].style.display = categoryVisible ? "" : "none";
+            }
+        }
+
+        async function submitSelectedLora(imageHistoryId, loraId) {
+            console.log(`Submitting Lora preview for image ID: ${imageHistoryId}, Lora ID: ${loraId}`);
+            
+            closeLoraPreviewPopup(); // Close the popup first
+
+            let options = {
+                message: `Are you sure you want to submit this image as a preview for Lora: ${loraId}?`,
+                question: true,
+            }
+
+            let userResponse = await globalAlert(options)
+            if (userResponse === 'no') {
+                return;
+            }
+
+            try {
+                const response = await fetch('/image-history/submit-lora-preview', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        imageHistoryID: imageHistoryId, 
+                        loraID: loraId 
+                    })
+                });
+                const result = await response.json();
+
+                let alertOptions = {
+                    message: result.message || 'An unknown error occurred.',
+                    question: false,
+                }
+                globalAlert(alertOptions);
+
+            } catch (error) {
+                console.error('Error submitting Lora preview:', error);
+                globalAlert({ message: `Error: ${error.message || 'Could not submit Lora preview.'}`, question: false });
+            } finally {
+                closeLoraPreviewPopup(); // Close popup regardless of success or failure
+            }
+        }
+
     </script>
 </body>
 </html>

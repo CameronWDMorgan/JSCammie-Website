@@ -656,6 +656,9 @@
                         <span id="darkModeIcon" class="darkModeIcon">🌙</span>
                         <span class="darkModeText">Dark Mode</span>
                     </button>
+                    <% if (session.accountId == 1039574722163249233 ) { %>
+                        <a href="/admin/lora-preview-moderation" class="profileLink">Lora Preview Moderation</a>
+                    <% } %>
                     <a href="/logout" class="profileLink">Logout</a>
                 </div>
             </div>
@@ -1064,16 +1067,16 @@
             linkcolour: "rgba(0, 255, 38, 1)",
             active: true
         },
-        // {
-        //     message: "We are currently doing a contest on the <a id='advert-link-colour' href='https://www.discord.gg/AvbQuRmh7t'>'Discord'</a> for 70,000 credits! Join now to participate!",
-        //     linkcolour: "rgba(0, 100, 255, 1)",
-        //     active: true
-        // },
         {
-            message: "Check out the <a id='advert-link-colour' href='https://www.discord.gg/AvbQuRmh7t'>'Discord'</a> to compete in contests for credits and more!",
+            message: "We are currently doing a contest on the <a id='advert-link-colour' href='https://www.discord.gg/AvbQuRmh7t'>'Discord'</a> for 70,000 credits! Join now to participate!",
             linkcolour: "rgba(0, 100, 255, 1)",
-            active: false
+            active: true
         },
+        // {
+        //     message: "Check out the <a id='advert-link-colour' href='https://www.discord.gg/AvbQuRmh7t'>'Discord'</a> to compete in contests for credits and more!",
+        //     linkcolour: "rgba(0, 100, 255, 1)",
+        //     active: false
+        // },
     ]
 
     let topSiteText = document.getElementById('topSiteText');

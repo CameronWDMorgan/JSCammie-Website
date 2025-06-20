@@ -1,8 +1,8 @@
 # JSCammie-Website
 
-JSCammie-Website is most of the usable web assets used by [JSCammie](https://jscammie.com)
+JSCammie-Website is most of the usable web assets used by [JSCammie](https://www.jscammie.com)
 
-[Report Bug] · [Report Typo] · [Report i18n issues] · [Request Enhancement]
+[View Suggestions](https://www.jscammie.com/suggestions) · [Create Suggestion](https://www.jscammie.com/submit-suggestion)
 
 ## Table of Contents
 
@@ -47,10 +47,7 @@ To get started with the repo, do the following;
 
 ## Roadmap
 
-- [ ] Preview images for the LORAs.
-  - [ ] SD 1.5 based LORAs.
-  - [ ] PDXL based LORAs.
-  - [ ] Illustrious based LORAs.
+The roadmap for JSCammie is not set in stone. Code updates and new features should be based on "Feature" suggestions from the [JSCammie Suggestions page](https://www.jscammie.com/suggestions).
 
 ## Contributing
 

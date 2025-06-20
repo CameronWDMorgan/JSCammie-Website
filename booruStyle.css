@@ -33,7 +33,7 @@
 	justify-content: center;
 	padding: 0px;
 	border-radius: 16px;
-	background-color: rgba(0, 0, 0, 0.35);
+	background-color: rgba(0, 0, 0, 0.25);
 	box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.6);
 	min-width: 300px;
 	min-height: 300px;
@@ -82,7 +82,7 @@
 	display: flex;
 	justify-content: space-around;
 	width: 100%;
-	background-color: rgba(0, 0, 0, 0.2);
+	background-color: rgba(0, 0, 0, 0.1);
 	padding: 10px 0;
 	margin-top: 5px;
 }
@@ -130,7 +130,7 @@
 	position: absolute;
 	right: 0;
 	top: 40px;
-	background-color: rgba(20, 20, 20, 0.95) !important;
+	background-color: rgba(20, 20, 20, 0.9) !important;
 	border-radius: 8px;
 	padding: 5px;
 	z-index: 11;
@@ -180,7 +180,7 @@
 
 .dropdownButton {
 	position: relative !important;
-	background-color: rgba(0, 0, 0, 0.5) !important;
+	background-color: rgba(0, 0, 0, 0.3) !important;
 	color: white;
 	padding: 5px !important;
 	font-size: 1.2rem !important;
@@ -195,7 +195,7 @@
 }
 
 .dropdownButton:hover {
-	background-color: rgba(50, 50, 50, 0.8) !important;
+	background-color: rgba(50, 50, 50, 0.6) !important;
 	transform: scale(1.1);
 }
 
@@ -208,7 +208,7 @@
 }
 
 .pageButtons button {
-	background-color: rgba(0, 0, 0, 0.1);
+	background-color: rgba(0, 0, 0, 0.05);
 	border: 1px solid rgba(0, 0, 0, 0.5);
 	border-radius: 15px;
 	padding: 8px 15px;
@@ -240,7 +240,7 @@
 	gap: 15px;
 	padding: 12px 15px;
 	width: 100%;
-	background-color: rgba(0, 0, 0, 0.2);
+	background-color: rgba(0, 0, 0, 0.1);
 	margin-bottom: 5px;
 }
 
@@ -306,7 +306,7 @@
 
 .upvoteHover {
 	position: absolute;
-	background: rgba(20, 20, 20, 0.85);
+	background: rgba(20, 20, 20, 0.9);
 	backdrop-filter: blur(5px);
 	border: 1px solid rgba(255, 255, 255, 0.2);
 	padding: 10px;
@@ -360,7 +360,7 @@
 
 /* Enhanced Search Styling */
 .searchDiv {
-	background-color: rgba(0, 0, 0, 0.2);
+	background-color: rgba(0, 0, 0, 0.1);
 	padding: 20px;
 	border-radius: 12px;
 	margin-bottom: 30px;
@@ -442,7 +442,7 @@
 	border-radius: 8px;
 	margin-bottom: 20px;
 	border: 1px solid rgba(100, 100, 255, 0.3);
-	background-color: rgba(0, 0, 0, 0.4);
+	background-color: rgba(0, 0, 0, 0.2);
 	transition: all 0.3s ease;
 }
 
@@ -483,7 +483,7 @@
 
 /* Moderation specific styles */
 .reportsDiv {
-	background-color: rgba(255, 50, 50, 0.2);
+	background-color: rgba(255, 50, 50, 0.15);
 	padding: 10px;
 	margin: 10px 0;
 	border-radius: 8px;
@@ -515,7 +515,7 @@
 
 .moderator-info, .prompt-info {
 	padding: 8px;
-	background-color: rgba(0, 0, 0, 0.3);
+	background-color: rgba(0, 0, 0, 0.15);
 	border-radius: 6px;
 	margin: 5px 0;
 	font-size: 0.9rem;

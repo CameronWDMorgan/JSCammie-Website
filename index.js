@@ -11,6 +11,7 @@ const fs = require('fs')
 const bodyParser = require('body-parser')
 
 const mongolib = require('./mongolib.js')
+const booruRoutes = require('./routes/booru');
 
 // axios
 const axios = require('axios');
@@ -101,6 +102,15 @@ async function showMessagePage(res, req, message) {
 		session: req.session
 	})
 }
+
+// re-route 404 errors to a showMessagePage function, only if its 404 though:
+app.use((req, res, next) => {
+	if (res.statusCode === 404) {
+		showMessagePage(res, req, '404 Not Found');
+	} else {
+		next();
+	}
+})
 
 // setup views directory:
 app.set('views', './views')
@@ -952,6 +962,7 @@ app.get('/image-history', async (req, res) => {
 			sort,
 			totalPages,
 			totalUserImages,
+			loraData: modifiedCachedYAMLData // Add Lora data here
 		});
 
 	} catch (error) {
@@ -1432,16 +1443,6 @@ async function loraImagesCache() {
 	modifiedCachedYAMLData = cachedYAMLData
 }
 
-let aiScripts = {
-	calculateCreditsPrice: fs.readFileSync('./scripts/ai/calculateCreditsPrice.js', 'utf8'),
-	APIForm: fs.readFileSync('./scripts/ai/API-form.js', 'utf8'),
-	imageGeneratorTour: fs.readFileSync('./scripts/ai/imageGeneratorTour.js', 'utf8'),
-}
-
-// split on module.exports to remove it and everything after:
-aiScripts.calculateCreditsPrice = aiScripts.calculateCreditsPrice.split('module.exports')[0]
-
-
 app.get('/userProfile', async (req, res) => {
 	let userProfile = await mongolib.getSchemaDocumentOnce("userProfile", {
 		accountId: req.session.accountId
@@ -1558,6 +1559,15 @@ app.post('/dailies', async (req, res) => {
 		message: 'Dailies claimed'
 	})
 })
+
+let aiScripts = {
+	calculateCreditsPrice: fs.readFileSync('./scripts/ai/calculateCreditsPrice.js', 'utf8'),
+	APIForm: fs.readFileSync('./scripts/ai/API-form.js', 'utf8'),
+	imageGeneratorTour: fs.readFileSync('./scripts/ai/imageGeneratorTour.js', 'utf8'),
+}
+
+// split on module.exports to remove it and everything after:
+aiScripts.calculateCreditsPrice = aiScripts.calculateCreditsPrice.split('module.exports')[0]
 
 // update the aiScripts every 15 seconds:
 setInterval(() => {
@@ -1816,6 +1826,34 @@ app.post('/generate', async function(req, res) {
 
 		request.creditsRequired = 0
 
+		// Calculate width and height based on aspect ratio and model
+		let baseDimension = 512; // Default for SD1.5
+		if (request.model.startsWith('pdxl') || request.model.startsWith('illustrious')) {
+			baseDimension = 1024;
+		}
+
+		const aspectRatioParts = request.aspect_ratio.split(':');
+		const ratioW = parseInt(aspectRatioParts[0]);
+		const ratioH = parseInt(aspectRatioParts[1]);
+
+		let calculatedWidth, calculatedHeight;
+
+		if (ratioW > ratioH) {
+			calculatedWidth = baseDimension;
+			calculatedHeight = Math.round((baseDimension * ratioH) / ratioW);
+		} else if (ratioH > ratioW) {
+			calculatedHeight = baseDimension;
+			calculatedWidth = Math.round((baseDimension * ratioW) / ratioH);
+		} else {
+			calculatedWidth = baseDimension;
+			calculatedHeight = baseDimension;
+		}
+
+		// Ensure dimensions are multiples of 64
+		request.width = Math.round(calculatedWidth / 64) * 64;
+		request.height = Math.round(calculatedHeight / 64) * 64;
+
+
 		// Validate seed value
 		if (request.seed && (parseInt(request.seed) < -1 || isNaN(parseInt(request.seed)))) {
 			request.seed = "-1";  // Default to -1 if seed is invalid or too small
@@ -1945,7 +1983,6 @@ app.post('/generate', async function(req, res) {
 		})
 	}
 });
-
 
 app.get('/cancel_request/:request_id', async function(req, res) {
 	try {
@@ -2114,42 +2151,47 @@ app.get('/result/:request_id', async function(req, res) {
 
 				let nextImageId = BigInt(Date.now());
 
-				for (const image of json.images) {
-					try {
-						// Check if the image object contains a base64 key
-						if (image.hasOwnProperty('base64')) {
-							let base64Data = image.base64;
+				// Check if json.images exists and is iterable
+				if (json.images && Array.isArray(json.images)) {
+					for (const image of json.images) {
+						try {
+							// Check if the image object contains a base64 key
+							if (image.hasOwnProperty('base64')) {
+								let base64Data = image.base64;
 
-							// Save the image to the file system
-							fs.writeFileSync(`${imagesHistorySaveLocation}${json.historyData.account_id}/${nextImageId}.png`, base64Data, 'base64');
+								// Save the image to the file system
+								fs.writeFileSync(`${imagesHistorySaveLocation}${json.historyData.account_id}/${nextImageId}.png`, base64Data, 'base64');
 
-							// Prepare the new image history document
-							let newImageHistory = {
-								account_id: json.historyData.account_id,
-								image_id: BigInt(nextImageId),
-								prompt: json.historyData.prompt,
-								negative_prompt: json.historyData.negative_prompt,
-								model: json.historyData.model,
-								aspect_ratio: json.historyData.aspect_ratio,
-								loras: json.historyData.loras,
-								lora_strengths: json.historyData.lora_strengths,
-								steps: json.historyData.steps,
-								cfg: json.historyData.cfg,
-								seed: json.historyData.seed,
-								image_url: `https://www.jscammie.com/imagesHistory/${json.historyData.account_id}/${nextImageId}.png`
-							};
+								// Prepare the new image history document
+								let newImageHistory = {
+									account_id: json.historyData.account_id,
+									image_id: BigInt(nextImageId),
+									prompt: json.historyData.prompt,
+									negative_prompt: json.historyData.negative_prompt,
+									model: json.historyData.model,
+									aspect_ratio: json.historyData.aspect_ratio,
+									loras: json.historyData.loras,
+									lora_strengths: json.historyData.lora_strengths,
+									steps: json.historyData.steps,
+									cfg: json.historyData.cfg,
+									seed: json.historyData.seed,
+									image_url: `https://www.jscammie.com/imagesHistory/${json.historyData.account_id}/${nextImageId}.png`
+								};
 
-							// change the newImageHistory image_id to a string:
-							newImageHistory.image_id = newImageHistory.image_id.toString()
+								// change the newImageHistory image_id to a string:
+								newImageHistory.image_id = newImageHistory.image_id.toString()
 
-							allImageHistory.push(newImageHistory);
+								allImageHistory.push(newImageHistory);
 
-							// Increment the image ID for the next iteration
-							nextImageId = BigInt(nextImageId) + BigInt(1);
+								// Increment the image ID for the next iteration
+								nextImageId = BigInt(nextImageId) + BigInt(1);
+							}
+						} catch (err) {
+							console.log('Error saving image or updating database:', err);
 						}
-					} catch (err) {
-						console.log('Error saving image or updating database:', err);
 					}
+				} else {
+					console.log('Warning: json.images is undefined, null, or not an array');
 				}
 				
 				// Now that allImageHistory is populated, save to database if under the limit
@@ -2386,71 +2428,6 @@ setInterval(() => {
 let booruFolder = "E:/JSCammie/booruImages/"
 
 
-app.get('/booru/post/:booru_id', async function(req, res) {
-	booru_id = req.param('booru_id')
-
-	let foundBooruImage = await userBooruSchema.findOne({
-		booru_id: booru_id
-	})
-
-	if (foundBooruImage == null) {
-		res.redirect('/booru/')
-		return
-	}
-
-	// find the user profile:
-	let userProfile = await userProfileSchema.findOne({
-		accountId: req.session.accountId
-	})
-
-	let postProfile = await userProfileSchema.findOne({
-		accountId: foundBooruImage.account_id
-	})
-
-	let foundBooruImages = await userBooruSchema.aggregate([{
-			$match: {
-				account_id: foundBooruImage.account_id
-			}
-		},
-		{
-			$group: {
-				_id: "$safety",
-				count: {
-					$sum: 1
-				}
-			}
-		}
-	])
-	let ratings = {
-		sfw: false,
-		suggestive: false,
-		nsfw: false
-	}
-	foundBooruImages.forEach(image => {
-		if (image._id == "sfw") {
-			ratings.sfw = true
-		} else if (image._id == "suggestive") {
-			ratings.suggestive = true
-		} else if (image._id == "nsfw") {
-			ratings.nsfw = true
-		} else if (image._id == "extreme") {
-			ratings.extreme = true
-		}
-	})
-	postProfile.ratings = Object.keys(ratings).filter(key => ratings[key]).join(',')
-	postProfile.ratings = postProfile.ratings.replace(/,/g, '/')
-	postProfile.ratings = `(${postProfile.ratings} Account)`
-
-	res.render('booru/post', {
-		session: req.session,
-		booruImage: foundBooruImage,
-		booruSearchScript,
-		userProfile,
-		postProfile
-	})
-
-})
-
 function splitTags(tags) {
 	// make all the tags lowercase:
 	tags = tags.map(tag => tag.toLowerCase())
@@ -2588,201 +2565,42 @@ const fetchAccounts = async (booruImages, type) => {
     });
 };
 
-app.get('/booru/', async function(req, res) {
-    try {
-        let search = req.param('search') || "";
-        const page = parseInt(req.param('page')) || 1;
-        let safety = req.param('safety') || ["sfw"];
-        const sort = req.param('sort') || "trending";
-        const totalPerPage = 48;
+// Function to calculate Booru Score
+function calculateBooruScore(stats, followerCount, SCORING_CONFIG, highestFollowerCount) {
+    // Calculate follower score modifier
+    const followerScoreModifier = ((followerCount / highestFollowerCount) / 7.14) + 0.95;
 
-        // Constants for trending algorithm
-        const tempBoostBias = 20;
-        const tempBoostHours = 2;
-        const trendingAgoHours = 24;
-        const tempBoostTimestamp = Date.now() - (tempBoostHours * 60 * 60 * 1000);
-        const trendingAgo = Date.now() - (trendingAgoHours * 60 * 60 * 1000);
-        const noVoteBoost = 100;
-        const voteBias = -0.05;
-        const commentBias = 0.1;
-        const recentVoteBias = 3;
-        const recentCommentBias = 15;
+    // Calculate average score per post
+    let avgScore = stats.postCount > 0 ? stats.totalScore / stats.postCount : 0;
 
-        // Handle URL parameters
-        if (!req.url.includes('?')) {
-            res.redirect(`/booru/?page=${page}&search=${search}&safety=${safety}&sort=${sort}`);
-            return;
-        }
+    // Add diminishing returns for volume (prevents spam posting)
+    let volumeModifier = stats.postCount > 0 ? Math.pow(stats.postCount, SCORING_CONFIG.VOLUME_DIMINISH_FACTOR) / Math.pow(SCORING_CONFIG.MIN_POST_THRESHOLD, SCORING_CONFIG.VOLUME_DIMINISH_FACTOR) : 0;
+		if (stats.postCount < SCORING_CONFIG.MIN_POST_THRESHOLD) {
+			volumeModifier = Math.pow(stats.postCount / SCORING_CONFIG.MIN_POST_THRESHOLD, SCORING_CONFIG.VOLUME_DIMINISH_FACTOR);
+		}
 
-        // Process safety parameter
-        if (!Array.isArray(safety)) {
-            safety = safety.split(',');
-        }
 
-        let reportedSearch = false;
-        if (safety.includes('reported')) {
-            safety = ["sfw", "suggestive", "nsfw", "extreme"];
-            reportedSearch = true;
-        }
+    // Calculate engagement rate (total engagement per post relative to follower count)
+    let totalEngagement = (stats.totalUpvotes || 0) + (stats.totalComments || 0);
+    let engagementPerPost = stats.postCount > 0 ? totalEngagement / stats.postCount : 0;
+    let effectiveFollowerCount = Math.min(followerCount, SCORING_CONFIG.FOLLOWER_ENGAGEMENT_CAP);
+		// ensure effectiveFollowerCount is at least 1 to prevent division by zero
+		effectiveFollowerCount = Math.max(1, effectiveFollowerCount);
+    let engagementRate = engagementPerPost / effectiveFollowerCount;
 
-        // Get user profile and settings
-        const userProfile = await mongolib.getSchemaDocumentOnce("userProfile", {
-            accountId: req.session.accountId
-        });
-
-        // Process tag blacklist
-        let tagBlacklist = userProfile?.settings?.booru_tag_blacklist ?? "";
-        if (tagBlacklist.length > 2) {
-            tagBlacklist = tagBlacklist.split(' ')
-                .map(tag => `-${tag}`)
-                .join(' ');
-            search = `${tagBlacklist} ${search}`;
-        }
-
-        const blockedAccounts = userProfile?.blockedAccounts ?? [];
-        const followedAccounts = userProfile?.followedAccounts ?? [];
-        const skip = (page - 1) * totalPerPage;
-
-        // Process search tags
-        // let searchTags = search ? (search.includes(' ') ? search.split(' ') : search.split(',')) : [];
-		// above is incorrect, it needs to always split by commas and spaces, but ensure there is only one space between tags, it needs to be an array:
-		let searchTags = search
-		searchTags = searchTags.split(',').map(tag => tag.trim()).join(' ')
-		searchTags = searchTags.split(' ').map(tag => tag.trim()).filter(tag => tag.trim() !== '');
-		searchTags = searchTags.filter(tag => tag.trim() !== '');
-		searchTags = searchTags.map(tag => tag.trim()).filter(tag => tag.trim() !== '');
-        // Filter out empty strings and trim whitespace
-        searchTags = searchTags.filter(tag => tag.trim() !== '');
-        if (searchTags.length === 1 && searchTags[0] === ",") {
-            searchTags = [];
-        }
-
-        // Build MongoDB query
-        let pipeline = [];
-        
-        if (reportedSearch) {
-            pipeline = [
-                { $match: { reports: { $exists: true, $ne: [] } } },
-                ...getPaginationStages(skip, totalPerPage)
-            ];
-        } else {
-            // Base match stage
-            pipeline.push(getBaseMatchStage(safety, blockedAccounts, sort === "following" ? followedAccounts : null));
-
-            // Add tag filtering if needed
-            if (searchTags.length > 0) {
-                const positiveTags = searchTags.filter(tag => !tag.startsWith('-'));
-                const negativeTags = searchTags.filter(tag => tag.startsWith('-')).map(tag => tag.slice(1));
-
-                console.log('Positive tags:', positiveTags);
-                console.log('Negative tags:', negativeTags);
-
-                if (positiveTags.length > 0) {
-                    const tagPromises = positiveTags.map(tag => 
-                        userBooruTagsSchema.findOne({ tag }).then(found => found?.booru_ids || [])
-                    );
-                    const allBooruIds = await Promise.all(tagPromises);
-                    const commonBooruIds = allBooruIds.reduce((acc, val) => 
-                        acc.length && val.length ? acc.filter(x => val.includes(x)) : []
-                    );
-
-                    // console.log('Found booru IDs for positive tags:', commonBooruIds);
-
-                    if (commonBooruIds.length > 0) {
-                        pipeline[0].$match.booru_id = { $in: commonBooruIds };
-                    }
-                }
-
-                if (negativeTags.length > 0) {
-                    const negativePromises = negativeTags.map(tag =>
-                        userBooruTagsSchema.findOne({ tag }).then(found => found?.booru_ids || [])
-                    );
-                    const negativeBooruIds = await Promise.all(negativePromises);
-                    const allNegativeIds = Array.from(new Set(negativeBooruIds.flat()));
-                    
-                    // console.log('Found booru IDs for negative tags:', allNegativeIds);
-
-                    if (allNegativeIds.length > 0) {
-                        pipeline[0].$match.booru_id = {
-                            ...pipeline[0].$match.booru_id,
-                            $nin: allNegativeIds
-                        };
-                    }
-                }
-            }
-
-            // Add sorting and scoring stages
-            if (sort === "trending") {
-                pipeline.push(getTrendingScoreStage(trendingAgo, tempBoostTimestamp));
-                pipeline.push({
-                    $addFields: {
-                        score: {
-                            $add: [
-                                { $multiply: ["$recentVoteCount", recentVoteBias] },
-                                { $multiply: ["$totalVotes", voteBias] },
-                                { $multiply: ["$recentCommentCount", recentCommentBias] },
-                                { $multiply: ["$commentCount", commentBias] },
-                                { $cond: { if: { $gt: [{ $toLong: "$timestampRated" }, tempBoostTimestamp] }, then: tempBoostBias, else: 0 } },
-                                { $cond: { if: { $and: [{ $eq: [{ $size: { $ifNull: ["$upvotes", []] } }, 0] }, { $eq: [{ $size: { $ifNull: ["$downvotes", []] } }, 0] }] }, then: noVoteBoost, else: 0 } }
-                            ]
-                        }
-                    }
-                });
-            } else if (sort === "votes") {
-                pipeline.push({
-                    $addFields: {
-                        totalVotes: {
-                            $subtract: [
-                                { $size: { $ifNull: ["$upvotes", []] } },
-                                { $size: { $ifNull: ["$downvotes", []] } }
-                            ]
-                        }
-                    }
-                });
-            }
-
-            // Add sort and pagination stages
-            pipeline.push(getSortStage(sort));
-            pipeline.push(...getPaginationStages(skip, totalPerPage));
-        }
-        
-        // First, let's check if there are any documents at all        
-        const booruImages = await mongolib.aggregateSchemaDocuments("userBooru", pipeline);
-
-        // Get total count for pagination
-        const countPipeline = [...pipeline];
-        countPipeline.pop(); // Remove limit
-        countPipeline.pop(); // Remove skip
-        countPipeline.push({ $count: 'count' });
-        const totalImages = await mongolib.aggregateSchemaDocuments("userBooru", countPipeline);
-        const totalImagesCount = totalImages.length > 0 ? totalImages[0].count : 0;
-        const totalPages = Math.ceil(totalImagesCount / totalPerPage);
-
-        // Fetch related accounts
-        const booruAccounts = await mongolib.getSchemaDocuments("userProfile", {
-            accountId: { $in: Array.from(new Set(booruImages.map(image => image.account_id))) }
-        });
-
-        const upvoteAccounts = await fetchAccounts(booruImages, 'upvotes');
-        const downvoteAccounts = await fetchAccounts(booruImages, 'downvotes');
-
-        // Render response
-        res.render('booru/home', {
-            session: req.session,
-            booruImages,
-            userProfile: userProfile || {},
-            booruSearchScript,
-            totalPages,
-            booruAccounts,
-            upvoteAccounts,
-            downvoteAccounts
-        });
-
-    } catch (error) {
-        console.log(`Error loading tags data: ${error}`);
-        res.status(500).send('Error loading booru tags data');
-    }
-});
+    // Final score: base average + volume bonus + engagement rate bonus
+    let rawFinalScore = avgScore * volumeModifier + (engagementRate * SCORING_CONFIG.ENGAGEMENT_MULTIPLIER);
+    let finalScoreWithFollowerModifier = rawFinalScore * followerScoreModifier;
+    
+    return {
+        rawScore: rawFinalScore,
+        finalScore: finalScoreWithFollowerModifier,
+        avgScore: avgScore,
+        volumeModifier: volumeModifier,
+        engagementRate: engagementRate,
+        followerScoreModifier: followerScoreModifier
+    };
+}
 
 app.get('/recounttags', async function(req, res) {
 
@@ -2863,249 +2681,6 @@ app.post('/tags-autocomplete', async function(req, res) {
 })
 
 he = require('he')
-
-app.post('/create-booru-image', async function(req, res) {
-	try {
-
-		let data = null
-		data = req.body
-
-		// check if the user account exists:
-		let userProfile = await userProfileSchema.findOne({
-			accountId: req.session.accountId
-		})
-
-		if (userProfile == null) {
-			res.send({
-				status: "error",
-				message: "User not found"
-			})
-			return
-		}
-
-		if (userProfile.booruPostBanned === true) {
-			res.send({
-				status: "error",
-				message: `User is banned from posting to the booru due to: '${userProfile.booruPostBanReason}'`
-			})
-			return
-		}
-
-		let hoursAgoBooru = Date.now() - (12 * 60 * 60 * 1000)
-
-		let imageCountAggregate = await mongolib.aggregateSchemaDocuments("userBooru", [{
-				$match: {
-					account_id: req.session.accountId,
-					timestamp: {
-						$gt: hoursAgoBooru.toString()
-					}
-				}
-			},
-		])
-
-		imageCount = imageCountAggregate.length
-
-		maxBooruImages = 50
-
-		console.log(`Last 12 hrs: ${imageCount} - ${userProfile.username}`)
-
-		if (imageCount >= maxBooruImages) {
-			// Calculate the time until the user can post again
-			let timeTillNextPost = Math.ceil(hoursAgoBooru - Date.now());
-			let timeTillNextPostString = "";
-
-			if (timeTillNextPost > 60 * 60 * 1000) {
-				let hours = Math.floor(timeTillNextPost / (60 * 60 * 1000));
-				let mins = Math.floor((timeTillNextPost % (60 * 60 * 1000)) / (60 * 1000));
-				timeTillNextPostString = `${hours} hour${hours !== 1 ? "s" : ""} and ${mins} minute${mins !== 1 ? "s" : ""}`;
-			} else {
-				let mins = Math.floor(timeTillNextPost / (60 * 1000));
-				timeTillNextPostString = `${mins} minute${mins !== 1 ? "s" : ""}`;
-			}
-
-			res.send({
-				status: "error",
-				message: `You've reached the limit of ${maxBooruImages} images in the last 12 hours. You can post again in ${timeTillNextPostString}.`
-			});
-			return;
-		}
-
-
-
-
-		// check if the user has posted a post in the last 3 days with the exact same prompt, count it, if its above 10, dont allow the post:
-		let antiSamePromptSpamDaysAgoBooru = Date.now() - (2 * 24 * 60 * 60 * 1000)
-
-		let samePromptCountAggregate = await mongolib.aggregateSchemaDocuments("userBooru", [{
-				$match: {
-					account_id: req.session.accountId,
-					timestamp: {
-						$gt: antiSamePromptSpamDaysAgoBooru.toString()
-					},
-					prompt: data.prompt
-				}
-			},
-		])
-
-		samePromptCount = samePromptCountAggregate.length
-
-		maxSamePrompt = 1
-
-		console.log(`Same prompt: ${samePromptCount} - ${userProfile.username}`)
-
-		if (samePromptCount >= maxSamePrompt) {
-			res.send({
-				status: "error",
-				message: `You've reached the limit of ${maxSamePrompt} images with the same prompt in the last 2 days.`
-			});
-			return;
-		}
-
-
-
-
-
-		// check if the folder for the user exists:
-		if (!fs.existsSync(`${booruFolder}/${req.session.accountId}/`)) {
-			fs.mkdirSync(`${booruFolder}/${req.session.accountId}/`, {
-				recursive: true
-			});
-		}
-
-		let nextImageId = BigInt(Date.now());
-
-		let image_url = data.image_url // the filepath for the png image E:/JSCammie/imagesHistory/
-
-		// replace the http:\\www.jscammie.com\\ at the start:
-		image_url = image_url.replace("https://www.jscammie.com/", "")
-		image_url = image_url.replace("http://www.jscammie.com/", "")
-
-		// load the image from disk:
-		let image = fs.readFileSync(image_url)
-
-		let newImageUrlBase = `booruImages/${req.session.accountId}/${nextImageId}.png`
-
-		// save the image to the booru folder:
-		fs.writeFileSync(newImageUrlBase, image)
-
-		// split the prompt into an array of tags, first, split on commas removing any spaces:
-
-		tags = data.prompt
-
-		tags = tags.split(',').map(tag => tag.trim())
-
-		tags = splitTags(tags)
-
-		// remove any tag with "username" in it:
-		tags = tags.filter(tag => !tag.includes("username"))
-
-		// tags.push(`${userProfile.username}-username`)
-
-		// get all accounts that have that username, then sort them by timestamp, the oldest one gets username-username, the rest get username-username-1, username-username-2, etc:
-
-		// timestamp is a string like this: "1729524416544", its the same as Date.now() but as a string, make sure it sorts correctly with the oldest having the lowest timestamp:
-
-		let accountsWithUsername = await mongolib.aggregateSchemaDocuments("userProfile", [{ $match: { username: userProfile.username } }, { $sort: { timestamp: 1 } }])
-		let usernameCount = 0
-		for (const account of accountsWithUsername) {
-			if (account.accountId == req.session.accountId) {
-				break
-			}
-			usernameCount++
-		}
-
-		if (usernameCount > 0) {
-			tags.push(`${userProfile.username}-username-${usernameCount}`)
-		} else {
-			tags.push(`${userProfile.username}-username`)
-		}
-
-		scoreTags = "score_10, score_9, score_8, score_7, score_6, score_5, score_4, score_3, score_2, score_1, score_0"
-		scoreUpTags = "score_10_up, score_9_up, score_8_up, score_7_up, score_6_up, score_5_up, score_4_up, score_3_up, score_2_up, score_1_up, score_0_up"
-		scoreUpTags2 = "score_10up, score_9up, score_8up, score_7up, score_6up, score_5up, score_4up, score_3up, score_2up, score_1up, score_0up"
-		qualityTags = "masterpiece, amazing_quality, best_quality, absurdres, very_aesthetic, high_quality, detailed, perfect_quality, high_resolution"
-		qualityTags2 = "8k, ultra-detailed, absurd_res, 4k, high_detail, amazing_lighting, perfect_detail, hi_res, highest_quality_textures"
-		qualityTags3 = "extreme_detail, studio_quality, max_detail, refined_detail, insanely_detailed, highres, highly_detailed_background, quality"
-
-		blockedTags = scoreTags + ", " + scoreUpTags + ", " + scoreUpTags2 + ", " + qualityTags + ", " + qualityTags2 + ", " + qualityTags3
-		blockedTags = blockedTags.split(", ")
-
-		tags = tags.filter(tag => !blockedTags.includes(tag))
-
-		for (const tag of tags) {
-			// check if the tag exists in the userBooruTagsSchema:
-			let foundTag = await userBooruTagsSchema.findOne({
-				tag: tag
-			})
-
-			if (foundTag == null) {
-				newCount = BigInt(1)
-				newCount = newCount.toString()
-			} else {
-				newCount = BigInt(foundTag.count) + BigInt(1)
-				newCount = newCount.toString()
-			}
-
-			await userBooruTagsSchema.findOneAndUpdate({
-				tag: tag
-			}, { // count is a string, make sure to convert it to a BigInt before incrementing, then back:
-				tag: tag,
-				count: newCount,
-				$push: {
-					booru_ids: `${req.session.accountId}-${nextImageId}`
-				},
-			}, {
-				upsert: true
-			})
-		}
-
-		// convert any broken text, for example &#39; to ', etc:
-		data.prompt = he.decode(data.prompt)
-		data.negative_prompt = he.decode(data.negative_prompt)
-
-		// Prepare the new booru image document
-		let newBooruImage = {
-			booru_id: `${req.session.accountId}-${nextImageId}`,
-			account_id: req.session.accountId,
-			image_id: BigInt(nextImageId),
-			prompt: data.prompt,
-			negative_prompt: data.negative_prompt,
-			model: data.model,
-			aspect_ratio: data.aspect_ratio,
-			loras: data.loras,
-			lora_strengths: data.lora_strengths,
-			steps: data.steps,
-			cfg: data.cfg,
-			seed: data.seed,
-			content_url: `https://www.jscammie.com/${newImageUrlBase}`,
-			safety: "na",
-			timestamp: Date.now(),
-			timestampRated: Date.now(),
-		};
-
-
-
-		// Insert the new booru image document into the database
-		await userBooruSchema.create(newBooruImage);
-
-		// set the userHistorySchema to have uploadedToBooru as true, use image_url without the .png as the image_id and the account_id:
-		await userHistorySchema.findOneAndUpdate({
-			image_url: data.image_url
-		}, {
-			uploadedToBooru: true
-		})
-
-		res.send({
-			status: "success",
-			message: "Booru image created",
-			booru_id: `${req.session.accountId}-${nextImageId}`
-		})
-
-	} catch (error) {
-		console.log(`Error creating booru image: ${error}`);
-		res.status(500).send('Error creating booru image');
-	}
-})
 
 app.post('/follow-account/', async function(req, res) {
 
@@ -4592,11 +4167,42 @@ app.post('/settings/update', async function(req, res) {
 				}
 			})
 
+		} else if (settingWanted == 'profile_background_color') {
+
+			// Validate hex color format
+			if (!/^#[0-9A-F]{6}$/i.test(settingValue)) {
+				res.send({
+					status: "error",
+					message: "Invalid color format. Please use a valid hex color (e.g., #4875B4)"
+				})
+				return
+			}
+
+			console.log(`Updating profile background color for accountId: ${req.session.accountId} to color: ${settingValue}`)
+
+			// First ensure the settings object exists, then set the profile background color
+			let updateResult = await mongolib.updateSchemaDocumentOnce("userProfile", {
+				accountId: req.session.accountId
+			}, {
+				$set: {
+					'settings.profile_background_color': settingValue
+				}
+			})
+
+			console.log(`Update result:`, updateResult)
+
+			// Verify the update by fetching the user profile
+			let verifyProfile = await mongolib.getSchemaDocumentOnce("userProfile", {
+				accountId: req.session.accountId
+			})
+			console.log(`Verification - saved color:`, verifyProfile?.settings?.profile_background_color)
+
 		} else {
 			res.send({
 				status: "error",
 				message: "Setting not found"
 			})
+			return
 		}
 
 		res.send({
@@ -4974,7 +4580,7 @@ app.post('/create-redeem-code', async function(req, res) {
 			code: code
 		})
 
-		if (foundCode.length > 0) {
+		if (foundCode) {
 			res.send({
 				status: 'error',
 				message: 'Code already exists'
@@ -4993,8 +4599,12 @@ app.post('/create-redeem-code', async function(req, res) {
 			variable: variable,
 			maxRedeems: maxRedeems,
 			redeemCount: 0,
-			expires: expires,
 			timestamp: String(Date.now())
+		}
+
+		// Only add expires if it has a value
+		if (expires) {
+			codeObject.expires = expires
 		}
 
 		let result = await mongolib.createSchemaDocument("userRedeem", {
@@ -5029,8 +4639,23 @@ app.get('/download', async function(req, res) {
 	});
 })
 
+// Configurable scoring constants - documented for clarity
+const SCORING_CONFIG = {
+	UPVOTE_WEIGHT: 0.7,           // Base points per upvote
+	COMMENT_WEIGHT: 4,            // Base points per comment (higher than upvotes for deeper engagement)
+	MIN_POST_THRESHOLD: 10,       // Minimum posts required for leaderboard
+	HOURS_EXCLUDE: 6,             // Hours to exclude recent posts (prevent manipulation)
+	ENGAGEMENT_MULTIPLIER: 0.9,   // How much engagement rate affects final score (0.3 = moderate, 0.6 = high, 0.9 = very high)
+	FOLLOWER_ENGAGEMENT_CAP: 50,  // Cap follower count for engagement rate calculation (prevents division by tiny numbers)
+	VOLUME_DIMINISH_FACTOR: 0.625   // Controls how much posting volume is penalized (0.5 = aggressive, 1.0 = no penalty)
+};
 
-
+// Initialize and mount booru routes
+booruRoutes.init({
+	SCORING_CONFIG
+});
+app.use('/booru', booruRoutes);
+app.use('/', booruRoutes); // For routes like create-booru-image that need root level access
 
 app.get('/leaderboard', async function(req, res) {
 
@@ -5079,6 +4704,7 @@ app.get('/leaderboard', async function(req, res) {
 				break;
 
 			case 'booru':
+
 				// Fetch booru images with only required fields
 				let booruImages = await mongolib.aggregateSchemaDocuments("userBooru", [
 					// make the upvotes, downvotes and comments the length of the array if it exists:
@@ -5089,7 +4715,7 @@ app.get('/leaderboard', async function(req, res) {
 				// ignore any booru images that released in the last x hours:
 				booruImages = booruImages.filter(image => {
 					let timestampCreated = image.timestamp
-					let xHoursAgo = Date.now() - 6 * 60 * 60 * 1000
+					let xHoursAgo = Date.now() - SCORING_CONFIG.HOURS_EXCLUDE * 60 * 60 * 1000
 					return timestampCreated < xHoursAgo
 				})
 
@@ -5109,80 +4735,72 @@ app.get('/leaderboard', async function(req, res) {
 
 				let userProfilesMap = Object.fromEntries(userProfiles.map(user => [user.accountId, user]));
 
-				// Process booru posts
+				// Process booru posts with simplified scoring
 				let userStats = {};
 				for (const image of booruImages) {
 					let { account_id, upvotes, comments } = image;
 					upvotes = upvotes || 0;
 					comments = comments || 0;
 
-					let commentScore = 5 * Math.log2(1 + comments);
-					let upvoteScore = 1.9 * upvotes;
-					let score = commentScore + upvoteScore;
+					// Simplified base score calculation
+					let baseScore = (upvotes * SCORING_CONFIG.UPVOTE_WEIGHT) + (comments * SCORING_CONFIG.COMMENT_WEIGHT);
 
 					if (!userStats[account_id]) {
-						userStats[account_id] = { postCount: 0, totalScore: 0, totalVotes: 0 };
+						userStats[account_id] = { 
+							postCount: 0, 
+							totalScore: 0, 
+							totalUpvotes: 0, 
+							totalComments: 0 
+						};
 					}
 
 					userStats[account_id].postCount++;
-					userStats[account_id].totalScore += score;
-					userStats[account_id].totalVotes += upvotes + comments;
+					userStats[account_id].totalScore += baseScore;
+					userStats[account_id].totalUpvotes += upvotes;
+					userStats[account_id].totalComments += comments;
 				}
 
-				// Construct leaderboard data
+				// Get highest follower count for normalization
+				const highestFollowerCountData = await mongolib.aggregateSchemaDocuments("userProfile", [
+					{ $match: { followedAccounts: { $exists: true, $ne: [] } } },
+					{ $project: { followedCount: { $size: "$followedAccounts" } } },
+					{ $sort: { followedCount: -1 } },
+					{ $limit: 1 }
+				]);
+				const highestFollowerCount = highestFollowerCountData[0]?.followedCount || 1; // Default to 1 if no data
+
+				// Construct leaderboard data with improved scoring
 				let allUserBooruAccounts = await Promise.all(
 					Object.entries(userStats)
-						.filter(([accountId, stats]) => stats.postCount >= 10)
+						.filter(([accountId, stats]) => stats.postCount >= SCORING_CONFIG.MIN_POST_THRESHOLD)
 						.map(async ([accountId, stats]) => {
 							let profile = userProfilesMap[accountId] || {};
 
-							// Engagement-based modifier
-							let engagementRate = stats.totalVotes / stats.postCount;
-							let activityModifier = Math.max(0.5, Math.log10(1 + stats.postCount)) * 80;
-							let engagementBoost = Math.log2(1 + stats.totalVotes / (stats.postCount + 5)) * 12;
-
-							// Get the followedAccounts count for the user
+							// Get follower count
 							let followedCountResult = await mongolib.aggregateSchemaDocuments("userProfile", [
 								{ $match: { followedAccounts: accountId } },
 								{ $count: "followedCount" }
 							]);
 
-							let followedCount = followedCountResult[0]?.followedCount || 0;
-							// if they have 0 followers then set it to 1:
-							if (followedCount == 0) {
-								followedCount = 1
-							}
+							let followerCount = followedCountResult[0]?.followedCount || 1; // Default to 1 to avoid division by zero
+
+							const scoreData = calculateBooruScore(stats, followerCount, SCORING_CONFIG, highestFollowerCount);
 
 							return {
 								accountId,
 								username: profile.username || "Unknown",
 								profileImg: profile.profileImg || "",
-								score: ((stats.totalScore / activityModifier) + engagementBoost),
-								followerCount: followedCount
+								score: scoreData.finalScore, // Use the final score from the new function
+								followerCount: followerCount,
+								postCount: stats.postCount,
+								avgScore: scoreData.avgScore.toFixed(2),
+								engagementRate: scoreData.engagementRate.toFixed(3)
 							};
 						})
 				);
 
-				let highestFollowerCount = 0
-				for (const account of allUserBooruAccounts) {
-					if (account.followerCount > highestFollowerCount) {
-						highestFollowerCount = account.followerCount
-					}
-				}
-
-				// alter the score based on the follower count, normalise the score to the number of followers:
-				allUserBooruAccounts = allUserBooruAccounts.map(account => {
-					// make sure the multiplicative gain is limited, taking into account the highest follower count:
-					let followerScore = ((account.followerCount / highestFollowerCount)/7.14) + 0.95
-					if (account.accountId == "550239177837379594") { console.log(`${account.username} has a follower score of ${followerScore} and their score would be ${account.score * followerScore}`) }
-					account.score = (account.score * followerScore)
-					return account;
-				})
-
-
 				allUserBooruAccounts = allUserBooruAccounts
 					.sort((a, b) => b.score - a.score)
-					.slice(0, 100);
 
 				res.render('leaderboard', {
 					session: req.session,
@@ -5348,590 +4966,6 @@ app.post('/booru-post-title-set', async function(req, res) {
 	}
 })
 
-
-
-
-// Booru creator stats page
-app.get('/booru/creator-stats', async function(req, res) {
-    try {
-        console.log("Starting creator stats calculation...");
-        
-        // Check if user is logged in
-        if (!req.session.accountId) {
-            return res.render('booru/creator-stats', {
-                session: req.session,
-                userStats: null
-            });
-        }
-
-        const accountId = req.session.accountId;
-        console.log(`Processing stats for account ID: ${accountId}`);
-        
-        // Time periods for stats calculation
-        const now = Date.now();
-        const twentyFourHoursAgo = now - (24 * 60 * 60 * 1000);
-        const previousTwentyFourHours = twentyFourHoursAgo - (24 * 60 * 60 * 1000);
-        
-        const sevenDaysAgo = now - (7 * 24 * 60 * 60 * 1000);
-        const previousSevenDays = sevenDaysAgo - (7 * 24 * 60 * 60 * 1000);
-        
-        const twentyEightDaysAgo = now - (28 * 24 * 60 * 60 * 1000);
-        const previousTwentyEightDays = twentyEightDaysAgo - (28 * 24 * 60 * 60 * 1000);
-                
-        // Fetch all user booru posts with timestamps, votes, and comments
-        const userBooruPosts = await mongolib.aggregateSchemaDocuments("userBooru", [
-            { $match: { account_id: accountId } },
-            { $project: {
-                booru_id: 1,
-                title: 1,
-                content_url: 1,
-                timestamp: { $toLong: "$timestamp" },
-                upvotes: { $cond: { if: { $isArray: "$upvotes" }, then: "$upvotes", else: [] } },
-                comments: { $cond: { if: { $isArray: "$comments" }, then: "$comments", else: [] } }
-            }}
-        ]);
-        
-        // Get follower count for the user (needed for leaderboard score calculation)
-        const followedCountResult = await mongolib.aggregateSchemaDocuments("userProfile", [
-            { $match: { followedAccounts: accountId } },
-            { $count: "followedCount" }
-        ]);
-        const userFollowerCount = followedCountResult[0]?.followedCount || 1; // Default to 1 if no followers
-        
-        // Get highest follower count for normalization (same as in leaderboard)
-        const highestFollowerCountData = await mongolib.aggregateSchemaDocuments("userProfile", [
-            { $match: { followedAccounts: { $exists: true, $ne: [] } } },
-            { $project: { followedCount: { $size: "$followedAccounts" } } },
-            { $sort: { followedCount: -1 } },
-            { $limit: 1 }
-        ]);
-        const highestFollowerCount = highestFollowerCountData[0]?.followedCount || userFollowerCount;
-        
-        // Calculate follower score modifier
-        const followerScore = ((userFollowerCount / highestFollowerCount) / 7.14) + 0.95;
-        
-        console.log(`User followers: ${userFollowerCount}, Highest followers: ${highestFollowerCount}`);
-        console.log(`Calculated follower score: ${followerScore}`);
-        
-        // Calculate total (all-time) Booru score
-        const totalStats = {
-            posts: userBooruPosts.length,
-            upvotes: 0,
-            comments: 0,
-            totalVotes: 0,
-            booruScore: 0,
-            rawBooruScore: 0,
-            followerBoost: followerScore
-        };
-        
-        // Count all upvotes and comments for total score
-        userBooruPosts.forEach(post => {
-            totalStats.upvotes += (post.upvotes?.length || 0);
-            totalStats.comments += (post.comments?.length || 0);
-        });
-        
-        totalStats.totalVotes = totalStats.upvotes + totalStats.comments;
-        
-        // Calculate total Booru score using the leaderboard formula
-        const totalCommentScore = 5 * Math.log2(1 + totalStats.comments);
-        const totalUpvoteScore = 1.9 * totalStats.upvotes;
-        const totalBaseScore = totalCommentScore + totalUpvoteScore;
-        
-        const totalActivityModifier = Math.max(0.5, Math.log10(1 + totalStats.posts)) * 80;
-        const totalEngagementBoost = Math.log2(1 + totalStats.totalVotes / (totalStats.posts + 5)) * 12;
-        
-        totalStats.rawBooruScore = (totalBaseScore / totalActivityModifier) + totalEngagementBoost;
-        totalStats.booruScore = totalStats.rawBooruScore * followerScore;
-        
-        console.log(`Total stats - Posts: ${totalStats.posts}, Upvotes: ${totalStats.upvotes}, Comments: ${totalStats.comments}`);
-        console.log(`Total Booru score: ${totalStats.booruScore.toFixed(1)} (raw: ${totalStats.rawBooruScore.toFixed(1)})`);
-        
-        // Get top posts from the last 28 days
-        const topPosts = userBooruPosts
-            .filter(post => post.timestamp >= twentyEightDaysAgo)
-            .map(post => {
-                // Calculate a score based on upvotes and comments
-                const score = (post.upvotes?.length || 0) * 2 + (post.comments?.length || 0) * 3;
-                return { ...post, score };
-            })
-            .sort((a, b) => b.score - a.score)
-            .slice(0, 25);
-        
-        // Initialize stat objects
-        const last24Hours = {
-            posts: 0,
-            upvotes: 0,
-            comments: 0,
-            postsChange: 0,
-            upvotesChange: 0,
-            commentsChange: 0,
-            engagementRate: 0,
-            engagementRateChange: 0,
-            booruScore: 0,
-            booruScoreChange: 0,
-            rawBooruScore: 0,
-            followerBoost: followerScore
-        };
-        
-        const last7Days = {
-            posts: 0,
-            upvotes: 0,
-            comments: 0,
-            postsChange: 0,
-            upvotesChange: 0,
-            commentsChange: 0,
-            engagementRate: 0,
-            engagementRateChange: 0,
-            booruScore: 0,
-            booruScoreChange: 0,
-            rawBooruScore: 0,
-            followerBoost: followerScore
-        };
-        
-        const last28Days = {
-            posts: 0,
-            upvotes: 0,
-            comments: 0,
-            postsChange: 0,
-            upvotesChange: 0,
-            commentsChange: 0,
-            engagementRate: 0,
-            engagementRateChange: 0,
-            booruScore: 0,
-            booruScoreChange: 0,
-            rawBooruScore: 0,
-            followerBoost: followerScore
-        };
-        
-        // Initialize counters for previous periods
-        const previous24Hours = { posts: 0, upvotes: 0, comments: 0 };
-        const previous7Days = { posts: 0, upvotes: 0, comments: 0 };
-        const previous28Days = { posts: 0, upvotes: 0, comments: 0 };
-        
-        // For daily chart data
-        const dailyData = {};
-        const lastNDays = 28; // Show data for last 28 days
-        
-        // Process each post
-        userBooruPosts.forEach(post => {
-            const postDate = new Date(parseInt(post.timestamp));
-            const dayKey = postDate.toISOString().split('T')[0]; // YYYY-MM-DD format
-            
-            // Initialize daily data
-            if (!dailyData[dayKey]) {
-                dailyData[dayKey] = { posts: 0, upvotes: 0, comments: 0, booruScore: 0, totalVotes: 0 };
-            }
-            
-            // Count the post
-            dailyData[dayKey].posts++;
-            
-            // Count upvotes - filter for upvotes that happened in the time period
-            const postUpvotes = post.upvotes || [];
-            let dailyUpvotesCount = 0;
-            
-            postUpvotes.forEach(vote => {
-                // Count all upvotes for this post on this day
-                if (vote.timestamp) {
-                    const voteDate = new Date(parseInt(vote.timestamp));
-                    const voteDayKey = voteDate.toISOString().split('T')[0];
-                    if (voteDayKey === dayKey) {
-                        dailyUpvotesCount++;
-                    }
-                    
-                    // Last 24 hours
-                    if (vote.timestamp >= twentyFourHoursAgo) {
-                        last24Hours.upvotes++;
-                    } else if (vote.timestamp >= previousTwentyFourHours && vote.timestamp < twentyFourHoursAgo) {
-                        previous24Hours.upvotes++;
-                    }
-                    
-                    // Last 7 days
-                    if (vote.timestamp >= sevenDaysAgo) {
-                        last7Days.upvotes++;
-                    } else if (vote.timestamp >= previousSevenDays && vote.timestamp < sevenDaysAgo) {
-                        previous7Days.upvotes++;
-                    }
-                    
-                    // Last 28 days
-                    if (vote.timestamp >= twentyEightDaysAgo) {
-                        last28Days.upvotes++;
-                    } else if (vote.timestamp >= previousTwentyEightDays && vote.timestamp < twentyEightDaysAgo) {
-                        previous28Days.upvotes++;
-                    }
-                }
-            });
-            
-            // Add upvotes to daily data
-            dailyData[dayKey].upvotes += dailyUpvotesCount;
-            dailyData[dayKey].totalVotes += dailyUpvotesCount;
-            
-            // Count comments - filter for comments that happened in the time period
-            const postComments = post.comments || [];
-            let dailyCommentsCount = 0;
-            
-            postComments.forEach(comment => {
-                // Count all comments for this post on this day
-                if (comment.timestamp) {
-                    const commentDate = new Date(parseInt(comment.timestamp));
-                    const commentDayKey = commentDate.toISOString().split('T')[0];
-                    if (commentDayKey === dayKey) {
-                        dailyCommentsCount++;
-                    }
-                    
-                    // Last 24 hours
-                    if (comment.timestamp >= twentyFourHoursAgo) {
-                        last24Hours.comments++;
-                    } else if (comment.timestamp >= previousTwentyFourHours && comment.timestamp < twentyFourHoursAgo) {
-                        previous24Hours.comments++;
-                    }
-                    
-                    // Last 7 days
-                    if (comment.timestamp >= sevenDaysAgo) {
-                        last7Days.comments++;
-                    } else if (comment.timestamp >= previousSevenDays && comment.timestamp < sevenDaysAgo) {
-                        previous7Days.comments++;
-                    }
-                    
-                    // Last 28 days
-                    if (comment.timestamp >= twentyEightDaysAgo) {
-                        last28Days.comments++;
-                    } else if (comment.timestamp >= previousTwentyEightDays && comment.timestamp < twentyEightDaysAgo) {
-                        previous28Days.comments++;
-                    }
-                }
-            });
-            
-            // Add comments to daily data
-            dailyData[dayKey].comments += dailyCommentsCount;
-            dailyData[dayKey].totalVotes += dailyCommentsCount;
-            
-            // Count posts by time period
-            if (post.timestamp >= twentyFourHoursAgo) {
-                last24Hours.posts++;
-            } else if (post.timestamp >= previousTwentyFourHours && post.timestamp < twentyFourHoursAgo) {
-                previous24Hours.posts++;
-            }
-            
-            if (post.timestamp >= sevenDaysAgo) {
-                last7Days.posts++;
-            } else if (post.timestamp >= previousSevenDays && post.timestamp < sevenDaysAgo) {
-                previous7Days.posts++;
-            }
-            
-            if (post.timestamp >= twentyEightDaysAgo) {
-                last28Days.posts++;
-            } else if (post.timestamp >= previousTwentyEightDays && post.timestamp < twentyEightDaysAgo) {
-                previous28Days.posts++;
-            }
-        });
-        
-        // Calculate percentage changes
-        last24Hours.postsChange = previous24Hours.posts === 0 
-            ? (last24Hours.posts > 0 ? 100 : 0) 
-            : Math.round(((last24Hours.posts - previous24Hours.posts) / previous24Hours.posts) * 100);
-            
-        last24Hours.upvotesChange = previous24Hours.upvotes === 0 
-            ? (last24Hours.upvotes > 0 ? 100 : 0) 
-            : Math.round(((last24Hours.upvotes - previous24Hours.upvotes) / previous24Hours.upvotes) * 100);
-
-        last24Hours.commentsChange = previous24Hours.comments === 0 
-            ? (last24Hours.comments > 0 ? 100 : 0) 
-            : Math.round(((last24Hours.comments - previous24Hours.comments) / previous24Hours.comments) * 100);
-        
-        last7Days.postsChange = previous7Days.posts === 0 
-            ? (last7Days.posts > 0 ? 100 : 0) 
-            : Math.round(((last7Days.posts - previous7Days.posts) / previous7Days.posts) * 100);
-            
-        last7Days.upvotesChange = previous7Days.upvotes === 0 
-            ? (last7Days.upvotes > 0 ? 100 : 0) 
-            : Math.round(((last7Days.upvotes - previous7Days.upvotes) / previous7Days.upvotes) * 100);
-
-        last7Days.commentsChange = previous7Days.comments === 0 
-            ? (last7Days.comments > 0 ? 100 : 0) 
-            : Math.round(((last7Days.comments - previous7Days.comments) / previous7Days.comments) * 100);
-        
-        last28Days.postsChange = previous28Days.posts === 0 
-            ? (last28Days.posts > 0 ? 100 : 0) 
-            : Math.round(((last28Days.posts - previous28Days.posts) / previous28Days.posts) * 100);
-            
-        last28Days.upvotesChange = previous28Days.upvotes === 0 
-            ? (last28Days.upvotes > 0 ? 100 : 0) 
-            : Math.round(((last28Days.upvotes - previous28Days.upvotes) / previous28Days.upvotes) * 100);
-
-        last28Days.commentsChange = previous28Days.comments === 0 
-            ? (last28Days.comments > 0 ? 100 : 0) 
-            : Math.round(((last28Days.comments - previous28Days.comments) / previous28Days.comments) * 100);
-        
-        // Calculate engagement rates (upvotes per post)
-        last24Hours.engagementRate = last24Hours.posts > 0 
-            ? last24Hours.upvotes / last24Hours.posts 
-            : 0;
-            
-        const previous24HoursEngagementRate = previous24Hours.posts > 0 
-            ? previous24Hours.upvotes / previous24Hours.posts 
-            : 0;
-            
-        last24Hours.engagementRateChange = previous24HoursEngagementRate === 0 
-            ? (last24Hours.engagementRate > 0 ? 100 : 0) 
-            : Math.round(((last24Hours.engagementRate - previous24HoursEngagementRate) / previous24HoursEngagementRate) * 100);
-        
-        last7Days.engagementRate = last7Days.posts > 0 
-            ? last7Days.upvotes / last7Days.posts 
-            : 0;
-            
-        const previous7DaysEngagementRate = previous7Days.posts > 0 
-            ? previous7Days.upvotes / previous7Days.posts 
-            : 0;
-            
-        last7Days.engagementRateChange = previous7DaysEngagementRate === 0 
-            ? (last7Days.engagementRate > 0 ? 100 : 0) 
-            : Math.round(((last7Days.engagementRate - previous7DaysEngagementRate) / previous7DaysEngagementRate) * 100);
-        
-        last28Days.engagementRate = last28Days.posts > 0 
-            ? last28Days.upvotes / last28Days.posts 
-            : 0;
-            
-        const previous28DaysEngagementRate = previous28Days.posts > 0 
-            ? previous28Days.upvotes / previous28Days.posts 
-            : 0;
-            
-        last28Days.engagementRateChange = previous28DaysEngagementRate === 0 
-            ? (last28Days.engagementRate > 0 ? 100 : 0) 
-            : Math.round(((last28Days.engagementRate - previous28DaysEngagementRate) / previous28DaysEngagementRate) * 100);
-        
-        // Calculate Booru Score
-        {
-            const totalVotes24h = last24Hours.upvotes + last24Hours.comments;
-            const commentScore24h = 5 * Math.log2(1 + last24Hours.comments);
-            const upvoteScore24h = 1.9 * last24Hours.upvotes;
-            const baseScore24h = commentScore24h + upvoteScore24h;
-            
-            // Add grace period for new posts - don't penalize posts less than 24 hours old
-            const gracePeriod = 24 * 60 * 60 * 1000; // 24 hours in ms
-            const postsWithGracePeriod = userBooruPosts.filter(post => {
-                // Count posts older than grace period or newer posts with good engagement
-                const postAge = now - post.timestamp;
-                // New posts in grace period won't hurt score
-                if (postAge < gracePeriod) {
-                    return false; // Don't count very new posts for activity penalty
-                }
-                return post.timestamp >= twentyFourHoursAgo;
-            }).length;
-            
-            const adjustedPostCount = Math.max(1, postsWithGracePeriod); // Ensure at least 1 post
-            const activityModifier24h = Math.max(0.5, Math.log10(1 + adjustedPostCount)) * 80;
-            const engagementBoost24h = Math.log2(1 + totalVotes24h / (adjustedPostCount + 5)) * 12;
-            
-            last24Hours.rawBooruScore = (baseScore24h / activityModifier24h) + engagementBoost24h;
-            last24Hours.booruScore = last24Hours.rawBooruScore * followerScore;
-            
-            // Previous 24 hours
-            const prevTotalVotes24h = previous24Hours.upvotes + previous24Hours.comments;
-            const prevCommentScore24h = 5 * Math.log2(1 + previous24Hours.comments);
-            const prevUpvoteScore24h = 1.9 * previous24Hours.upvotes;
-            const prevBaseScore24h = prevCommentScore24h + prevUpvoteScore24h;
-            
-            const prevPostsWithGracePeriod = userBooruPosts.filter(post => {
-                const postAge = twentyFourHoursAgo - post.timestamp;
-                if (postAge < gracePeriod) {
-                    return false;
-                }
-                return post.timestamp >= previousTwentyFourHours && post.timestamp < twentyFourHoursAgo;
-            }).length;
-            
-            const prevAdjustedPostCount = Math.max(1, prevPostsWithGracePeriod);
-            const prevActivityModifier24h = Math.max(0.5, Math.log10(1 + prevAdjustedPostCount)) * 80;
-            const prevEngagementBoost24h = Math.log2(1 + prevTotalVotes24h / (prevAdjustedPostCount + 5)) * 12;
-            
-            previous24Hours.booruScore = ((prevBaseScore24h / prevActivityModifier24h) + prevEngagementBoost24h) * followerScore;
-            
-            last24Hours.booruScoreChange = previous24Hours.booruScore === 0
-                ? (last24Hours.booruScore > 0 ? 100 : 0)
-                : Math.round(((last24Hours.booruScore - previous24Hours.booruScore) / previous24Hours.booruScore) * 100);
-        }
-        
-        {
-            const totalVotes7d = last7Days.upvotes + last7Days.comments;
-            const commentScore7d = 5 * Math.log2(1 + last7Days.comments);
-            const upvoteScore7d = 1.9 * last7Days.upvotes;
-            const baseScore7d = commentScore7d + upvoteScore7d;
-            
-            // Add grace period for new posts - don't penalize posts less than 24 hours old
-            const gracePeriod = 24 * 60 * 60 * 1000; // 24 hours in ms
-            const postsWithGracePeriod = userBooruPosts.filter(post => {
-                // Count posts older than grace period or newer posts with good engagement
-                const postAge = now - post.timestamp;
-                if (postAge < gracePeriod) {
-                    return false; // Don't count very new posts for activity penalty
-                }
-                return post.timestamp >= sevenDaysAgo;
-            }).length;
-            
-            const adjustedPostCount = Math.max(1, postsWithGracePeriod); // Ensure at least 1 post
-            const activityModifier7d = Math.max(0.5, Math.log10(1 + adjustedPostCount)) * 80;
-            const engagementBoost7d = Math.log2(1 + totalVotes7d / (adjustedPostCount + 5)) * 12;
-            
-            last7Days.rawBooruScore = (baseScore7d / activityModifier7d) + engagementBoost7d;
-            last7Days.booruScore = last7Days.rawBooruScore * followerScore;
-            
-            // Previous 7 days
-            const prevTotalVotes7d = previous7Days.upvotes + previous7Days.comments;
-            const prevCommentScore7d = 5 * Math.log2(1 + previous7Days.comments);
-            const prevUpvoteScore7d = 1.9 * previous7Days.upvotes;
-            const prevBaseScore7d = prevCommentScore7d + prevUpvoteScore7d;
-            
-            const prevPostsWithGracePeriod = userBooruPosts.filter(post => {
-                const postAge = sevenDaysAgo - post.timestamp;
-                if (postAge < gracePeriod) {
-                    return false;
-                }
-                return post.timestamp >= previousSevenDays && post.timestamp < sevenDaysAgo;
-            }).length;
-            
-            const prevAdjustedPostCount = Math.max(1, prevPostsWithGracePeriod);
-            const prevActivityModifier7d = Math.max(0.5, Math.log10(1 + prevAdjustedPostCount)) * 80;
-            const prevEngagementBoost7d = Math.log2(1 + prevTotalVotes7d / (prevAdjustedPostCount + 5)) * 12;
-            
-            previous7Days.booruScore = ((prevBaseScore7d / prevActivityModifier7d) + prevEngagementBoost7d) * followerScore;
-            
-            last7Days.booruScoreChange = previous7Days.booruScore === 0
-                ? (last7Days.booruScore > 0 ? 100 : 0)
-                : Math.round(((last7Days.booruScore - previous7Days.booruScore) / previous7Days.booruScore) * 100);
-        }
-        
-        {
-            const totalVotes28d = last28Days.upvotes + last28Days.comments;
-            const commentScore28d = 5 * Math.log2(1 + last28Days.comments);
-            const upvoteScore28d = 1.9 * last28Days.upvotes;
-            const baseScore28d = commentScore28d + upvoteScore28d;
-            
-            // Add grace period for new posts - don't penalize posts less than 24 hours old
-            const gracePeriod = 24 * 60 * 60 * 1000; // 24 hours in ms
-            const postsWithGracePeriod = userBooruPosts.filter(post => {
-                // Count posts older than grace period or newer posts with good engagement
-                const postAge = now - post.timestamp;
-                if (postAge < gracePeriod) {
-                    return false; // Don't count very new posts for activity penalty
-                }
-                return post.timestamp >= twentyEightDaysAgo;
-            }).length;
-            
-            const adjustedPostCount = Math.max(1, postsWithGracePeriod); // Ensure at least 1 post
-            const activityModifier28d = Math.max(0.5, Math.log10(1 + adjustedPostCount)) * 80;
-            const engagementBoost28d = Math.log2(1 + totalVotes28d / (adjustedPostCount + 5)) * 12;
-            
-            last28Days.rawBooruScore = (baseScore28d / activityModifier28d) + engagementBoost28d;
-            last28Days.booruScore = last28Days.rawBooruScore * followerScore;
-            
-            // Previous 28 days
-            const prevTotalVotes28d = previous28Days.upvotes + previous28Days.comments;
-            const prevCommentScore28d = 5 * Math.log2(1 + previous28Days.comments);
-            const prevUpvoteScore28d = 1.9 * previous28Days.upvotes;
-            const prevBaseScore28d = prevCommentScore28d + prevUpvoteScore28d;
-            
-            const prevPostsWithGracePeriod = userBooruPosts.filter(post => {
-                const postAge = twentyEightDaysAgo - post.timestamp;
-                if (postAge < gracePeriod) {
-                    return false;
-                }
-                return post.timestamp >= previousTwentyEightDays && post.timestamp < twentyEightDaysAgo;
-            }).length;
-            
-            const prevAdjustedPostCount = Math.max(1, prevPostsWithGracePeriod);
-            const prevActivityModifier28d = Math.max(0.5, Math.log10(1 + prevAdjustedPostCount)) * 80;
-            const prevEngagementBoost28d = Math.log2(1 + prevTotalVotes28d / (prevAdjustedPostCount + 5)) * 12;
-            
-            previous28Days.booruScore = ((prevBaseScore28d / prevActivityModifier28d) + prevEngagementBoost28d) * followerScore;
-            
-            last28Days.booruScoreChange = previous28Days.booruScore === 0
-                ? (last28Days.booruScore > 0 ? 100 : 0)
-                : Math.round(((last28Days.booruScore - previous28Days.booruScore) / previous28Days.booruScore) * 100);
-        }
-        
-        // Also apply grace period to all-time Booru score
-        {
-            const gracePeriod = 24 * 60 * 60 * 1000; // 24 hours in ms
-            const postsWithGracePeriod = userBooruPosts.filter(post => {
-                const postAge = now - post.timestamp;
-                return postAge >= gracePeriod; // Only count posts older than grace period
-            }).length;
-            
-            const adjustedPostCount = Math.max(1, postsWithGracePeriod);
-            const adjustedActivityModifier = Math.max(0.5, Math.log10(1 + adjustedPostCount)) * 80;
-            const adjustedEngagementBoost = Math.log2(1 + totalStats.totalVotes / (adjustedPostCount + 5)) * 12;
-            
-            totalStats.rawBooruScore = (totalBaseScore / adjustedActivityModifier) + adjustedEngagementBoost;
-            totalStats.booruScore = totalStats.rawBooruScore * followerScore;
-        }
-        
-        // Prepare chart data
-        const sortedDays = Object.keys(dailyData).sort();
-        const recentDays = sortedDays.slice(-lastNDays); // Last N days
-        
-        // Precalculate follower score to avoid reference errors
-        console.log(`Applying follower score ${followerScore} to chart data`);
-        
-        // Calculate daily Booru Scores for the chart
-        recentDays.forEach(day => {
-            const data = dailyData[day];
-            
-            // Base score calculation
-            const commentScore = 5 * Math.log2(1 + data.comments);
-            const upvoteScore = 1.9 * data.upvotes;
-            const baseScore = commentScore + upvoteScore;
-            
-            // Engagement and activity modifiers
-            const activityModifier = Math.max(0.5, Math.log10(1 + data.posts)) * 80;
-            const engagementBoost = Math.log2(1 + data.totalVotes / (data.posts + 5)) * 12;
-            
-            // Calculate raw score
-            const rawScore = (baseScore / activityModifier) + engagementBoost;
-            
-            // Apply follower boost (using the previously calculated followerScore)
-            data.booruScore = rawScore * followerScore;
-        });
-        
-        const dailyLabels = recentDays.map(date => {
-            const [year, month, day] = date.split('-');
-            return `${month}/${day}`;
-        });
-        
-        const dailyUpvotes = recentDays.map(date => dailyData[date].upvotes);
-        const dailyComments = recentDays.map(date => dailyData[date].comments);
-        const dailyPosts = recentDays.map(date => dailyData[date].posts);
-        const dailyEngagement = recentDays.map(date => {
-            const posts = dailyData[date].posts;
-            return posts > 0 ? (dailyData[date].upvotes / posts) : 0;
-        });
-        const dailyBooruScores = recentDays.map(date => dailyData[date].booruScore);
-        
-        const userStats = {
-            last24Hours,
-            last7Days,
-            last28Days,
-            dailyLabels,
-            dailyUpvotes,
-            dailyComments,
-            dailyPosts,
-            dailyEngagement,
-            dailyBooruScores,
-            topPosts,
-            followerCount: userFollowerCount,
-            totalStats
-        };
-        
-        // Render the page with stats
-        res.render('booru/creator-stats', {
-            session: req.session,
-            userStats
-        });
-        
-    } catch (error) {
-        console.log(`Error loading creator stats: ${error}`);
-        res.status(500).send('Error loading creator statistics');
-    }
-});
-
 app.post('/image-history/download-page', async (req, res) => {
 	try {
 		const accountId = req.session.accountId;
@@ -6008,6 +5042,267 @@ app.post('/image-history/download-page', async (req, res) => {
 		res.status(500).json({ status: 'error', message: 'Internal server error' });
 	}
 });
+
+app.post('/image-history/submit-lora-preview', async (req, res) => {
+
+	try {
+	
+		let { imageHistoryID, loraID } = req.body;
+
+		// Check if the user exists:
+		let userProfile = await mongolib.getSchemaDocumentOnce("userProfile", {
+			accountId: req.session.accountId
+		});
+		if (!userProfile) {
+			return res.status(404).json({ status: 'error', message: 'User not found' });
+		}
+		
+		// check that the image history exists and belongs to the user:
+		let imageHistory = await mongolib.getSchemaDocumentOnce("userHistory", {
+			image_id: imageHistoryID,
+			account_id: req.session.accountId
+		});
+		if (!imageHistory) {
+			return res.status(404).json({ status: 'error', message: 'Image history not found or does not belong to user.' });
+		}
+
+		// check that the lora exists inside of the lora yaml:
+		const category = loraID.split('-')[0];
+		if (!modifiedCachedYAMLData || !modifiedCachedYAMLData[category] || !modifiedCachedYAMLData[category][loraID]) {
+			return res.status(400).json({ status: 'error', message: 'Invalid Lora ID.' });
+		}
+
+		// Check if a submission for this accountId and loraId already exists
+		const existingSubmission = await mongolib.getSchemaDocumentOnce("generatorLoraPreviewSubmission", {
+			accountId: req.session.accountId,
+			loraId: loraID
+		});
+
+		if (existingSubmission) {
+			return res.status(400).json({ status: 'error', message: 'You have already submitted a preview for this Lora.' });
+		}
+
+		// Construct the image path
+		const imagePath = path.join(__dirname, 'imagesHistory', req.session.accountId, `${imageHistoryID}.png`);
+
+		// Read the image file
+		let imageBuffer;
+		try {
+			imageBuffer = fs.readFileSync(imagePath);
+		} catch (error) {
+			console.error('Error reading image file:', error);
+			return res.status(500).json({ status: 'error', message: 'Error reading image file.' });
+		}
+
+		// Convert image to base64
+		const base64Image = imageBuffer.toString('base64');
+
+		// Create the submission document
+		const submissionData = {
+			accountId: req.session.accountId,
+			base64Image: base64Image,
+			timestamp: String(Date.now()),
+			loraId: loraID,
+			prompt: imageHistory.prompt || "", // Add the prompt from the image history
+		};
+
+		const creationResult = await mongolib.createSchemaDocument("generatorLoraPreviewSubmission", submissionData);
+
+		if (creationResult.status === 'error') {
+			console.error('Error creating submission document:', creationResult.message);
+			return res.status(500).json({ status: 'error', message: 'Error saving submission.' });
+		}
+
+		return res.status(200).json({ status: 'success', message: 'Lora preview submitted successfully.' });
+		
+	} catch (error) {
+		console.error('Error in submit-lora-preview route:', error);
+		res.status(500).json({ status: 'error', message: 'Internal server error' });
+	}
+});
+
+
+
+app.get('/admin/lora-preview-moderation', async (req, res) => {
+    try {
+        if (!req.session.loggedIn) {
+            return res.redirect('/login');
+        }
+
+        const userProfile = await mongolib.getSchemaDocumentOnce("userProfile", { accountId: req.session.accountId });
+
+        if (!userProfile || userProfile.badges?.moderator !== true) {
+            // return res.status(403).send('Access Denied. You must be a moderator to view this page.');
+             return showMessagePage(res, req, 'Access Denied. You must be a moderator to view this page.');
+        }
+
+        const pendingSubmissions = await mongolib.getSchemaDocuments("generatorLoraPreviewSubmission", { status: "pending" });
+
+        // Enhance submissions with user details and Lora details
+        const enrichedSubmissions = await Promise.all(pendingSubmissions.map(async (submission) => {
+            const account = await mongolib.getSchemaDocumentOnce("userProfile", { accountId: submission.accountId });
+            let loraDetails = null;
+            let existingLoraImageUrl = null;
+            
+            if (modifiedCachedYAMLData) {
+                const loraCategory = submission.loraId.split('-')[0];
+                if (modifiedCachedYAMLData[loraCategory] && modifiedCachedYAMLData[loraCategory][submission.loraId]) {
+                    loraDetails = modifiedCachedYAMLData[loraCategory][submission.loraId];
+                    // Check if the lora already has an image
+                    if (loraDetails.image) {
+                        existingLoraImageUrl = loraDetails.image;
+                    }
+                }
+            }
+            return {
+                ...submission.toObject(), // Convert Mongoose document to plain object
+                account: account ? { username: account.username, accountId: account.accountId } : { username: 'Unknown User', accountId: submission.accountId },
+                loraDetails: loraDetails ? { name: loraDetails.name } : null, // Only pass necessary details like name
+                existingLoraImageUrl: existingLoraImageUrl
+            };
+        }));
+
+        res.render('admin/lora-preview-moderation', {
+            session: req.session,
+            userProfile: userProfile, // Pass the moderator's profile
+            submissions: enrichedSubmissions,
+            // Assuming _headerAll, _navbar, _footer are handled by the EJS file structure or a main layout
+        });
+
+    } catch (error) {
+        console.error('Error loading Lora preview moderation page:', error);
+        // res.status(500).send('Internal Server Error');
+        showMessagePage(res, req, 'Internal Server Error while loading moderation page.');
+    }
+});
+
+app.post('/admin/lora-preview-moderation/reject', async (req, res) => {
+
+	try {
+
+		let { accountId, loraId, rejectionReason } = req.body;
+
+		// Check if the user exists:
+		let userProfile = await mongolib.getSchemaDocumentOnce("userProfile", {
+			accountId: accountId
+		});
+
+		if (!userProfile) {
+			return res.status(404).json({ status: 'error', message: 'User not found' });
+		}
+
+		// Check if the lora exists:
+		let lora = modifiedCachedYAMLData[loraId.split('-')[0]]?.[loraId];
+
+		if (!lora) {
+			return res.status(404).json({ status: 'error', message: 'Lora not found' });
+		}
+
+		// delete the submission:
+		await mongolib.deleteSchemaDocument("generatorLoraPreviewSubmission", {
+			accountId: accountId,
+			loraId: loraId
+		});
+
+		// send a notification to the user:
+		await mongolib.createUserNotification(accountId, `Your Lora preview submission for <strong>${loraId}</strong> has been rejected. Reason: ${rejectionReason}`, 'lora_preview_rejected');
+
+		return res.status(200).json({ status: 'success', message: `Submission for ${loraId} rejected.` });
+
+	} catch (error) {
+		console.error('Error rejecting Lora preview:', error);
+		res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+	}
+
+})
+
+
+app.post('/admin/lora-preview-moderation/approve', async (req, res) => {
+	try {
+		let { accountId, loraId } = req.body;
+
+		// Check if the user exists:
+		let userProfile = await mongolib.getSchemaDocumentOnce("userProfile", {
+			accountId: accountId
+		});
+
+		if (!userProfile) {
+			return res.status(404).json({ status: 'error', message: 'User not found' });
+		}
+
+		// Check if the lora exists:
+		let lora = modifiedCachedYAMLData[loraId.split('-')[0]]?.[loraId];
+
+		if (!lora) {
+			return res.status(404).json({ status: 'error', message: 'Lora not found' });
+		}
+
+		// Fetch the submission to get the base64Image
+		const submission = await mongolib.getSchemaDocumentOnce("generatorLoraPreviewSubmission", {
+			accountId: accountId,
+			loraId: loraId
+		});
+
+		if (!submission) {
+			return res.status(404).json({ status: 'error', message: 'Submission not found' });
+		}
+
+		// save the image to the loraimages folder, using the pdxl or illustrious etc etc in the lora name to determine the folder, and the FULL lora name to determine the filename:
+		// example filename and structure: loraimages/illustrious/style/style-illustriousabstractpurple.png
+		
+		// Extract category from loraId (part before first dash)
+		const category = loraId.split('-')[0];
+		
+		// Extract model type from loraId (part after first dash, before any other identifiers)
+		const loraIdParts = loraId.split('-');
+		let modelType = ''; // default fallback
+		if (loraIdParts.length > 1) {
+			const secondPart = loraIdParts[1].toLowerCase();
+			if (secondPart.startsWith('illustrious')) {
+				modelType = 'illustrious';
+			} else if (secondPart.startsWith('pdxl') || secondPart.startsWith('pony')) {
+				modelType = 'pdxl';
+			} else if (secondPart.startsWith('flux')) {
+				modelType = 'flux';
+			}
+		}
+		
+		const loraImageFilename = `${loraId}.png`;
+		let loraImagePath;
+		if (modelType === '') {
+			loraImagePath = path.join(__dirname, 'loraimages', category, loraImageFilename);
+		} else {
+			loraImagePath = path.join(__dirname, 'loraimages', modelType, category, loraImageFilename);
+		}
+
+		console.log(`Saving lora image to ${loraImagePath}`);
+		fs.mkdirSync(path.dirname(loraImagePath), { recursive: true });
+		
+		// Convert base64 to buffer and save
+		const imageBuffer = Buffer.from(submission.base64Image, 'base64');
+		fs.writeFileSync(loraImagePath, imageBuffer);
+		console.log(`Lora image saved to ${loraImagePath}`);
+
+		// send a notification to the user:
+		await mongolib.createUserNotification(accountId, `Your Lora preview submission for <strong>${loraId}</strong> has been approved, 333 Credits have been added to your account.`, 'lora_preview_approved');
+
+		// add 500 credits to the user:
+		await mongolib.modifyUserCredits(accountId, 333, '+', `Lora preview approved. 333 credits added.`);
+
+		// delete the submission:
+		await mongolib.deleteSchemaDocument("generatorLoraPreviewSubmission", {
+			accountId: accountId,
+			loraId: loraId
+		});
+
+		return res.status(200).json({ status: 'success', message: `Submission for ${loraId} approved.` });
+
+	} catch (error) {
+		console.error('Error approving Lora preview:', error);
+		res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+	}
+})
+
 
 
 

@@ -7,7 +7,7 @@ const userRedeemSchema = new Schema({
     variable: { type: String, required: true },
     redeemCount: { type: Number, required: true },
     maxRedeems: { type: Number, required: true },
-    expires: { type: String, required: true },
+    expires: { type: String, required: false },
     type: { type: String, required: true, default: 'credits' },
     usersRedeemed: { type: Array, required: true, default: [] },
     oneTimeUse: { type: Boolean, required: true, default: true },

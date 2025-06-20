@@ -43,6 +43,7 @@ const settingsSchema = new Schema({
     misc_generationReadyBeep: { type: Boolean, default: true },
     booru_tag_blacklist: { type: String, default: "" },
     user_bio: { type: String, default: "" },
+    profile_background_color: { type: String, default: "#4875b4" },
 })
 
 const userProfileSchema = new Schema({

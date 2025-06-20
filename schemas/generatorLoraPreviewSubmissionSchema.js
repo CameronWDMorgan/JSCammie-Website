@@ -7,6 +7,7 @@ const generatorLoraPreviewSubmissionSchema = new Schema({
 	status: { type: String, required: false, default: "pending" },
 	timestamp: { type: String, required: true },
 	loraId: { type: String, required: true },
+	prompt: { type: String, required: false, default: "" },
 })
 
 const name = "generatorLoraPreviewSubmission"

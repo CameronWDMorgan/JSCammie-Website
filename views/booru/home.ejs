@@ -144,17 +144,19 @@
             border-radius: 10px;
             margin-bottom: 20px;
             border: 1px solid rgba(100, 100, 255, 0.3);
+            background-color: rgba(0, 0, 0, 0.05);
         }
 
         .autoCompleteDropdown summary {
             cursor: pointer;
-            background-color: rgba(100, 100, 255, 0.3);
+            background-color: rgba(100, 100, 255, 0.2);
             border-radius: 10px;
             padding: 4px
         }
 
         .autoCompleteDropdown:hover {
             border: 1px solid rgba(255, 255, 255, 0.7);
+            background-color: rgba(0, 0, 0, 0.1);
         }
 
         </style>
@@ -221,11 +223,12 @@
                 border-radius: 10px;
                 margin-bottom: 20px;
                 border: 1px solid rgba(100, 100, 255, 0.3);
+                background-color: rgba(0, 0, 0, 0.05);
             }
 
             .moreInfoDropdown summary {
                 cursor: pointer;
-                background-color: rgba(100, 100, 255, 0.3);
+                background-color: rgba(100, 100, 255, 0.2);
                 border-radius: 10px;
                 padding: 4px
             }
@@ -235,7 +238,7 @@
             }
 
             .moreInfoDropdown:hover {
-                background-color: rgba(100, 100, 255, 0.3);
+                background-color: rgba(100, 100, 255, 0.15);
             }
             
 
@@ -837,9 +840,9 @@
 
                 // new pagination code similar to the bottom one but has the ability to skip 15 pages forward and backward:
                 splitUrl = window.location.href.split("?page=")
-                pageNumber = splitUrl[1].split("&")[0]
+                pageNumber = splitUrl[1] ? splitUrl[1].split("&")[0] : "1"
 
-                let page = parseInt(pageNumber)
+                let page = parseInt(pageNumber) || 1
 
                 let paginationDiv = document.createElement("div")
 

@@ -159,7 +159,12 @@ function booruSearchInitialize(settingsMode=false) {
         }
 
         let sortQuery = urlParams.get("sort");
-        if (sortQuery) {
+        let followingQuery = urlParams.get("following");
+        
+        // If following=true is in URL, set sort to following
+        if (followingQuery === 'true') {
+            document.getElementById("searchSorting").value = "following";
+        } else if (sortQuery) {
             document.getElementById("searchSorting").value = sortQuery;
         } else {
             document.getElementById("searchSorting").value = "trending";
@@ -169,7 +174,15 @@ function booruSearchInitialize(settingsMode=false) {
             let safetyQuery = safetyArray.join(",");
             let searchValue = searchInput.value;
             let sortQuery = searchSorting.value;
-            window.location.href = `https://www.jscammie.com/booru/?page=1&search=${searchValue}&safety=${safetyQuery}&sort=${sortQuery}`;
+            
+            let url = `https://www.jscammie.com/booru/?page=1&search=${searchValue}&safety=${safetyQuery}&sort=${sortQuery}`;
+            
+            // Add following parameter if following sort is selected
+            if (sortQuery === 'following') {
+                url += '&following=true';
+            }
+            
+            window.location.href = url;
         }
     }
 

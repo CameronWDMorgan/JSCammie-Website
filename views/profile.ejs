@@ -73,6 +73,21 @@
     </div>
 
     <style>
+        /* Custom background color for this profile - override dark/light mode with higher specificity */
+        html body,
+        html body.dark-mode,
+        body.dark-mode html,
+        body[style*="background-color"] {
+            background-color: <%= profileProfile.settings?.profile_background_color || '#4875b4' %> !important;
+            background: <%= profileProfile.settings?.profile_background_color || '#4875b4' %> !important;
+        }
+
+        /* Also override any CSS variables that might be used */
+        :root {
+            --day-bg-solid: <%= profileProfile.settings?.profile_background_color || '#4875b4' %> !important;
+            --dark-bg-solid: <%= profileProfile.settings?.profile_background_color || '#4875b4' %> !important;
+        }
+        
         /* Modal styling */
         .modal {
             display: none; /* Hidden by default */
@@ -116,7 +131,7 @@
             align-items: center;
             margin-bottom: 30px;
             padding: 20px;
-            background-color: rgba(0, 0, 0, 0.2);
+            background-color: rgba(0, 0, 0, 0.1);
             border-radius: 16px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
         }
@@ -148,7 +163,7 @@
 
         #actionButtons button {
             padding: 8px 15px;
-            background-color: rgba(0, 132, 255, 0.6);
+            background-color: rgba(0, 132, 255, 0.4);
             border: 1px solid rgba(0, 132, 255, 0.3);
             border-radius: 8px;
             font-size: 0.9rem;
@@ -157,7 +172,7 @@
         }
 
         #actionButtons button:hover {
-            background-color: rgba(0, 132, 255, 0.8);
+            background-color: rgba(0, 132, 255, 0.6);
             transform: translateY(-2px);
         }
         
@@ -165,7 +180,7 @@
             display: flex;
             justify-content: center;
             margin-bottom: 30px;
-            background-color: rgba(0, 0, 0, 0.2);
+            background-color: rgba(0, 0, 0, 0.1);
             padding: 15px;
             border-radius: 12px;
         }
@@ -176,7 +191,7 @@
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            background-color: rgba(30, 30, 30, 0.7);
+            background-color: rgba(30, 30, 30, 0.5);
             color: white;
             font-weight: bold;
             font-size: 1rem;
@@ -185,12 +200,12 @@
         }
         
         .tab-button:hover {
-            background-color: rgba(60, 60, 60, 0.9);
+            background-color: rgba(60, 60, 60, 0.7);
             transform: translateY(-2px);
         }
         
         .tab-button.active {
-            background-color: rgba(0, 132, 255, 0.7);
+            background-color: rgba(0, 132, 255, 0.5);
             box-shadow: 0 4px 10px rgba(0, 102, 255, 0.3);
         }
 
@@ -404,7 +419,7 @@
             align-items: center;
             margin-bottom: 30px;
             padding: 20px;
-            background-color: rgba(0, 0, 0, 0.2);
+            background-color: rgba(0, 0, 0, 0.1);
             border-radius: 16px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
         }
@@ -436,7 +451,7 @@
 
         #actionButtons button {
             padding: 8px 15px;
-            background-color: rgba(0, 132, 255, 0.6);
+            background-color: rgba(0, 132, 255, 0.4);
             border: 1px solid rgba(0, 132, 255, 0.3);
             border-radius: 8px;
             font-size: 0.9rem;
@@ -445,7 +460,7 @@
         }
 
         #actionButtons button:hover {
-            background-color: rgba(0, 132, 255, 0.8);
+            background-color: rgba(0, 132, 255, 0.6);
             transform: translateY(-2px);
         }
         
@@ -453,7 +468,7 @@
             display: flex;
             justify-content: center;
             margin-bottom: 30px;
-            background-color: rgba(0, 0, 0, 0.2);
+            background-color: rgba(0, 0, 0, 0.1);
             padding: 15px;
             border-radius: 12px;
         }
@@ -464,7 +479,7 @@
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            background-color: rgba(30, 30, 30, 0.7);
+            background-color: rgba(30, 30, 30, 0.5);
             color: white;
             font-weight: bold;
             font-size: 1rem;
@@ -473,12 +488,12 @@
         }
         
         .tab-button:hover {
-            background-color: rgba(60, 60, 60, 0.9);
+            background-color: rgba(60, 60, 60, 0.7);
             transform: translateY(-2px);
         }
         
         .tab-button.active {
-            background-color: rgba(0, 132, 255, 0.7);
+            background-color: rgba(0, 132, 255, 0.5);
             box-shadow: 0 4px 10px rgba(0, 102, 255, 0.3);
         }
 

@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lora Preview Moderation | JSCammie.com</title>
+    <%- include('../../partials/_headerAll') %>
+    <link rel="stylesheet" href="/style.css"> 
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background-colour);
+            color: var(--text-colour);
+            margin: 0;
+            padding: 0;
+            line-height: 1.5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 15px auto;
+            padding: 20px;
+            background-color: var(--highlight-colour);
+            border-radius: 8px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: var(--text-colour);
+            margin-bottom: 25px;
+            font-size: 2em;
+            font-weight: 400;
+        }
+        
+        /* Group styling */
+        .lora-group {
+            margin-bottom: 25px;
+            border: 1px solid var(--border-colour);
+            border-radius: 8px;
+            overflow: hidden;
+            background-color: var(--background-colour);
+            box-shadow: 0 1px 8px rgba(0,0,0,0.05);
+        }
+        
+        .group-header {
+            background: linear-gradient(135deg, var(--darker-background-colour), var(--highlight-colour));
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border-colour);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .group-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: var(--text-colour);
+            margin: 0;
+        }
+        
+        .group-count {
+            background-color: #007bff;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        
+        .group-content {
+            padding: 15px;
+        }
+        
+        .submission-card {
+            background-color: var(--highlight-colour);
+            border: 1px solid var(--border-colour);
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 15px;
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 20px;
+            align-items: start;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .submission-card:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 15px rgba(0,0,0,0.1);
+        }
+        
+        .submission-card:last-child {
+            margin-bottom: 0;
+        }
+        
+        .submission-info {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+        
+        .info-item {
+            background-color: var(--background-colour);
+            padding: 8px 12px;
+            border-radius: 5px;
+            border: 1px solid var(--border-colour);
+        }
+        
+        .info-item strong {
+            display: block;
+            color: var(--text-colour);
+            font-weight: 600;
+            margin-bottom: 3px;
+            font-size: 0.8em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .info-item span {
+            color: var(--text-colour);
+            font-size: 0.9em;
+        }
+        
+        .prompt-section {
+            background-color: var(--darker-background-colour);
+            border-radius: 6px;
+            border: 1px solid var(--border-colour);
+            padding: 12px;
+        }
+        
+        .prompt-label {
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--text-colour);
+            font-size: 0.9em;
+        }
+        
+        .prompt-text {
+            color: var(--text-colour);
+            word-wrap: break-word;
+            line-height: 1.4;
+            font-style: italic;
+            background-color: var(--background-colour);
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid var(--border-colour);
+            font-size: 0.85em;
+            max-height: 80px;
+            overflow-y: auto;
+        }
+        
+        .prompt-text.empty {
+            opacity: 0.6;
+            text-align: center;
+        }
+        
+        .images-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .image-section {
+            text-align: center;
+        }
+        
+        .image-label {
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--text-colour);
+            padding: 4px 0;
+            background-color: var(--darker-background-colour);
+            border-radius: 4px;
+        }
+        
+        .submission-image, .existing-image {
+            width: 100%;
+            max-width: 320px;
+            border-radius: 6px;
+            border: 1px solid var(--border-colour);
+            max-height: 250px;
+            object-fit: contain;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s ease;
+        }
+        
+        .submission-image:hover, .existing-image:hover {
+            transform: scale(1.02);
+        }
+        
+        .no-existing-image {
+            width: 100%;
+            max-width: 320px;
+            height: 180px;
+            border: 2px dashed var(--border-colour);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-colour);
+            font-style: italic;
+            background-color: var(--background-colour);
+            margin: 0 auto;
+            font-size: 0.9em;
+        }
+        
+        .actions {
+            grid-column: 1 / -1;
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+            align-items: center;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-colour);
+        }
+        
+        .actions button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            color: white;
+            font-size: 0.9em;
+        }
+        
+        .accept-btn {
+            background: linear-gradient(135deg, #28a745, #20c997);
+        }
+        
+        .accept-btn:hover {
+            background: linear-gradient(135deg, #218838, #1ab394);
+            transform: translateY(-1px);
+        }
+        
+        .reject-btn {
+            background: linear-gradient(135deg, #dc3545, #fd7e14);
+        }
+        
+        .reject-btn:hover {
+            background: linear-gradient(135deg, #c82333, #e8590c);
+            transform: translateY(-1px);
+        }
+        
+        .rejection-reason {
+            flex-grow: 1;
+            padding: 8px 12px;
+            border-radius: 5px;
+            border: 1px solid var(--border-colour);
+            background-color: var(--background-colour);
+            color: var(--text-colour);
+            font-size: 0.9em;
+            transition: border-color 0.3s ease;
+        }
+        
+        .rejection-reason:focus {
+            border-color: #007bff;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.1);
+        }
+        
+        .rejection-reason::placeholder {
+            color: var(--text-colour);
+            opacity: 0.6;
+        }
+        
+        .no-submissions {
+            text-align: center;
+            font-size: 1.2em;
+            color: var(--text-colour);
+            padding: 40px;
+            background-color: var(--background-colour);
+            border-radius: 8px;
+            border: 2px dashed var(--border-colour);
+        }
+        
+        .user-link {
+            color: #007bff;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s ease;
+        }
+        
+        .user-link:hover {
+            color: #0056b3;
+            text-decoration: underline;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 1000px) {
+            .submission-card {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .images-container {
+                flex-direction: row;
+                justify-content: space-around;
+            }
+            
+            .image-section {
+                flex: 1;
+                max-width: 250px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                padding: 15px;
+            }
+            
+            .group-header {
+                flex-direction: column;
+                gap: 8px;
+                text-align: center;
+            }
+            
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .images-container {
+                flex-direction: column;
+            }
+            
+            .actions {
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            .actions button {
+                width: 100%;
+            }
+        }
+        
+        /* Dark mode specific fixes */
+        body.dark-mode .container {
+            background-color: var(--highlight-colour);
+        }
+        body.dark-mode .submission-card {
+            background-color: var(--highlight-colour);
+        }
+        body.dark-mode .rejection-reason {
+            background-color: var(--background-colour);
+            color: var(--text-colour);
+        }
+        body.dark-mode .no-existing-image {
+            background-color: var(--background-colour);
+            color: var(--text-colour);
+        }
+        body.dark-mode .prompt-section {
+            background-color: var(--darker-background-colour);
+            border-color: var(--border-colour);
+        }
+    </style>
+</head>
+<body>
+    <%- include('../../partials/_navigation') %>
+    <div class="container mt-5 pt-5">
+        <h1>Lora Preview Submissions</h1>
+        <% if (submissions.length > 0) { %>
+            <%
+            // Group submissions by lora ID
+            const groupedSubmissions = {};
+            submissions.forEach(submission => {
+                const loraId = submission.loraId;
+                if (!groupedSubmissions[loraId]) {
+                    groupedSubmissions[loraId] = [];
+                }
+                groupedSubmissions[loraId].push(submission);
+            });
+            %>
+            <% Object.keys(groupedSubmissions).forEach(loraId => { %>
+                <div class="lora-group" data-lora-id="<%= loraId %>">
+                    <div class="group-header">
+                        <h2 class="group-title">
+                            <%= groupedSubmissions[loraId][0].loraDetails ? groupedSubmissions[loraId][0].loraDetails.name : 'Unknown Lora' %> 
+                            <small style="opacity: 0.7; font-weight: 400;">(ID: <%= loraId %>)</small>
+                        </h2>
+                        <div class="group-count">
+                            <%= groupedSubmissions[loraId].length %> submission<%= groupedSubmissions[loraId].length !== 1 ? 's' : '' %>
+                        </div>
+                    </div>
+                    <div class="group-content">
+                        <% groupedSubmissions[loraId].forEach(submission => { %>
+                            <div class="submission-card" id="submission-<%= submission._id %>">
+                                <div class="submission-info">
+                                    <div class="info-grid">
+                                        <div class="info-item">
+                                            <strong>Submission ID</strong>
+                                            <span><%= submission._id %></span>
+                                        </div>
+                                        <div class="info-item">
+                                            <strong>User</strong>
+                                            <span>
+                                                <a href="/profile/<%= submission.account.accountId %>" target="_blank" class="user-link">
+                                                    <%= submission.account.username %> (<%= submission.account.accountId %>)
+                                                </a>
+                                            </span>
+                                        </div>
+                                        <div class="info-item">
+                                            <strong>Submitted At</strong>
+                                            <span><%= new Date(parseInt(submission.timestamp)).toLocaleString() %></span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="prompt-section">
+                                        <div class="prompt-label">Generation Prompt</div>
+                                        <div class="prompt-text <%= submission.prompt ? '' : 'empty' %>">
+                                            <%= submission.prompt || 'No prompt available' %>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="images-container">
+                                    <div class="image-section">
+                                        <div class="image-label">Submitted Preview</div>
+                                        <img src="data:image/png;base64,<%= submission.base64Image %>" alt="Lora Preview" class="submission-image">
+                                    </div>
+                                    <div class="image-section">
+                                        <div class="image-label">Current Lora Image</div>
+                                        <% if (submission.existingLoraImageUrl) { %>
+                                            <img src="<%= submission.existingLoraImageUrl %>" alt="Current Lora Image" class="existing-image">
+                                        <% } else { %>
+                                            <div class="no-existing-image">No existing image</div>
+                                        <% } %>
+                                    </div>
+                                </div>
+                                <div class="actions">
+                                    <button class="accept-btn" onclick="handleAction('<%= submission._id %>', 'accept')">Accept</button>
+                                    <button class="reject-btn" onclick="handleAction('<%= submission._id %>', 'reject', '<%= submission._id %>')">Reject</button>
+                                    <input type="text" class="rejection-reason" id="reason-<%= submission._id %>" placeholder="Rejection reason (if rejecting)">
+                                </div>
+                            </div>
+                        <% }); %>
+                    </div>
+                </div>
+            <% }); %>
+        <% } else { %>
+            <p class="no-submissions">No pending submissions.</p>
+        <% } %>
+    </div>
+
+    <script>
+        async function handleAction(submissionId, action, reasonInputIdSuffix) {
+            let reason = null;
+            if (action === 'reject') {
+                reason = document.getElementById(`reason-${reasonInputIdSuffix}`).value;
+                if (!reason) {
+                    globalAlert({ message: "Rejection reason is required.", question: false });
+                    return;
+                }
+            }
+
+            // Get the submission data from the card
+            const submissionCard = document.getElementById(`submission-${submissionId}`);
+            const accountId = submissionCard.querySelector('a[href^="/profile/"]').href.split('/').pop();
+            const loraGroup = submissionCard.closest('.lora-group');
+            const loraId = loraGroup.dataset.loraId;
+
+            // If accepting, get all OTHER submissions in the same group BEFORE processing
+            let otherSubmissions = [];
+            if (action === 'accept') {
+                const groupContent = loraGroup.querySelector('.group-content');
+                const allCards = groupContent.querySelectorAll('.submission-card');
+                
+                // Collect info for all other submissions (excluding current one)
+                allCards.forEach(card => {
+                    if (card.id !== `submission-${submissionId}`) {
+                        const otherSubmissionId = card.id.replace('submission-', '');
+                        const otherAccountId = card.querySelector('a[href^="/profile/"]').href.split('/').pop();
+                        otherSubmissions.push({
+                            submissionId: otherSubmissionId,
+                            accountId: otherAccountId,
+                            card: card
+                        });
+                    }
+                });
+                
+                console.log(`Found ${otherSubmissions.length} other submissions to auto-reject`);
+            }
+
+            const endpoint = action === 'accept' ? '/admin/lora-preview-moderation/approve' : '/admin/lora-preview-moderation/reject';
+            
+            try {
+                globalAlert({ message: `Processing ${action}...`, question: false, type: 'info' });
+                
+                const requestBody = action === 'reject' 
+                    ? { accountId, loraId, rejectionReason: reason }
+                    : { accountId, loraId };
+
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    // Remove the current card from the UI
+                    submissionCard.remove();
+                    
+                    // If accepting, auto-reject all other submissions in the same group
+                    if (action === 'accept' && otherSubmissions.length > 0) {
+                        globalAlert({ message: `Auto-rejecting ${otherSubmissions.length} other submissions...`, question: false, type: 'info' });
+                        
+                        for (const otherSubmission of otherSubmissions) {
+                            try {
+                                console.log(`Auto-rejecting submission ${otherSubmission.submissionId}`);
+                                
+                                const rejectResponse = await fetch('/admin/lora-preview-moderation/reject', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    },
+                                    body: JSON.stringify({
+                                        accountId: otherSubmission.accountId,
+                                        loraId: loraId,
+                                        rejectionReason: 'Auto-rejected: Another submission was accepted for this Lora'
+                                    })
+                                });
+                                
+                                const rejectResult = await rejectResponse.json();
+                                if (rejectResult.status === 'success') {
+                                    otherSubmission.card.remove();
+                                    console.log(`Successfully auto-rejected submission ${otherSubmission.submissionId}`);
+                                } else {
+                                    console.error(`Failed to auto-reject submission ${otherSubmission.submissionId}:`, rejectResult.message);
+                                }
+                            } catch (error) {
+                                console.error(`Error auto-rejecting submission ${otherSubmission.submissionId}:`, error);
+                            }
+                        }
+                        
+                        globalAlert({ message: `Accepted submission and auto-rejected ${otherSubmissions.length} others in the group`, question: false, type: 'success' });
+                    } else {
+                        globalAlert({ message: result.message, question: false, type: 'success' });
+                    }
+                    
+                    // Update the count or remove group if empty
+                    const groupContent = loraGroup.querySelector('.group-content');
+                    const remainingCards = groupContent.querySelectorAll('.submission-card').length;
+                    const countElement = loraGroup.querySelector('.group-count');
+                    
+                    if (remainingCards === 0) {
+                        // Remove entire group if no submissions left
+                        loraGroup.remove();
+                        if (document.querySelectorAll('.lora-group').length === 0) {
+                            document.querySelector('.container').innerHTML += '<p class="no-submissions">No pending submissions.</p>';
+                        }
+                    } else {
+                        // Update count
+                        countElement.textContent = `${remainingCards} submission${remainingCards !== 1 ? 's' : ''}`;
+                    }
+                } else {
+                    globalAlert({ message: `Error: ${result.message}`, question: false });
+                }
+            } catch (error) {
+                console.error(`Error during ${action}:`, error);
+                globalAlert({ message: `An unexpected error occurred: ${error.toString()}`, question: false });
+            }
+        }
+    </script>
+</body>
+</html> 

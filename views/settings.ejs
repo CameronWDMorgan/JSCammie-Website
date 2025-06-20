@@ -27,350 +27,742 @@
     </div>
 
     <style>
+        .settings-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .settings-section {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .settings-section h2 {
+            color: #4caf50;
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            border-bottom: 2px solid #4caf50;
+            padding-bottom: 10px;
+        }
+        
+        .settings-section h3 {
+            color: #8bc34a;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+        
         button {
-            background: #4caf50;
+            background: linear-gradient(135deg, #4caf50, #45a049);
             color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
+            padding: 12px 24px;
+            border-radius: 8px;
             cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
         }
+        
         button:hover {
-            background: #45a049;
+            background: linear-gradient(135deg, #45a049, #3d8b40);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
         }
-        details {
-            margin-top: 20px;
-        }
-        summary {
-            cursor: pointer;
-            padding: 10px;
+        
+        input[type="file"], input[type="text"], textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
             background: rgba(0, 0, 0, 0.3);
-            border-radius: 5px;
+            color: white;
+            font-size: 14px;
+            margin-bottom: 15px;
+            transition: border-color 0.3s ease;
         }
-        summary:hover {
-            background: rgba(139, 255, 133, 0.279);
+        
+        input[type="file"]:focus, input[type="text"]:focus, textarea:focus {
+            outline: none;
+            border-color: #4caf50;
+            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
         }
-        p {
+        
+        .progress-container {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 15px 0;
+            height: 8px;
+        }
+        
+        .progress-bar {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #4caf50, #8bc34a);
+            transition: width 0.3s ease;
+        }
+        
+        .status-message {
+            padding: 10px;
+            border-radius: 6px;
             margin-top: 10px;
+            font-weight: 500;
+        }
+        
+        .status-message.success {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4caf50;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+        
+        .status-message.error {
+            background: rgba(244, 67, 54, 0.2);
+            color: #f44336;
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+        
+        .notification-grid {
+            display: grid;
+            gap: 15px;
+        }
+        
+        .notification-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .notification-item:nth-child(even) {
+            background: rgba(255, 255, 255, 0.08);
+        }
+        
+        .notification-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 500;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 24px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+            margin: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.2);
+            transition: 0.4s;
+            border-radius: 24px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: #4caf50;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        
+        .tooltip {
+            cursor: help;
+            font-size: 16px;
+            color: #4caf50;
+            transition: color 0.3s ease;
+        }
+        
+        .tooltip:hover {
+            color: #8bc34a;
+        }
+        
+        .tooltipText {
+            visibility: hidden;
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s;
+            max-width: 200px;
+        }
+        
+        .tooltip:hover .tooltipText {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        .search-section {
+            position: relative;
+            margin-bottom: 250px; /* Add space for dropdown */
+        }
+        
+        .autoCompleteDropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.95);
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+        }
+        
+        .autoCompleteDropdown[open] {
+            animation: dropdownFadeIn 0.2s ease-out;
+        }
+        
+        @keyframes dropdownFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Ensure the blacklist section has enough space */
+        .settings-section:has(.search-section) {
+            padding-bottom: 280px;
+        }
+        
+        .page-title {
+            text-align: center;
+            color: #4caf50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .page-subtitle {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 40px;
+            font-size: 1.1em;
+        }
+        
+        .color-picker-section {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .color-picker-section label {
+            font-weight: 600;
+            color: #8bc34a;
+            font-size: 1.1em;
+        }
+        
+        .color-input-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .color-input-group input[type="color"] {
+            width: 60px;
+            height: 40px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            cursor: pointer;
+            background: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .color-input-group input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 0;
+            border-radius: 6px;
+        }
+        
+        .color-input-group input[type="color"]::-webkit-color-swatch {
+            border: none;
+            border-radius: 6px;
+        }
+        
+        .color-input-group input[type="text"] {
+            width: 120px;
+            font-family: monospace;
+            text-transform: uppercase;
+        }
+        
+        .color-input-group button {
+            padding: 8px 16px;
+            font-size: 0.9em;
+            background: linear-gradient(135deg, #6c757d, #5a6268);
+            margin: 0;
+        }
+        
+        .color-input-group button:hover {
+            background: linear-gradient(135deg, #5a6268, #495057);
         }
     </style>
 
-    <div class="round-frosted page-content mw75-dynamic" style="padding: 40px; justify-content: center;">
-        <h1>Settings</h1>
-        <p>Change your settings here.</p>
-        <div>
-            <details>
-                <summary>Change Avatar</summary>
-                <h2>Change Avatar</h2>
-                <h2>MAKE SURE AVATARS ARE SFW!</h2>
-                <input type="file" id="avatar" name="avatar" accept="image/*" required>
-                <button id="avatarUploadButton">Upload</button>
-                <div id="avatarProgressContainer" style="width: 100%; background: #f3f3f3; border-radius: 5px; overflow: hidden; margin-top: 10px;">
-                    <div id="avatarProgressBar" style="width: 0%; height: 20px; background: #4caf50;"></div>
-                </div>
-                <p id="avatarStatusMessage"></p>
-            </details>
+    <div class="round-frosted page-content mw75-dynamic settings-container">
+        <h1 class="page-title">Settings</h1>
+        <p class="page-subtitle">Customize your JSCammie experience</p>
+        
+        <!-- Avatar Settings -->
+        <div class="settings-section">
+            <h2>🖼️ Avatar Settings</h2>
+            <h3>Change Your Profile Picture</h3>
+            <p style="color: #f44336; font-weight: bold; margin-bottom: 15px;">⚠️ MAKE SURE AVATARS ARE SFW!</p>
+            <input type="file" id="avatar" name="avatar" accept="image/*" required>
+            <button id="avatarUploadButton">Upload Avatar</button>
+            <div class="progress-container">
+                <div id="avatarProgressBar" class="progress-bar"></div>
+            </div>
+            <p id="avatarStatusMessage" class="status-message"></p>
+        </div>
 
-            <script>
-                document.getElementById('avatarUploadButton').addEventListener('click', function () {
-                    const fileInput = document.getElementById('avatar');
-                    const file = fileInput.files[0];
+        <!-- Bio Settings -->
+        <div class="settings-section">
+            <h2>📝 Profile Bio</h2>
+            <h3>Update Your Profile Description</h3>
+            <form action="/settings/update" method="post" id="bio_form">
+                <input type="hidden" name="setting" value="user_bio">
+                <textarea name="value" rows="4" placeholder="Tell others about yourself..." required><%= userProfile.settings?.user_bio %></textarea>
+                <button type="submit">Update Bio</button>
+                <p id="bioStatusMessage" class="status-message"></p>
+            </form>
+        </div>
 
-                    if (!file) {
-                        document.getElementById('avatarStatusMessage').textContent = 'Please select a file to upload.';
-                        return;
-                    }
-
-                    const xhr = new XMLHttpRequest();
-                    xhr.open('POST', '/settings/avatar', true);
-                    xhr.setRequestHeader('Content-Type', file.type);
-
-                    // Update progress bar
-                    xhr.upload.addEventListener('progress', function (e) {
-                        if (e.lengthComputable) {
-                            const percentComplete = (e.loaded / e.total) * 100;
-                            document.getElementById('avatarProgressBar').style.width = percentComplete + '%';
-                        }
-                    });
-
-                    // Handle the response
-                    xhr.onload = function () {
-                        if (xhr.status >= 200 && xhr.status < 300) {
-                            const response = JSON.parse(xhr.responseText);
-                            document.getElementById('avatarStatusMessage').textContent = 'Avatar uploaded successfully!';
-                            // Optionally, update the user's avatar on the page
-                            // document.getElementById('userAvatar').src = response.avatarUrl;
-                        } else {
-                            document.getElementById('avatarStatusMessage').textContent = 'Error uploading avatar: ' + xhr.responseText;
-                        }
-                        // Reset the progress bar
-                        document.getElementById('avatarProgressBar').style.width = '0%';
-                        fileInput.value = ''; // Clear the file input
-                    };
-
-                    xhr.onerror = function () {
-                        document.getElementById('avatarStatusMessage').textContent = 'Error uploading avatar.';
-                    };
-
-                    xhr.send(file);
-                });
-            </script>
-
-
-
-            <details>
-                <summary>Change Bio</summary>
-                <h2>Change Bio</h2>
-                <form action="/settings/update" method="post" id="bio_form">
-                    <input type="hidden" name="setting" value="user_bio">
-                    <textarea name="value" rows="4" style="width: 100%; margin-top: 10px;" required><%= userProfile.settings?.user_bio %></textarea>
-                    <button type="submit">Update</button>
-                    <p id="bioStatusMessage"></p>
-                </form>
-            </details>
-
-            <script>
-            
-                document.getElementById('bio_form').addEventListener('submit', function (e) {
-                    e.preventDefault();
-
-                    let formData = new FormData(document.getElementById('bio_form'));
-
-                    let data = {
-                        setting: formData.get('setting'),
-                        value: formData.get('value')
-                    }
-
-                    console.log(data);
-
-                    fetch('/settings/update', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(data)
-                    }).then(response => {
-                        if (response.ok) {
-                            document.getElementById('bioStatusMessage').textContent = 'Bio updated successfully!';
-                        } else {
-                            document.getElementById('bioStatusMessage').textContent = 'Error updating bio: ' + response.statusText;
-                        }
-                    }).catch(error => {
-                        document.getElementById('bioStatusMessage').textContent = 'Error updating bio.';
-                    });
-                });
-
-            </script>
-
+        <!-- Booru Blacklist Settings -->
+        <div class="settings-section">
+            <h2>🚫 Content Filter</h2>
+            <h3>Booru Tag Blacklist</h3>
+            <p style="margin-bottom: 20px;">Enter tags here to hide posts containing them from the booru.</p>
             <link rel='stylesheet' href='/booruStyle.css'/>
+            <div class="search-section">
+                <details id="autoCompleteDropdown" class="autoCompleteDropdown">
+                    <summary>Auto Complete Results</summary>
+                    <div id="searchResultsDiv"></div>
+                </details>
+                <input id="searchInput" type="text" placeholder="Enter tags separated by commas..." />
+                <button id="updateBooruTagBlacklistButton">Update Blacklist</button>
+                <p id="booruBlacklistStatusMessage" class="status-message"></p>
+            </div>
+        </div>
 
-            <details>
-                <summary>Booru Tag Blacklist:</summary>
-                <h2>Booru Tag Blacklist</h2>
-                <p>Enter any tags here to block posts with them from showing up on the booru.</p>
-                <div class="searchDiv">
-                    <details id="autoCompleteDropdown" class="autoCompleteDropdown">
-                        <summary>Auto Complete Results</summary>
-                        <div id="searchResultsDiv"></div>
-                    </details>
-                    <input id="searchInput" type="text" placeholder="Search..." style="width: 100%; padding: 10px; border-radius: 10px; margin-bottom: 20px;" />
-                    <br>
-                    <button id="updateBooruTagBlacklistButton">Update Blacklist</button>
-                    <p id="booruBlacklistStatusMessage"></p>
-                </div>
-
-                <script>
-                    <%- booruSearchScript %>
-
-                    booruSearchInitialize(true)
-
-                    let booruBlacklistUpdateButton = document.getElementById('updateBooruTagBlacklistButton');
-
-                    // firstly set searchInput value to the current blacklist:
-                    console.log("<%= userProfile.settings?.booru_tag_blacklist %>");
-                    document.getElementById('searchInput').value = "<%= userProfile.settings?.booru_tag_blacklist %>";
-
-                    booruBlacklistUpdateButton.addEventListener('click', function () {
-                        let blacklist = document.getElementById('searchInput').value
-                        let data = {
-                            setting: 'booru_tag_blacklist',
-                            value: blacklist
-                        }
-
-                        fetch('/settings/update', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify(data)
-                        }).then(response => {
-                            if (response.ok) {
-                                document.getElementById('searchInput').value = blacklist
-                                document.getElementById('booruBlacklistStatusMessage').textContent = 'Blacklist updated successfully!';
-                            } else {
-                                document.getElementById('booruBlacklistStatusMessage').textContent = 'Error updating blacklist: ' + response.statusText;
-                            }
-                        }).catch(error => {
-                            document.getElementById('booruBlacklistStatusMessage').textContent = 'Error updating blacklist.';
-                        });
-                    });
-
-                </script>
-            
-            </details>
-
-            <style>
-                .notificationSetting1, .notificationSetting2 {
-                    align-items: right;
-                    width: 100%
-                }
-                .notificationSetting1 label, .notificationSetting2 label {
-                    margin-right: 10px;
-                }
-                .notificationSetting1 {
-                    background-color: rgba(0, 0, 0, 0.3);
-                    padding: 10px;
-                }
-                .notificationSetting2 {
-                    background-color: rgba(0, 0, 0, 0.1);
-                    padding: 10px;
-                }
-            </style>
-
-            <details>
-                <summary>Manage Notifications</summary>
-                <h2>Manage Notifications</h2>
-                <div class="notificationSettingsDiv">
-                    <div class="notificationSetting1">
-                        <label>Notify Booru Votes</label>
+        <!-- Notification Settings -->
+        <div class="settings-section">
+            <h2>🔔 Notification Preferences</h2>
+            <h3>Choose What Notifications You Want to Receive</h3>
+            <div class="notification-grid">
+                <div class="notification-item">
+                    <div class="notification-label">
+                        <span>Booru Votes</span>
+                        <span class="tooltip" onclick="showTooltip(this)">❓
+                            <div class="tooltipText">Receive a notification when someone votes on your booru post.</div>
+                        </span>
+                    </div>
+                    <label class="toggle-switch">
                         <input type="checkbox" id="toggle_notification_booruVote" name="toggle_notification_booruVote" <% if (userProfile.settings?.notification_booruVote ?? true) { %>checked<% } %> />
-                        <span class="tooltip" onclick="showTooltip(this)">❓</span>
-                        <div class="tooltipText">Receive a notification when someone votes on your booru post.</div>
-                    </div>
+                        <span class="slider"></span>
+                    </label>
+                </div>
 
-                    <div class="notificationSetting2">
-                        <label>Notify Booru Comments</label>
+                <div class="notification-item">
+                    <div class="notification-label">
+                        <span>Booru Comments</span>
+                        <span class="tooltip" onclick="showTooltip(this)">❓
+                            <div class="tooltipText">Receive a notification when someone comments on your booru post.</div>
+                        </span>
+                    </div>
+                    <label class="toggle-switch">
                         <input type="checkbox" id="toggle_notification_booruComment" name="toggle_notification_booruComment" <% if (userProfile.settings?.notification_booruComment ?? true) { %>checked<% } %> />
-                        <span class="tooltip" onclick="showTooltip(this)">❓</span>
-                        <div class="tooltipText">Receive a notification when someone comments on your booru post.</div>
-                    </div>
+                        <span class="slider"></span>
+                    </label>
+                </div>
 
-                    <div class="notificationSetting1">
-                        <label>Notify Booru Ratings</label>
+                <div class="notification-item">
+                    <div class="notification-label">
+                        <span>Booru Ratings</span>
+                        <span class="tooltip" onclick="showTooltip(this)">❓
+                            <div class="tooltipText">Receive a notification when a moderator/jscammie rates your booru post.</div>
+                        </span>
+                    </div>
+                    <label class="toggle-switch">
                         <input type="checkbox" id="toggle_notification_booruRating" name="toggle_notification_booruRating" <% if (userProfile.settings?.notification_booruRating ?? true) { %>checked<% } %> />
-                        <span class="tooltip" onclick="showTooltip(this)">❓</span>
-                        <div class="tooltipText">Receive a notification when a moderator/jscammie rates your booru post.</div>
-                    </div>
+                        <span class="slider"></span>
+                    </label>
+                </div>
 
-                    <div class="notificationSetting2">
-                        <label>Notify Suggestion Promotions</label>
+                <div class="notification-item">
+                    <div class="notification-label">
+                        <span>Suggestion Promotions</span>
+                        <span class="tooltip" onclick="showTooltip(this)">❓
+                            <div class="tooltipText">Receive a notification when a suggestion you made is promoted to a booru post.</div>
+                        </span>
+                    </div>
+                    <label class="toggle-switch">
                         <input type="checkbox" id="toggle_notification_suggestionPromoted" name="toggle_notification_suggestionPromoted" <% if (userProfile.settings?.notification_suggestionPromoted ?? true) { %>checked<% } %> />
-                        <span class="tooltip" onclick="showTooltip(this)">❓</span>
-                        <div class="tooltipText">Receive a notification when a suggestion you made is promoted to a booru post.</div>
-                    </div>
+                        <span class="slider"></span>
+                    </label>
+                </div>
 
-                    <div class="notificationSetting1">
-                        <label>Notify Generator Credit Spends</label>
+                <div class="notification-item">
+                    <div class="notification-label">
+                        <span>Generator Credit Spends</span>
+                        <span class="tooltip" onclick="showTooltip(this)">❓
+                            <div class="tooltipText">Receive a notification when you spend credits on the generator.</div>
+                        </span>
+                    </div>
+                    <label class="toggle-switch">
                         <input type="checkbox" id="toggle_notification_generatorSpentCredits" name="toggle_notification_generatorSpentCredits" <% if (userProfile.settings?.notification_generatorSpentCredits ?? true) { %>checked<% } %> />
-                        <span class="tooltip" onclick="showTooltip(this)">❓</span>
-                        <div class="tooltipText">Receive a notification when you spend credits on the generator.</div>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+            <p id="notification_StatusMessage" class="status-message"></p>
+        </div>
+
+        <!-- Appearance Settings -->
+        <div class="settings-section">
+            <h2>🎨 Appearance Settings</h2>
+            <h3>Profile Page Customization</h3>
+            <div class="color-picker-section">
+                <label for="profileBackgroundColor">Profile Background Color</label>
+                <div class="color-input-group">
+                    <input type="color" id="profileBackgroundColor" name="profileBackgroundColor" value="<%= userProfile.settings?.profile_background_color || '#4875b4' %>" />
+                    <input type="text" id="profileBackgroundColorText" placeholder="#4875b4" value="<%= userProfile.settings?.profile_background_color || '#4875b4' %>" />
+                    <button type="button" id="resetBackgroundColor">Reset to Default</button>
+                </div>
+                <p style="font-size: 0.9rem; color: rgba(255, 255, 255, 0.7); margin-top: 10px;">Choose a custom background color for your profile page. This will be visible to other users when they visit your profile.</p>
+                <button id="updateBackgroundColorButton">Update Background Color</button>
+                <p id="backgroundColorStatusMessage" class="status-message"></p>
+            </div>
+        </div>
+
+        <!-- Miscellaneous Settings -->
+        <div class="settings-section">
+            <h2>⚙️ General Settings</h2>
+            <h3>Additional Preferences</h3>
+            <div class="notification-grid">
+                <div class="notification-item">
+                    <div class="notification-label">
+                        <span>Generation Ready Beep</span>
+                        <span class="tooltip" onclick="showTooltip(this)">❓
+                            <div class="tooltipText">Enable a beep sound when the generator is ready to generate a new suggestion.</div>
+                        </span>
                     </div>
-
-
-                    <div id="notification_StatusMessage"></div>
-                </div>
-                
-            </details>
-
-            <script>
-            
-                document.querySelector('.notificationSettingsDiv').addEventListener('change', function (e) {
-                    let target = e.target;
-                    let setting = target.id;
-                    let value = target.checked;
-
-                    let data = {
-                        setting: setting,
-                        value: value
-                    }
-
-                    fetch('/settings/update', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(data)
-                    }).then(response => {
-                        if (response.ok) {
-                            document.getElementById("notification_StatusMessage").textContent = 'Setting updated successfully!';
-                        } else {
-                            document.getElementById("notification_StatusMessage").textContent = 'Error updating setting: ' + response.statusText;
-                        }
-                    }).catch(error => {
-                        document.getElementById("notification_StatusMessage").textContent = 'Error updating setting.';
-                    });
-                });
-
-            </script>
-
-
-            <details>
-            
-                <!-- toggle the generation ready beep: -->
-                <summary>Manage Miscellaneous Settings</summary>
-
-                <h2>Manage Miscellaneous Settings</h2>
-
-                <div class="miscellaneousSettingsDiv">
-                    <div class="miscellaneousSetting1">
-                        <label>Enable Generation Ready Beep</label>
+                    <label class="toggle-switch">
                         <input type="checkbox" id="toggle_misc_generationReadyBeep" name="toggle_misc_generationReadyBeep" <% if (userProfile.settings?.misc_generationReadyBeep?? true) { %>checked<% } %> />
-                        <span class="tooltip" onclick="showTooltip(this)">❓</span>
-                        <div class="tooltipText">Enable a beep sound when the generator is ready to generate a new suggestion.</div>
+                        <span class="slider"></span>
+                    </label>
                 </div>
-
-                <div id="misc_StatusMessage"></div>
-            
-            </details>
-
-            <script>
-            
-                document.querySelector('.miscellaneousSettingsDiv').addEventListener('change', function (e) {
-                    let target = e.target;
-                    let setting = target.id;
-                    let value = target.checked;
-
-                    let data = {
-                        setting: setting,
-                        value: value
-                    }
-
-                    fetch('/settings/update', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(data)
-                    }).then(response => {
-                        if (response.ok) {
-                            document.getElementById("misc_StatusMessage").textContent = 'Setting updated successfully!';
-                        } else {
-                            document.getElementById("misc_StatusMessage").textContent = 'Error updating setting: ' + response.statusText;
-                        }
-                    }).catch(error => {
-                        document.getElementById("misc_StatusMessage").textContent = 'Error updating setting.';
-                    });
-                });
-            
-            </script>
-
-            
-
+            </div>
+            <p id="misc_StatusMessage" class="status-message"></p>
         </div>
     </div>
 
-    
+    <script>
+        // Avatar Upload Script
+        document.getElementById('avatarUploadButton').addEventListener('click', function () {
+            const fileInput = document.getElementById('avatar');
+            const file = fileInput.files[0];
+            const statusMessage = document.getElementById('avatarStatusMessage');
 
+            if (!file) {
+                statusMessage.textContent = 'Please select a file to upload.';
+                statusMessage.className = 'status-message error';
+                return;
+            }
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/settings/avatar', true);
+            xhr.setRequestHeader('Content-Type', file.type);
+
+            // Update progress bar
+            xhr.upload.addEventListener('progress', function (e) {
+                if (e.lengthComputable) {
+                    const percentComplete = (e.loaded / e.total) * 100;
+                    document.getElementById('avatarProgressBar').style.width = percentComplete + '%';
+                }
+            });
+
+            // Handle the response
+            xhr.onload = function () {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    statusMessage.textContent = 'Avatar uploaded successfully!';
+                    statusMessage.className = 'status-message success';
+                } else {
+                    statusMessage.textContent = 'Error uploading avatar: ' + xhr.responseText;
+                    statusMessage.className = 'status-message error';
+                }
+                // Reset the progress bar
+                document.getElementById('avatarProgressBar').style.width = '0%';
+                fileInput.value = ''; // Clear the file input
+            };
+
+            xhr.onerror = function () {
+                statusMessage.textContent = 'Error uploading avatar.';
+                statusMessage.className = 'status-message error';
+            };
+
+            xhr.send(file);
+        });
+
+        // Bio Update Script
+        document.getElementById('bio_form').addEventListener('submit', function (e) {
+            e.preventDefault();
+            const statusMessage = document.getElementById('bioStatusMessage');
+
+            let formData = new FormData(document.getElementById('bio_form'));
+            let data = {
+                setting: formData.get('setting'),
+                value: formData.get('value')
+            }
+
+            fetch('/settings/update', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            }).then(response => {
+                if (response.ok) {
+                    statusMessage.textContent = 'Bio updated successfully!';
+                    statusMessage.className = 'status-message success';
+                } else {
+                    statusMessage.textContent = 'Error updating bio: ' + response.statusText;
+                    statusMessage.className = 'status-message error';
+                }
+            }).catch(error => {
+                statusMessage.textContent = 'Error updating bio.';
+                statusMessage.className = 'status-message error';
+            });
+        });
+
+        // Booru Search Script
+        <%- booruSearchScript %>
+        booruSearchInitialize(true)
+
+        // Set initial blacklist value
+        document.getElementById('searchInput').value = "<%= userProfile.settings?.booru_tag_blacklist %>";
+
+        document.getElementById('updateBooruTagBlacklistButton').addEventListener('click', function () {
+            const blacklist = document.getElementById('searchInput').value;
+            const statusMessage = document.getElementById('booruBlacklistStatusMessage');
+            
+            let data = {
+                setting: 'booru_tag_blacklist',
+                value: blacklist
+            }
+
+            fetch('/settings/update', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            }).then(response => {
+                if (response.ok) {
+                    document.getElementById('searchInput').value = blacklist;
+                    statusMessage.textContent = 'Blacklist updated successfully!';
+                    statusMessage.className = 'status-message success';
+                } else {
+                    statusMessage.textContent = 'Error updating blacklist: ' + response.statusText;
+                    statusMessage.className = 'status-message error';
+                }
+            }).catch(error => {
+                statusMessage.textContent = 'Error updating blacklist.';
+                statusMessage.className = 'status-message error';
+            });
+        });
+
+        // Notification Settings Script
+        document.querySelector('.notification-grid').addEventListener('change', function (e) {
+            if (e.target.type === 'checkbox') {
+                const statusMessage = document.getElementById("notification_StatusMessage");
+                let setting = e.target.id;
+                let value = e.target.checked;
+
+                let data = {
+                    setting: setting,
+                    value: value
+                }
+
+                fetch('/settings/update', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                }).then(response => {
+                    if (response.ok) {
+                        statusMessage.textContent = 'Setting updated successfully!';
+                        statusMessage.className = 'status-message success';
+                    } else {
+                        statusMessage.textContent = 'Error updating setting: ' + response.statusText;
+                        statusMessage.className = 'status-message error';
+                    }
+                }).catch(error => {
+                    statusMessage.textContent = 'Error updating setting.';
+                    statusMessage.className = 'status-message error';
+                });
+            }
+        });
+
+        // Miscellaneous Settings Script
+        document.querySelector('.settings-section:last-child .notification-grid').addEventListener('change', function (e) {
+            if (e.target.type === 'checkbox') {
+                const statusMessage = document.getElementById("misc_StatusMessage");
+                let setting = e.target.id;
+                let value = e.target.checked;
+
+                let data = {
+                    setting: setting,
+                    value: value
+                }
+
+                fetch('/settings/update', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                }).then(response => {
+                    if (response.ok) {
+                        statusMessage.textContent = 'Setting updated successfully!';
+                        statusMessage.className = 'status-message success';
+                    } else {
+                        statusMessage.textContent = 'Error updating setting: ' + response.statusText;
+                        statusMessage.className = 'status-message error';
+                    }
+                }).catch(error => {
+                    statusMessage.textContent = 'Error updating setting.';
+                    statusMessage.className = 'status-message error';
+                });
+            }
+        });
+
+        // Background Color Settings Script
+        const colorPicker = document.getElementById('profileBackgroundColor');
+        const colorText = document.getElementById('profileBackgroundColorText');
+        const resetButton = document.getElementById('resetBackgroundColor');
+        const updateButton = document.getElementById('updateBackgroundColorButton');
+
+        // Sync color picker and text input
+        colorPicker.addEventListener('input', function() {
+            colorText.value = colorPicker.value.toUpperCase();
+        });
+
+        colorText.addEventListener('input', function() {
+            let value = colorText.value;
+            // Add # if not present
+            if (!value.startsWith('#')) {
+                value = '#' + value;
+            }
+            // Validate hex color
+            if (/^#[0-9A-F]{6}$/i.test(value)) {
+                colorPicker.value = value;
+                colorText.style.borderColor = 'rgba(76, 175, 80, 0.8)';
+            } else {
+                colorText.style.borderColor = 'rgba(244, 67, 54, 0.8)';
+            }
+            colorText.value = value.toUpperCase();
+        });
+
+        // Reset to default color
+        resetButton.addEventListener('click', function() {
+            colorPicker.value = '#4875B4';
+            colorText.value = '#4875B4';
+            colorText.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+        });
+
+        // Update background color
+        updateButton.addEventListener('click', function() {
+            const statusMessage = document.getElementById('backgroundColorStatusMessage');
+            const selectedColor = colorPicker.value;
+
+            // Validate color format
+            if (!/^#[0-9A-F]{6}$/i.test(selectedColor)) {
+                statusMessage.textContent = 'Please enter a valid hex color (e.g., #4875B4)';
+                statusMessage.className = 'status-message error';
+                return;
+            }
+
+            const data = {
+                setting: 'profile_background_color',
+                value: selectedColor
+            };
+
+            fetch('/settings/update', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            }).then(response => {
+                if (response.ok) {
+                    statusMessage.textContent = 'Background color updated successfully!';
+                    statusMessage.className = 'status-message success';
+                } else {
+                    statusMessage.textContent = 'Error updating background color: ' + response.statusText;
+                    statusMessage.className = 'status-message error';
+                }
+            }).catch(error => {
+                statusMessage.textContent = 'Error updating background color.';
+                statusMessage.className = 'status-message error';
+            });
+        });
+
+        // Tooltip functionality
+        function showTooltip(element) {
+            // Toggle tooltip visibility for mobile devices
+            const tooltip = element.querySelector('.tooltipText');
+            if (tooltip) {
+                tooltip.style.visibility = tooltip.style.visibility === 'visible' ? 'hidden' : 'visible';
+                tooltip.style.opacity = tooltip.style.opacity === '1' ? '0' : '1';
+            }
+        }
+    </script>
 
     <!-- get partials/_footer: -->
     <%- include('../partials/_footer') %>

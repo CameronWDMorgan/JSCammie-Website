@@ -14,6 +14,7 @@ const generationLoraSchema = require('./schemas/generationLoraSchema.js');
 const userBooruCommentsSchema = require('./schemas/userBooruCommentsSchema.js');
 const userNotificationSchema = require('./schemas/userNotificationSchema.js');
 const userRedeemSchema = require('./schemas/userRedeemSchema.js');
+const generatorLoraPreviewSubmissionSchema = require('./schemas/generatorLoraPreviewSubmissionSchema.js');
 
 const { Decimal128 } = mongoose.Types;
 
@@ -47,17 +48,13 @@ async function createUserNotification(accountId, message, type) {
 async function modifyUserCredits(accountId, amount, operation, message, testMode=false) {
 	
 	let UserProfile = await getSchemaDocumentOnce('userProfile', {accountId: accountId})
-	if (!UserProfile) {
-		return null
-	}
-	if (UserProfile.status === 'error') {
+	if (UserProfile === null) {
 		return null
 	}
 
-	userProfile = UserProfile.data
-
-	userCreditsBefore = Number(UserProfile.credits)
-	userCreditsAfter = Number(UserProfile.credits)
+	// No need to access .data since UserProfile is already the document
+	let userCreditsBefore = Number(UserProfile.credits)
+	let userCreditsAfter = Number(UserProfile.credits)
 
 	if (operation == '+') {
 		userCreditsAfter += Number(amount)
@@ -93,7 +90,10 @@ async function modifyUserCredits(accountId, amount, operation, message, testMode
 
 	}
 
-	return userCreditsAfter
+	// Return an object with newCredits property to match what index.js expects
+	return {
+		newCredits: userCreditsAfter
+	}
 }
 
 async function modifyUserExp(accountId, amount, operation) {
@@ -104,12 +104,11 @@ async function modifyUserExp(accountId, amount, operation) {
 	// [{"level":1,"exp":0},{"level":2,"exp":138},{"level":3,"exp":345},{"level":4,"exp":621},{"level":5,"exp":966},
 
 	let UserProfile = await getSchemaDocumentOnce('userProfile', {accountId: accountId})
-	if (UserProfile.status === 'error') {
+	if (UserProfile === null) {
 		return null
 	}
 
-	userProfile = UserProfile.data
-
+	// No need to access .data since UserProfile is already the document
 	userExpAfter = Number(UserProfile.exp)
 
 	if (operation == '+') {
@@ -177,6 +176,9 @@ async function getSchemaDocumentOnce(schema, query) {
 				break;
 			case 'userRedeem':
 				document = await userRedeemSchema.findOne(query);
+				break;
+			case 'generatorLoraPreviewSubmission':
+				document = await generatorLoraPreviewSubmissionSchema.findOne(query);
 				break;
 			default:
 				document = null;
@@ -267,6 +269,13 @@ async function getSchemaDocuments(schema, query) {
 					document = await userRedeemSchema.find(query)
 				}
 				break;
+			case 'generatorLoraPreviewSubmission':
+				if (query == {}) {
+					document = await generatorLoraPreviewSubmissionSchema.find({})
+				} else {
+					document = await generatorLoraPreviewSubmissionSchema.find(query)
+				}
+				break;
 			default:
 				document = null
 		}
@@ -316,6 +325,9 @@ async function aggregateSchemaDocuments(schema, query) {
 			case 'userRedeem':
 				documents = await userRedeemSchema.aggregate(query)
 				break;
+			case 'generatorLoraPreviewSubmission':
+				documents = await generatorLoraPreviewSubmissionSchema.aggregate(query)
+				break;
 			default:
 				documents = null
 		}
@@ -364,6 +376,9 @@ async function updateSchemaDocumentOnce(schema, query, update) {
 				break;
 			case 'userRedeem':	
 				await userRedeemSchema.findOneAndUpdate(query, update)
+				break;
+			case 'generatorLoraPreviewSubmission':
+				await generatorLoraPreviewSubmissionSchema.findOneAndUpdate(query, update)
 				break;
 			default:
 				return null
@@ -419,6 +434,9 @@ async function createSchemaDocument(schema, document) {
 			case 'userRedeem':
 				await userRedeemSchema.create(document);
 				break;
+			case 'generatorLoraPreviewSubmission':
+				await generatorLoraPreviewSubmissionSchema.create(document);
+				break;
 			default:
 				console.error(`Invalid schema: ${schema}`);
 				return null
@@ -463,6 +481,9 @@ async function deleteSchemaDocument(schema, query) {
 				break;
 			case 'userRedeem':
 				await userRedeemSchema.findOneAndDelete(query)
+				break;
+			case 'generatorLoraPreviewSubmission':
+				await generatorLoraPreviewSubmissionSchema.findOneAndDelete(query)
 				break;
 			default:
 				return {status: 'error', message: 'Invalid schema'}

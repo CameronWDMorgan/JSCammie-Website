@@ -16,6 +16,190 @@
     gtag('config', 'G-K3KJJKS1R4');
     </script>
     
+    <style>
+        .redeem-form {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            padding: 40px;
+            color: white;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            margin: 20px auto;
+            max-width: 600px;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+            position: relative;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 15px 20px;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .form-group input::placeholder {
+            color: rgba(255,255,255,0.7);
+        }
+        
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            background: rgba(255,255,255,0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        
+        .form-group select option {
+            background: #333;
+            color: white;
+        }
+        
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            margin-left: 5px;
+            cursor: help;
+        }
+        
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: rgba(0,0,0,0.9);
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 12px;
+            font-weight: normal;
+            text-transform: none;
+            letter-spacing: normal;
+        }
+        
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        .submit-btn {
+            background: linear-gradient(45deg, #f093fb 0%, #f5576c 100%);
+            border: none;
+            padding: 18px 40px;
+            border-radius: 50px;
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .submit-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(240, 147, 251, 0.4);
+        }
+        
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .status-message {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-align: center;
+            display: none;
+        }
+        
+        .status-message.success {
+            background: rgba(76, 175, 80, 0.8);
+            color: white;
+        }
+        
+        .status-message.error {
+            background: rgba(244, 67, 54, 0.8);
+            color: white;
+        }
+        
+        .form-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .form-header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #fff, #f093fb);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .form-header p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .redeem-form {
+                margin: 10px;
+                padding: 30px 20px;
+            }
+        }
+        
+        .loading-spinner {
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top: 3px solid #fff;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+    
 </head>
 <body>
 
@@ -26,50 +210,165 @@
         <%- include('../partials/_bannerAdvert') %>
     </div>
 
-    <div class="round-frosted page-content mw50-dynamic" style="padding: 40px; justify-content: center;">
-        <h1>Create Redeem Code</h1>
+    <div class="redeem-form">
+        <div class="form-header">
+            <h1>Create Redeem Code</h1>
+            <p>Generate reward codes for your community members</p>
+        </div>
 
-        <p>Create a redeem code below to give to your users!</p>
+        <form id="redeemForm">
+            <div class="form-group">
+                <label for="code">
+                    Code 
+                    <span class="tooltip">ℹ️
+                        <span class="tooltiptext">Unique identifier for the redeem code. Should be memorable and secure.</span>
+                    </span>
+                </label>
+                <input type="text" id="code" name="code" placeholder="Enter a unique code (e.g., WELCOME2024)" required>
+            </div>
 
-        <form action="/create-redeem-code" method="POST">
-            <input type="text" name="code" placeholder="Enter your code here" required>
-            <input type="text" name="variable" placeholder="Enter your reward here" required>
-            <select name="type" required>
-                <option value="credits">Credits</option>
-                <option value="badges">Badges</option>
-                <option value="items">Items</option>
-            </select>
-            <input type="datetime-local" name="expires" required>
-            <input type="number" name="maxRedeems" placeholder="Max Redeems" required>
-            <button type="submit">Create</button>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="type">
+                        Reward Type
+                        <span class="tooltip">ℹ️
+                            <span class="tooltiptext">Type of reward users will receive when redeeming this code.</span>
+                        </span>
+                    </label>
+                    <select id="type" name="type" required>
+                        <option value="">Select reward type</option>
+                        <option value="credits">Credits</option>
+                        <option value="badges">Badges</option>
+                        <option value="items">Items</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="variable">
+                        Reward Amount
+                        <span class="tooltip">ℹ️
+                            <span class="tooltiptext">The amount or identifier of the reward (e.g., 100 for credits, badge_name for badges).</span>
+                        </span>
+                    </label>
+                    <input type="text" id="variable" name="variable" placeholder="e.g., 100 or badge_premium" required>
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="maxRedeems">
+                        Max Redeems
+                        <span class="tooltip">ℹ️
+                            <span class="tooltiptext">Maximum number of times this code can be used by different users.</span>
+                        </span>
+                    </label>
+                    <input type="number" id="maxRedeems" name="maxRedeems" placeholder="e.g., 100" min="1" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="expires">
+                        Expiration Date
+                        <span class="tooltip">ℹ️
+                            <span class="tooltiptext">When this code will stop working. Leave empty for no expiration.</span>
+                        </span>
+                    </label>
+                    <input type="datetime-local" id="expires" name="expires">
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn" id="submitBtn">
+                Create Redeem Code
+            </button>
         </form>
 
-        <script>
-        
-            document.querySelector('form').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const code = e.target.code.value;
-                const variable = e.target.variable.value;
-                const type = e.target.type.value;
-                const expires = e.target.expires.value;
-                const maxRedeems = e.target.maxRedeems.value;
+        <div id="statusMessage" class="status-message"></div>
+    </div>
+
+    <!-- get partials/_footer: -->
+    <%- include('../partials/_footer') %>
+
+    <script>
+        document.getElementById('redeemForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const statusMessage = document.getElementById('statusMessage');
+            
+            // Get form data
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Basic validation
+            if (!data.code.trim()) {
+                showMessage('Please enter a valid code', 'error');
+                return;
+            }
+            
+            if (!data.variable.trim()) {
+                showMessage('Please enter a reward amount/identifier', 'error');
+                return;
+            }
+            
+            if (data.maxRedeems < 1) {
+                showMessage('Max redeems must be at least 1', 'error');
+                return;
+            }
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="loading-spinner"></span>Creating...';
+            
+            try {
                 const response = await fetch('/create-redeem-code', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ code, variable, type, expires, maxRedeems })
+                    body: JSON.stringify(data)
                 });
-                const data = await response.json();
-                alert(data.message);
-            });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    showMessage('✅ ' + result.message + '! Code: ' + data.code, 'success');
+                    e.target.reset(); // Clear form
+                } else {
+                    showMessage('❌ ' + result.message, 'error');
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('❌ Network error. Please try again.', 'error');
+            } finally {
+                // Reset button state
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Create Redeem Code';
+            }
+        });
         
-        </script>
-
-    </div>
-
-    <!-- get partials/_footer: -->
-    <%- include('../partials/_footer') %>
+        function showMessage(message, type) {
+            const statusMessage = document.getElementById('statusMessage');
+            statusMessage.textContent = message;
+            statusMessage.className = `status-message ${type}`;
+            statusMessage.style.display = 'block';
+            
+            // Auto-hide success messages after 5 seconds
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusMessage.style.display = 'none';
+                }, 5000);
+            }
+        }
+        
+        // Auto-format code input
+        document.getElementById('code').addEventListener('input', function(e) {
+            // Convert to uppercase and remove spaces
+            e.target.value = e.target.value.toUpperCase().replace(/\s/g, '');
+        });
+        
+        // Set minimum date to current date
+        document.getElementById('expires').min = new Date().toISOString().slice(0, 16);
+    </script>
     
 </body>
 </html>
