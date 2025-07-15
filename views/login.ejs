@@ -3,9 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Discord Login | JSCammie.com</title>
+    <title>Login to JSCammie.com - Access Your AI Generator Account</title>
+    <meta name="description" content="Login to your JSCammie.com account to access the free AI image generator, save your creations, and manage your profile.">
+    <meta name="keywords" content="jscammie login, discord login, ai generator account, user login, sign in">
+    <meta name="author" content="JSCammie">
+    
+    <!-- Open Graph meta tags for social media -->
+    <meta property="og:title" content="Login to JSCammie.com - Access Your AI Generator Account">
+    <meta property="og:description" content="Login to your JSCammie.com account to access the free AI image generator, save your creations, and manage your profile.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://jscammie.com/login">
+    <meta property="og:site_name" content="JSCammie.com">
+    
+    <!-- Twitter Card meta tags -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Login to JSCammie.com - Access Your AI Generator Account">
+    <meta name="twitter:description" content="Login to your JSCammie.com account to access the free AI image generator, save your creations, and manage your profile.">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://jscammie.com/login">
+    
     <link rel='stylesheet' href='/style.css' />
     
+    <%- include('../partials/_headerAll') %>
     
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-K3KJJKS1R4"></script>
@@ -21,20 +41,64 @@
 
 
     /* make the button underneath the flex display: */
-        .discord-login-btn {
+        .login-btn {
             display: inline-block;
-            background-color: #7289DA; /* Discord brand color */
             color: white;
-            padding: 10px 20px;
-            border-radius: 5px;
+            padding: 12px 24px;
+            border-radius: 8px;
             text-decoration: none;
             font-size: 16px;
             font-weight: bold;
-            transition: background-color 0.3s ease;
+            transition: all 0.3s ease;
+            margin: 8px;
+            min-width: 200px;
+            text-align: center;
+            border: 2px solid transparent;
+        }
+
+        .discord-login-btn {
+            background-color: #7289DA; /* Discord brand color */
         }
 
         .discord-login-btn:hover {
             background-color: #5b6eae; /* Darker shade for hover effect */
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(114, 137, 218, 0.3);
+        }
+
+        .google-login-btn {
+            background-color: #4285F4; /* Google brand color */
+        }
+
+        .google-login-btn:hover {
+            background-color: #357ae8; /* Darker shade for hover effect */
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
+        }
+
+        .login-buttons-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .login-divider {
+            margin: 16px 0;
+            text-align: center;
+            color: #888;
+            font-size: 14px;
+        }
+
+        .login-divider::before,
+        .login-divider::after {
+            content: '';
+            display: inline-block;
+            width: 50px;
+            height: 1px;
+            background-color: #ccc;
+            margin: 0 10px;
+            vertical-align: middle;
         }
 
     </style>
@@ -51,9 +115,100 @@
     <!-- Login Section -->
     <div class="round-frosted page-content mw50-dynamic center-fully">
         <ul class="center-fully-no-flex">
-            <h1>Login Below</h1>
-            <a href="https://discord.com/api/oauth2/authorize?client_id=1194813360529735711&response_type=token&redirect_uri=https%3A%2F%2Fwww.jscammie.com%2Fauth%2Fdiscord&scope=identify" class="discord-login-btn" style="display: block;">LOGIN WITH DISCORD</a>    
-            <br><br>
+            <!-- Notification Messages -->
+            <% if (notification) { %>
+                <div style="margin-bottom: 24px; padding: 16px; border-radius: 8px; border: 1px solid; <%= notification.type === 'success' ? 'background-color: rgba(0, 255, 0, 0.1); border-color: rgba(0, 255, 0, 0.3); color: #28a745;' : 'background-color: rgba(0, 123, 255, 0.1); border-color: rgba(0, 123, 255, 0.3); color: #007bff;' %>">
+                    <p style="margin: 0; font-weight: bold;"><%= notification.message %></p>
+                </div>
+            <% } %>
+            
+            <% if (session.loggedIn && userProfile) { %>
+                <!-- Already logged in - show account linking options -->
+                <h1>Account Linking</h1>
+                <div style="margin-bottom: 24px; padding: 16px; background-color: rgba(0, 255, 0, 0.1); border-radius: 8px; border: 1px solid rgba(0, 255, 0, 0.3);">
+                    <p style="color: #28a745; margin: 0; font-weight: bold;">✓ You are already logged in as <strong><%= userProfile.username %></strong></p>
+                    <% if (activeProviders.length > 0) { %>
+                        <p style="color: #28a745; margin: 8px 0 0 0; font-size: 14px;">
+                            Active sessions: 
+                            <% activeProviders.forEach((provider, index) => { %>
+                                <span style="background-color: rgba(40, 167, 69, 0.2); padding: 2px 6px; border-radius: 4px; margin-left: 4px;">
+                                    <% if (provider === 'discord') { %>🎮 Discord<% } else if (provider === 'google') { %>🔍 Google<% } %>
+                                </span>
+                            <% }); %>
+                        </p>
+                    <% } %>
+                </div>
+                
+                <p style="margin-bottom: 24px; color: #666;">Link additional accounts to your profile for easier access:</p>
+                
+                <div class="login-buttons-container">
+                    <% if (activeProviders.includes('discord')) { %>
+                        <div style="padding: 12px 24px; margin: 8px; background-color: rgba(114, 137, 218, 0.2); border-radius: 8px; border: 2px solid #7289DA; color: #7289DA; min-width: 200px; text-align: center;">
+                            <i class="fab fa-discord" style="margin-right: 8px;"></i>
+                            Discord Active ✓
+                        </div>
+                    <% } else { %>
+                        <button onclick="loginWithDiscord()" class="login-btn discord-login-btn">
+                            <i class="fab fa-discord" style="margin-right: 8px;"></i>
+                            <% if (connectedProviders.includes('discord')) { %>
+                                Reconnect Discord
+                            <% } else { %>
+                                Link Discord Account
+                            <% } %>
+                        </button>
+                    <% } %>
+                    
+                    <% if (activeProviders.includes('google')) { %>
+                        <div style="padding: 12px 24px; margin: 8px; background-color: rgba(66, 133, 244, 0.2); border-radius: 8px; border: 2px solid #4285F4; color: #4285F4; min-width: 200px; text-align: center;">
+                            <i class="fab fa-google" style="margin-right: 8px;"></i>
+                            Google Active ✓
+                        </div>
+                    <% } else { %>
+                        <a href="/auth/google" class="login-btn google-login-btn">
+                            <i class="fab fa-google" style="margin-right: 8px;"></i>
+                            <% if (connectedProviders.includes('google')) { %>
+                                Reconnect Google
+                            <% } else { %>
+                                Link Google Account
+                            <% } %>
+                        </a>
+                    <% } %>
+                </div>
+                
+                <div style="margin-top: 24px; text-align: center;">
+                    <a href="/logout-all" style="display: inline-block; background-color: #dc3545; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-bottom: 16px;">
+                        🚪 Logout from All Accounts
+                    </a>
+                </div>
+                
+                <div style="margin-top: 16px; font-size: 14px; color: #666; text-align: center;">
+                    <p>Linking additional accounts makes it easier to access your profile from different devices.</p>
+                    <p><a href="/" style="color: #007bff; text-decoration: none;">← Return to Generator</a></p>
+                </div>
+            <% } else { %>
+                <!-- Not logged in - show login options -->
+                <h1>Login Below</h1>
+                <p style="margin-bottom: 24px; color: #666;">Please choose your preferred login method to access your account.</p>
+                
+                <div class="login-buttons-container">
+                    <button onclick="loginWithDiscord()" class="login-btn discord-login-btn">
+                        <i class="fab fa-discord" style="margin-right: 8px;"></i>
+                        Login with Discord
+                    </button>
+                    
+                    <div class="login-divider">or</div>
+                    
+                    <a href="/auth/google" class="login-btn google-login-btn">
+                        <i class="fab fa-google" style="margin-right: 8px;"></i>
+                        Login with Google
+                    </a>
+                </div>
+                
+                <div style="margin-top: 24px; font-size: 14px; color: #666; text-align: center;">
+                    <p>By logging in, you agree to our Terms of Service and Privacy Policy.</p>
+                    <p>You can link multiple accounts after logging in.</p>
+                </div>
+            <% } %>
         </ul>
         
     </div>
@@ -61,5 +216,14 @@
     <!-- get partials/_footer: -->
     <%- include('../partials/_footer') %>
 
+    <script>
+        function loginWithDiscord() {
+            const client_id = '1194813360529735711';
+            const redirect_uri = 'https://www.jscammie.com/auth/discord';
+            const scope = 'identify email';
+            const url = `https://discord.com/api/oauth2/authorize?client_id=${client_id}&redirect_uri=${encodeURIComponent(redirect_uri)}&response_type=token&scope=${encodeURIComponent(scope)}`;
+            window.location.href = url;
+        }
+    </script>
 </body>
 </html>

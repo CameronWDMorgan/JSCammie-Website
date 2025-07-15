@@ -1,10 +1,41 @@
 <!-- setup basic html template with metadata etc: -->
 <html>
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Privacy Policy | JSCammie.com</title>
+    <meta name="description" content="Read JSCammie.com's privacy policy to understand how we collect, use, and protect your data when using our free AI image generator and services.">
+    <meta name="keywords" content="jscammie privacy policy, data protection, privacy rights, ai generator privacy, user data">
+    <meta name="author" content="JSCammie">
+    
+    <!-- Open Graph meta tags for social media -->
+    <meta property="og:title" content="Privacy Policy | JSCammie.com">
+    <meta property="og:description" content="Read JSCammie.com's privacy policy to understand how we collect, use, and protect your data when using our free AI image generator and services.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://jscammie.com/privacypolicy">
+    <meta property="og:site_name" content="JSCammie.com">
+    
+    <!-- Twitter Card meta tags -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Privacy Policy | JSCammie.com">
+    <meta name="twitter:description" content="Read JSCammie.com's privacy policy to understand how we collect, use, and protect your data when using our free AI image generator and services.">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://jscammie.com/privacypolicy">
+    
     <link rel='stylesheet' href='/style.css'/>
-
+    
     <%- include('../partials/_headerAll') %>
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-K3KJJKS1R4"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-K3KJJKS1R4');
+    </script>
 
 </head>
 <body>
@@ -20,7 +51,7 @@
     <div class="round-frosted page-content mw50-dynamic" style="padding: 40px; justify-content: center;">
             
         <h1>Privacy Policy for JSCammie.com</h1>
-        <p><strong>Updated on 24th February 2025</strong></p>
+        <p><strong>Updated on 15th July 2025</strong></p>
 
         <h2>1. Introduction</h2>
         <p>Welcome to JSCammie.com. I take your privacy seriously. This Privacy Policy outlines how I collect, use, and protect your personal information when you use my services. By accessing or using this website, you agree to the terms outlined in this Privacy Policy.</p>
@@ -31,33 +62,139 @@
         <ul>
             <li>Your Discord username</li>
             <li>Your Discord user ID</li>
+            <li>Your Discord email address (if provided)</li>
+            <li>Your Discord avatar URL</li>
         </ul>
 
-        <h3>b. AI Image Generator:</h3>
+        <h3>b. Google Authentication:</h3>
+        <p>When you use the Google authentication feature to log in, I may collect the following information:</p>
+        <ul>
+            <li>Your Google account ID</li>
+            <li>Your Google email address</li>
+            <li>Your Google display name</li>
+            <li>Your Google profile picture URL</li>
+        </ul>
+
+        <h3>c. AI Image Generator:</h3>
         <p>When you use the AI image generator, I store the following information for use within the Image History page:</p>
         <ul>
             <li>The generated image</li>
             <li>The date and time the image was generated</li>
-            <li>The settings used to generate the image</li>
+            <li>The settings used to generate the image (prompts, model, parameters)</li>
+            <li>Your account ID associated with the generation</li>
+        </ul>
+
+        <h3>d. Booru and Community Features:</h3>
+        <p>When you use the booru (image sharing) and community features, I may collect:</p>
+        <ul>
+            <li>Images you choose to share publicly</li>
+            <li>Comments and votes on shared images</li>
+            <li>Tags and metadata associated with shared content</li>
+        </ul>
+
+        <h3>e. Credits and Transaction History:</h3>
+        <p>To manage the credit system, I store:</p>
+        <ul>
+            <li>Credit balance and transaction history</li>
+            <li>Purchase and usage records</li>
+            <li>Promotional credit activities</li>
+        </ul>
+
+        <h3>f. User Preferences and Settings:</h3>
+        <p>To enhance your experience, I may store:</p>
+        <ul>
+            <li>User interface preferences (dark mode, etc.)</li>
+            <li>Notification settings</li>
+            <li>Generation history and favorites</li>
         </ul>
 
         <h2>3. How I Use Your Information</h2>
-        <h3>a. Discord Authentication Data:</h3>
-        <p>I use the information collected during Discord authentication solely for the purpose of user authentication and account creation. I do not share this information with third parties.</p>
+        <h3>a. Authentication Data:</h3>
+        <p>I use the information collected during Discord and Google authentication for the following purposes:</p>
+        <ul>
+            <li>User authentication and account creation</li>
+            <li>Account linking (connecting multiple OAuth providers to one account)</li>
+            <li>Username generation and display</li>
+            <li>Preventing duplicate accounts with the same email address</li>
+        </ul>
+        <p>I do not share this authentication information with third parties.</p>
 
-        <h2>4. Data Security</h2>
+        <h3>b. Generated Content:</h3>
+        <p>Images and associated data from AI generation are used to:</p>
+        <ul>
+            <li>Provide you with access to your generation history</li>
+            <li>Enable sharing through the booru system (if you choose to share)</li>
+            <li>Improve the AI generation service</li>
+        </ul>
+
+        <h3>c. Community Features:</h3>
+        <p>Data from community interactions (comments, votes, shared images) is used to:</p>
+        <ul>
+            <li>Facilitate community engagement</li>
+            <li>Moderate content and maintain platform safety</li>
+            <li>Calculate trending and popular content</li>
+        </ul>
+
+        <h2>4. Data Storage and Retention</h2>
+        <p>Your data is stored securely using industry-standard practices:</p>
+        <ul>
+            <li>User profiles and authentication data are stored in MongoDB databases</li>
+            <li>Generated images are stored on secure servers with controlled access</li>
+            <li>Session data is managed through secure, encrypted sessions</li>
+            <li>Credit transactions are tracked with full audit trails</li>
+        </ul>
+        <p>Data is retained for as long as your account remains active. You may request deletion of your account and associated data at any time.</p>
+
+        <h2>5. Account Linking and Multiple Providers</h2>
+        <p>JSCammie.com supports linking multiple OAuth providers (Discord and Google) to a single account. When linking accounts:</p>
+        <ul>
+            <li>Email addresses are used to detect potential conflicts</li>
+            <li>You can connect both Discord and Google to the same account</li>
+            <li>All linked providers share the same user profile and credit balance</li>
+            <li>Account linking helps prevent duplicate accounts</li>
+        </ul>
+
+        <h2>6. Data Security</h2>
         <p>I take reasonable measures to protect your data against unauthorized access or disclosure. However, please be aware that no data transmission over the internet can be guaranteed to be 100% secure.</p>
 
-        <h2>5. Your Rights</h2>
+        <h2>7. Your Rights</h2>
 
         <h3>a. Right to Data Deletion:</h3>
-        <p>You can request the deletion of your account and associated data by contacting me at jscammie@protonmail.com.</p>
+        <p>You can request the deletion of your account and associated data by contacting me at jscammie@protonmail.com. This includes:</p>
+        <ul>
+            <li>Your user profile and authentication data</li>
+            <li>Generated images and history</li>
+            <li>Comments and community interactions</li>
+            <li>Credit transaction history</li>
+        </ul>
 
-        <h2>6. Changes to this Privacy Policy</h2>
-        <p>I may update this Privacy Policy from time to time to reflect changes in data practices. The most recent version will always be available on the website.</p>
+        <h3>b. Right to Data Access:</h3>
+        <p>You can request access to your personal data by contacting me at jscammie@protonmail.com.</p>
 
-        <h2>7. Contact Me</h2>
-        <p>If you have any questions or concerns about this Privacy Policy or my data practices, please contact me at jscammie@protonmail.com.</p>
+        <h3>c. Account Management:</h3>
+        <p>You can manage your account settings, including:</p>
+        <ul>
+            <li>Linking or unlinking OAuth providers</li>
+            <li>Notification preferences</li>
+            <li>Privacy settings for shared content</li>
+        </ul>
+
+        <h2>8. Third-Party Services</h2>
+        <p>JSCammie.com integrates with the following third-party services:</p>
+        <ul>
+            <li><strong>Discord OAuth:</strong> For user authentication (subject to Discord's Privacy Policy)</li>
+            <li><strong>Google OAuth:</strong> For user authentication (subject to Google's Privacy Policy)</li>
+        </ul>
+        <p>These services may have their own privacy policies and data handling practices.</p>
+
+        <h2>9. Analytics and Tracking</h2>
+        <p>This website uses Google Analytics to understand usage patterns and improve the service. You can opt out of Google Analytics tracking using browser extensions or settings.</p>
+
+        <h2>10. Changes to this Privacy Policy</h2>
+        <p>I may update this Privacy Policy from time to time to reflect changes in data practices or legal requirements. The most recent version will always be available on the website with the updated date clearly displayed.</p>
+
+        <h2>11. Contact Me</h2>
+        <p>If you have any questions or concerns about this Privacy Policy, your data, or my data practices, please contact me at jscammie@protonmail.com.</p>
 
     </div>
 

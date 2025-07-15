@@ -6,7 +6,7 @@ require('dotenv').config();
 
 const userBooruSchema = require('./schemas/userBooruSchema.js');
 const userBooruTagsSchema = require('./schemas/userBooruTagsSchema.js');
-const userProfileSchema = require('./schemas/userProfileSchema.js');
+const userProfileSchema = require('./schemas/userProfileSchemaNew.js');
 const userSuggestionSchema = require('./schemas/userSuggestionSchema.js');
 const userHistorySchema = require('./schemas/userHistorySchema.js');
 const userCreditsHistorySchema = require('./schemas/userCreditsHistorySchema.js');
@@ -31,13 +31,31 @@ async function connectToDatabase() {
 }
 
 
-async function createUserNotification(accountId, message, type) {
+async function createUserNotification(accountId, message, type, options = {}) {
+	// Support both old and new calling patterns for backward compatibility
+	const {
+		priority = 'normal',
+		actionUrl = null,
+		expiresAt = null,
+		metadata = {},
+		grouped = false,
+		groupId = null
+	} = options;
+
 	let notificationObject = {
 		notificationId: `${accountId}-${Date.now()}-${type}-${Math.floor(Math.random() * 100)}`,
 		timestamp: Date.now(),
 		message: message,
 		accountId: accountId,
-		type: type
+		type: type,
+		priority: priority,
+		read: false,
+		readTimestamp: null,
+		actionUrl: actionUrl,
+		expiresAt: expiresAt,
+		metadata: metadata,
+		grouped: grouped,
+		groupId: groupId
 	}
 
 	await userNotificationSchema.create(notificationObject)
@@ -45,7 +63,118 @@ async function createUserNotification(accountId, message, type) {
 	return {status: 'success', message: 'Notification created'}
 }
 
-async function modifyUserCredits(accountId, amount, operation, message, testMode=false) {
+// New function to create grouped notifications (e.g., multiple credit gains)
+async function createGroupedNotification(accountId, type, groupId, notifications) {
+	try {
+		const timestamp = Date.now();
+		
+		// Create a summary notification for the group
+		const totalCredits = notifications.reduce((sum, notif) => sum + (notif.metadata?.credits || 0), 0);
+		const count = notifications.length;
+		
+		let groupMessage = '';
+		if (type === 'credits' && totalCredits > 0) {
+			groupMessage = `You gained ${totalCredits} credits from ${count} activities`;
+		} else {
+			groupMessage = `${count} notifications`;
+		}
+
+		const groupNotification = {
+			notificationId: `${accountId}-${timestamp}-${type}-group-${Math.floor(Math.random() * 100)}`,
+			timestamp: timestamp,
+			message: groupMessage,
+			accountId: accountId,
+			type: type,
+			priority: 'normal',
+			read: false,
+			readTimestamp: null,
+			actionUrl: null,
+			expiresAt: null,
+			metadata: { 
+				groupedCount: count,
+				totalCredits: totalCredits,
+				groupedNotifications: notifications
+			},
+			grouped: true,
+			groupId: groupId
+		};
+
+		await userNotificationSchema.create(groupNotification);
+		return {status: 'success', message: 'Grouped notification created'};
+	} catch (error) {
+		console.log(`Error creating grouped notification: ${error}`);
+		return {status: 'error', message: 'Error creating grouped notification'};
+	}
+}
+
+// New function to mark notifications as read
+async function markNotificationsAsRead(accountId, notificationIds = []) {
+	try {
+		const timestamp = Date.now();
+		
+		if (notificationIds.length === 0) {
+			// Mark all notifications as read for this user
+			await userNotificationSchema.updateMany(
+				{ accountId: accountId, read: false },
+				{ 
+					$set: { 
+						read: true, 
+						readTimestamp: timestamp 
+					}
+				}
+			);
+		} else {
+			// Mark specific notifications as read
+			await userNotificationSchema.updateMany(
+				{ 
+					accountId: accountId, 
+					notificationId: { $in: notificationIds },
+					read: false 
+				},
+				{ 
+					$set: { 
+						read: true, 
+						readTimestamp: timestamp 
+					}
+				}
+			);
+		}
+		
+		return {status: 'success', message: 'Notifications marked as read'};
+	} catch (error) {
+		console.log(`Error marking notifications as read: ${error}`);
+		return {status: 'error', message: 'Error marking notifications as read'};
+	}
+}
+
+// New function to clean up expired notifications
+async function cleanupExpiredNotifications() {
+	try {
+		const currentTime = Date.now();
+		
+		// Delete notifications that have expired
+		const result = await userNotificationSchema.deleteMany({
+			expiresAt: { $ne: null, $lt: currentTime }
+		});
+		
+		// Only clean up notifications older than 90 days to give users more time
+		const ninetyDaysAgo = currentTime - (90 * 24 * 60 * 60 * 1000);
+		const oldResult = await userNotificationSchema.deleteMany({
+			timestamp: { $lt: ninetyDaysAgo }
+		});
+		
+		console.log(`Cleaned up ${result.deletedCount} expired notifications and ${oldResult.deletedCount} old notifications`);
+		return {
+			status: 'success', 
+			message: `Cleaned up ${result.deletedCount + oldResult.deletedCount} notifications`
+		};
+	} catch (error) {
+		console.log(`Error cleaning up notifications: ${error}`);
+		return {status: 'error', message: 'Error cleaning up notifications'};
+	}
+}
+
+async function modifyUserCredits(accountId, amount, operation, message, testMode=false, notificationOptions = {}) {
 	
 	let UserProfile = await getSchemaDocumentOnce('userProfile', {accountId: accountId})
 	if (UserProfile === null) {
@@ -88,6 +217,30 @@ async function modifyUserCredits(accountId, amount, operation, message, testMode
 
 		await userCreditsHistorySchema.create(creditsHistoryObject)
 
+		// Create enhanced notification for credit changes if enabled in user settings
+		if (UserProfile.settings?.notification_generatorSpentCredits !== false) {
+			const creditChange = userCreditsAfter - userCreditsBefore;
+			const notificationType = creditChange > 0 ? 'credits' : 'credits';
+			const priority = Math.abs(creditChange) > 1000 ? 'high' : 'normal';
+			
+			// Don't spam notifications for small credit changes unless it's a significant gain
+			if (Math.abs(creditChange) >= 50 || (creditChange > 0 && Math.abs(creditChange) >= 10)) {
+				await createUserNotification(
+					accountId, 
+					message,
+					notificationType,
+					{
+						priority: priority,
+						metadata: {
+							credits: Math.abs(creditChange),
+							operation: operation,
+							newTotal: userCreditsAfter
+						},
+						...notificationOptions
+					}
+				);
+			}
+		}
 	}
 
 	// Return an object with newCredits property to match what index.js expects
@@ -152,7 +305,7 @@ async function getSchemaDocumentOnce(schema, query) {
 				if (!query.accountId) {
 					return null; // Return null instead of an error object
 				} else {
-					query.accountId = String(query.accountId); // Ensure it's a string
+					query.accountId = String(query.accountId);
 					document = await userProfileSchema.findOne(query);
 				}
 				break;
@@ -501,6 +654,9 @@ async function deleteSchemaDocument(schema, query) {
 // export all functions
 module.exports = {
 	createUserNotification,
+	createGroupedNotification,
+	markNotificationsAsRead,
+	cleanupExpiredNotifications,
 	modifyUserCredits,
 	modifyUserExp,
 	getSchemaDocumentOnce,

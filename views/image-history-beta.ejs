@@ -1,11 +1,31 @@
 <!-- setup basic html template with metadata etc: -->
 <html>
 <head>
-    <title>Image History | JSCammie.com</title>
-    <meta name="description" content="View your generated images and their details.">
-    <meta name="keywords" content="AI, Image, Generator, History, Details">
-    <meta name="author" content="JSCammie">
+    <meta charset="UTF-8">
     <meta name="viewport" content="height=device-height, width=device-width, initial-scale=1.0">
+    <title>Your AI Image Generation History | JSCammie.com</title>
+    <meta name="description" content="View your AI generated image history, manage your creations, upload to booru, and track your AI art journey with detailed generation parameters.">
+    <meta name="keywords" content="ai image history, generated images, ai art gallery, stable diffusion history, image management, booru upload">
+    <meta name="author" content="JSCammie">
+    
+    <!-- Open Graph meta tags for social media -->
+    <meta property="og:title" content="Your AI Image Generation History | JSCammie.com">
+    <meta property="og:description" content="View your AI generated image history, manage your creations, upload to booru, and track your AI art journey with detailed generation parameters.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://jscammie.com/image-history">
+    <meta property="og:site_name" content="JSCammie.com">
+    
+    <!-- Twitter Card meta tags -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Your AI Image Generation History | JSCammie.com">
+    <meta name="twitter:description" content="View your AI generated image history, manage your creations, upload to booru, and track your AI art journey with detailed generation parameters.">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://jscammie.com/image-history">
+    
+    <!-- Robots directive for user-specific content -->
+    <meta name="robots" content="noindex, nofollow">
+    
     <link rel='stylesheet' href='/style.css'/>
     
     <%- include('../partials/_headerAll') %>
@@ -86,6 +106,71 @@
                 }
             }
 
+            // Function to check if an image is upscaled based on resolution
+            function checkIfUpscaled(img, model) {
+                // Wait for image to load completely
+                if (img.complete) {
+                    determineIfUpscaled(img, model);
+                } else {
+                    img.addEventListener('load', function() {
+                        determineIfUpscaled(img, model);
+                    });
+                }
+            }
+
+            function determineIfUpscaled(img, model, originalImg = null) {
+                // Get the actual image dimensions (using thumbnail dimensions)
+                const naturalWidth = img.naturalWidth;
+                const naturalHeight = img.naturalHeight;
+                
+                // Determine base dimension based on model (for thumbnails)
+                let baseDimension = 256; // Default for SD1.5 thumbnails
+                if (model.startsWith('pdxl') || model.startsWith('illustrious')) {
+                    baseDimension = 384; // Set to 384 for illustrious/pdxl thumbnails
+                }
+                
+                // For upscaled images, thumbnails will also be proportionally larger
+                // Use a smaller multiplier since we're working with thumbnails
+                const upscaleThreshold = baseDimension * 1.2; // 1.2x the base dimension
+                
+                const isUpscaled = naturalWidth > upscaleThreshold || naturalHeight > upscaleThreshold;
+                
+                // Debug logging
+                console.log(`Image check - Model: ${model}, Dimensions: ${naturalWidth}x${naturalHeight}, Base: ${baseDimension}, Threshold: ${upscaleThreshold}, Upscaled: ${isUpscaled}`);
+                
+                if (isUpscaled) {
+                    // Find the parent div - use originalImg if provided (for thumbnail case)
+                    const elementToCheck = originalImg || img;
+                    let parentDiv = elementToCheck.closest('.generationDiv');
+                    
+                    // If we're checking a temp image, find the parent by src
+                    if (!parentDiv && originalImg) {
+                        const allImages = document.querySelectorAll('.generatedImage');
+                        for (const displayImg of allImages) {
+                            if (displayImg.src.replace('-thumb.png', '.png') === img.src) {
+                                parentDiv = displayImg.closest('.generationDiv');
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (parentDiv) {
+                        const imageId = parentDiv.id;
+                        const badge = document.getElementById('upscaled-' + imageId);
+                        if (badge) {
+                            badge.style.display = 'block';
+                            console.log(`Showing upscaled badge for image: ${imageId}`);
+                        } else {
+                            console.log(`Badge not found for image: ${imageId}`);
+                        }
+                    } else {
+                        console.log('Could not find parent div for image');
+                    }
+                } else {
+                    console.log(`Image not upscaled: ${naturalWidth}x${naturalHeight} <= ${upscaleThreshold}`);
+                }
+            }
+
             function openInGenerator(image_id) {
                 // `https://jscammie.com/?prompt=${booruImage.prompt}&negativeprompt=${booruImage.negative_prompt}&aspectRatio=${booruImage.aspect_ratio}&model=${booruImage.model}&steps=${booruImage.steps}&cfguidance=${booruImage.cfg}&seed=${booruImage.seed}&loras=[${booruImage.loras}]&lora_strengths=[${booruImage.lora_strengths}]`
 
@@ -95,6 +180,31 @@
                 let url = `https://jscammie.com/?prompt=${encodeURIComponent(imageData.prompt)}&negativeprompt=${imageData.negative_prompt}&aspectRatio=${imageData.aspect_ratio}&model=${imageData.model}&steps=${imageData.steps}&cfguidance=${imageData.cfg}&seed=${imageData.seed}&loras=[${imageData.loras}]&lora_strengths=[${imageData.lora_strengths}]&`;
 
                 window.open(url, '_blank')
+            }
+
+            async function confirmBooruUpload(image_id) {
+                // Hide the booru popup while showing the confirmation dialog
+                document.getElementById('booruPopupContent').style.display = 'none';
+                
+                const options = {
+                    message: 'Are you sure you want to upload this image to the booru?\n\nBy clicking "Yes", you confirm that:\n• Your image follows all community guidelines\n• You understand the moderation process\n• You accept potential consequences for violations',
+                    question: true,
+                    options: {
+                        yes: function() { console.log("Upload confirmed"); },
+                        no: function() { console.log("Upload cancelled"); }
+                    }
+                };
+                
+                const userResponse = await globalAlert(options);
+                
+                if (userResponse === 'yes') {
+                    // Close the popup completely and proceed with upload
+                    closeBooruPopup();
+                    uploadToBooru(image_id);
+                } else {
+                    // If 'no', show the booru popup again
+                    document.getElementById('booruPopupContent').style.display = 'block';
+                }
             }
 
             async function uploadToBooru(image_id) {
@@ -163,26 +273,82 @@
                     closeGenerationPopup();
                     closeBooruPopup();
                 }
-
-                // 4a. While "Aged Up" content is allowed it needs to be clear from just looking at the image that they are over 18 with their proportions, outfit & general looks, they also MUST be 100% fictional and not based on anyone from real-life.
     
                 booruPopupContent.innerHTML = `
                     <button class="closeButton" onclick="closeBooruPopup()">×</button>
-                    <h1>Upload to Booru</h1>
-                    <p>By uploading to the booru you agree to the following:</p>
-                    <ul>
-                        <li>Child/Cub/Loli NSFW content are NOT ALLOWED!!!</li>
-                        <br>
-                        <li>Aged-Up Characters that look over the age of 18 are allowed, if they do not look over 18, the post will be removed!</li>
-                        <br>
-                        <li>By default all content is hidden until a moderator approves it and gives it a safety rating (sfw, suggestive, nsfw).</li>
-                        <br>
-                        <li>ALL SETTINGS used to create an image are visible, if your content shows a word like "loli", even if its sfw, it will be removed!</li>
-                        <br>
-                        <li>Quality Generations are prefered! (Don't upload a billion variations ^-^;)
-                    </ul>
-                    <p>If you agree to these rules/terms then feel free to click below</p>
-                    <button id="uploadToBooruButton" onclick="uploadToBooru('${image_id}')">Upload to Booru</button>
+                    <div class="booru-upload-header">
+                        <h1><i class="fas fa-upload"></i> Upload to Booru</h1>
+                        <p class="booru-subtitle">Share your creation with the community</p>
+                    </div>
+                    
+                    <div class="booru-rules-container">
+                        <div class="booru-rules-header">
+                            <h2><i class="fas fa-exclamation-triangle"></i> Community Guidelines</h2>
+                            <p>Please carefully review these rules before uploading:</p>
+                        </div>
+                        
+                        <div class="booru-rules-sections">
+                            <div class="rule-section critical">
+                                <h3><i class="fas fa-ban"></i> Prohibited Content</h3>
+                                <ul>
+                                    <li><strong>NO Child/Cub/Loli NSFW content</strong> - Zero tolerance policy</li>
+                                    <li><strong>NO Scat or Vore</strong> - Not allowed under any circumstances</li>
+                                    <li><strong>NO Inappropriate tags</strong> - Prompts containing banned keywords (e.g., "loli") will be removed even if SFW</li>
+                                    <li><strong>NO Low-quality spam</strong> - Avoid uploading excessive variations of the same image</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="rule-section warning">
+                                <h3><i class="fas fa-user-check"></i> Age-Up Guidelines</h3>
+                                <ul>
+                                    <li>Aged-up characters must <strong>clearly appear over 18</strong> in proportions and appearance</li>
+                                    <li>Characters must look mature in clothing, body type, and facial features</li>
+                                    <li>When in doubt, don't upload - moderators will remove questionable content</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="rule-section info">
+                                <h3><i class="fas fa-shield-alt"></i> Moderation Process</h3>
+                                <ul>
+                                    <li>All uploads are <strong>hidden by default</strong> until approved</li>
+                                    <li>Moderators assign safety ratings: SFW, Suggestive, or NSFW</li>
+                                    <li>Generation settings are publicly visible for transparency</li>
+                                </ul>
+                                <br>
+                                <details>
+                                    <summary><i class="fas fa-info-circle"></i> Additional Notes on What Constitutes as Suggestive/Nsfw/Extreme</summary>
+                                    <ul>
+                                        <li>Suggestive: Provocative poses, large breasts, cleavage, suggestive clothing and suggestive angles</li>
+                                        <li>NSFW: Nudity, sexual content, or explicit themes, x-ray </li>
+                                        <li>Extreme: Gore, excessive violence, pregnancy, egg laying, giantess/macro, hyper-proportions, tentacles, inflation, or other extreme content</li>
+                                    </ul>
+                                </details>
+                            </div>
+                            
+                            <div class="rule-section success">
+                                <h3><i class="fas fa-star"></i> Quality Standards</h3>
+                                <ul>
+                                    <li>Upload your <strong>best generations</strong> - quality over quantity</li>
+                                    <li>Ensure good composition and minimal artifacts</li>
+                                    <li>Unique and creative content is especially welcomed</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="booru-consequences">
+                            <h3><i class="fas fa-gavel"></i> Consequences</h3>
+                            <p>Violations may result in content removal, warnings, or account restrictions on posting to the booru.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="booru-upload-actions">
+                        <button class="booru-cancel-btn" onclick="closeBooruPopup()">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                        <button class="booru-upload-btn" onclick="confirmBooruUpload('${image_id}')">
+                            <i class="fas fa-check"></i> I Agree - Upload to Booru
+                        </button>
+                    </div>
                 `;
 
                 document.getElementById('overlay').style.display = 'block';
@@ -521,6 +687,28 @@
             background-color: rgba(0, 0, 0, 0.8);
         }
 
+        .upscaled-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+            z-index: 1001;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            display: none; /* Hidden by default, shown via JavaScript */
+        }
+
+        .upscaled-badge::before {
+            content: "🔍 ";
+            margin-right: 2px;
+        }
+
         .dropdown {
             position: absolute;
             top: 50px;
@@ -795,7 +983,11 @@
                     ? imageData.image_url.replace('.png', '-thumb.png') 
                     : imageData.image_url; %>
                 <img class="generatedImage" loading="lazy" src="<%= thumbImage %>" 
-                    onclick="handleImageClick('<%= imageData.image_id %><%= imageData.account_id %>', event)" />
+                    onclick="handleImageClick('<%= imageData.image_id %><%= imageData.account_id %>', event)" 
+                    onload="checkIfUpscaled(this, '<%= imageData.model %>')" />
+
+                <!-- Upscaled badge -->
+                <div class="upscaled-badge" id="upscaled-<%= imageData.image_id %><%= imageData.account_id %>">Upscaled</div>
 
                 <!-- Dropdown toggle button -->
                 <button class="dropdownToggle" onclick="toggleDropdown('<%= imageData.image_id %><%= imageData.account_id %>')">⋮</button>
@@ -1284,7 +1476,9 @@
 
                     div.innerHTML = `
                         <img class="generatedImage" loading="lazy" src="${thumbImage}" 
-                            onclick="handleImageClick('${imageId}', event)" />
+                            onclick="handleImageClick('${imageId}', event)" 
+                            onload="checkIfUpscaled(this, '${imageData.model}')" />
+                        <div class="upscaled-badge" id="upscaled-${imageId}">Upscaled</div>
                         <button class="dropdownToggle" onclick="toggleDropdown('${imageId}')">⋮</button>
                         <div id="dropdown-${imageId}" class="dropdown">
                             <button onclick="deleteImage('${imageData.image_id}-${imageData.account_id}')">Delete</button>
@@ -1664,6 +1858,404 @@
         }
     </style>
 
+    <style>
+        /* Enhanced Booru Upload Popup Styles */
+        .booruPopupContent {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, var(--background-colour), var(--darker-background-colour));
+            padding: 0;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            z-index: 2000;
+            max-width: 800px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            display: none;
+            color: var(--text-colour);
+            border: 2px solid var(--border-colour);
+            font-family: 'Roboto', sans-serif;
+            z-index: 3000;
+        }
+
+        .booru-upload-header {
+            background: linear-gradient(135deg, #006de2, #0084ff);
+            padding: 25px;
+            border-radius: 13px 13px 0 0;
+            text-align: center;
+            border-bottom: 2px solid var(--border-colour);
+        }
+
+        .booru-upload-header h1 {
+            margin: 0;
+            font-size: 2rem;
+            font-weight: 700;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .booru-upload-header i {
+            margin-right: 10px;
+            font-size: 1.8rem;
+        }
+
+        .booru-subtitle {
+            margin: 8px 0 0 0;
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 300;
+        }
+
+        .booru-rules-container {
+            padding: 30px;
+        }
+
+        .booru-rules-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid var(--border-colour);
+        }
+
+        .booru-rules-header h2 {
+            margin: 0 0 10px 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-colour);
+        }
+
+        .booru-rules-header p {
+            margin: 0;
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .booru-rules-sections {
+            display: grid;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .rule-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 20px;
+            border-left: 4px solid;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .rule-section:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .rule-section.critical {
+            border-left-color: #ff4757;
+            background: rgba(255, 71, 87, 0.1);
+        }
+
+        .rule-section.warning {
+            border-left-color: #ffa502;
+            background: rgba(255, 165, 2, 0.1);
+        }
+
+        .rule-section.info {
+            border-left-color: #3742fa;
+            background: rgba(55, 66, 250, 0.1);
+        }
+
+        .rule-section.success {
+            border-left-color: #2ed573;
+            background: rgba(46, 213, 115, 0.1);
+        }
+
+        .rule-section h3 {
+            margin: 0 0 15px 0;
+            font-size: 1.2rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .rule-section.critical h3 {
+            color: #ff6b7a;
+        }
+
+        .rule-section.warning h3 {
+            color: #ffb142;
+        }
+
+        .rule-section.info h3 {
+            color: #5c7cfa;
+        }
+
+        .rule-section.success h3 {
+            color: #51cf66;
+        }
+
+        .rule-section ul {
+            margin: 0;
+            padding-left: 20px;
+            list-style: none;
+        }
+
+        .rule-section li {
+            margin: 12px 0;
+            padding-left: 20px;
+            position: relative;
+            line-height: 1.5;
+            font-size: 0.95rem;
+        }
+
+        .rule-section li::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            top: 0;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .rule-section.critical li::before {
+            color: #ff6b7a;
+        }
+
+        .rule-section.warning li::before {
+            color: #ffb142;
+        }
+
+        .rule-section.info li::before {
+            color: #5c7cfa;
+        }
+
+        .rule-section.success li::before {
+            color: #51cf66;
+        }
+
+        .rule-section strong {
+            font-weight: 600;
+            color: var(--text-colour);
+        }
+
+        /* Details element styling for booru popup */
+        .booruPopupContent details {
+            margin: 15px 0 !important;
+            padding: 0 !important;
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            background: rgba(0, 0, 0, 0.05) !important;
+            border-radius: 8px !important;
+            border: 1px solid rgba(0, 0, 0, 0.1) !important;
+        }
+
+        .booruPopupContent details summary {
+            padding: 12px 15px !important;
+            font-weight: 600 !important;
+            color: var(--primary-colour) !important;
+            cursor: pointer !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+            border-radius: 8px !important;
+            transition: all 0.2s ease !important;
+        }
+
+        .booruPopupContent details summary:hover {
+            background: rgba(0, 0, 0, 0.05) !important;
+            color: var(--primary-colour-light) !important;
+        }
+
+        .booruPopupContent details[open] summary {
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
+            border-radius: 8px 8px 0 0 !important;
+        }
+
+        .booruPopupContent details ul {
+            margin: 0 !important;
+            padding: 15px 20px !important;
+            background: rgba(0, 0, 0, 0.02) !important;
+            border-radius: 0 0 8px 8px !important;
+            list-style: none !important;
+        }
+
+        .booruPopupContent details li {
+            margin: 8px 0 !important;
+            padding-left: 20px !important;
+            position: relative !important;
+            font-size: 0.9rem !important;
+            line-height: 1.4 !important;
+        }
+
+        .booruPopupContent details li::before {
+            content: "•" !important;
+            position: absolute !important;
+            left: 0 !important;
+            color: var(--primary-colour) !important;
+            font-weight: bold !important;
+        }
+
+        .booru-consequences {
+            background: rgba(255, 71, 87, 0.15);
+            border: 1px solid rgba(255, 71, 87, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .booru-consequences h3 {
+            margin: 0 0 10px 0;
+            font-size: 1.1rem;
+            color: #ff6b7a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .booru-consequences p {
+            margin: 0;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .booru-upload-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            padding: 25px;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 0 0 13px 13px;
+            border-top: 2px solid var(--border-colour);
+        }
+
+        .booru-cancel-btn,
+        .booru-upload-btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 140px;
+            justify-content: center;
+        }
+
+        .booru-cancel-btn {
+            background: linear-gradient(135deg, #6c757d, #5a6169);
+            color: white;
+            border: 2px solid transparent;
+        }
+
+        .booru-cancel-btn:hover {
+            background: linear-gradient(135deg, #5a6169, #495057);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .booru-upload-btn {
+            background: linear-gradient(135deg, #2ed573, #26d0ce);
+            color: white;
+            border: 2px solid transparent;
+        }
+
+        .booru-upload-btn:hover {
+            background: linear-gradient(135deg, #26d0ce, #2ed573);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(46, 213, 115, 0.4);
+        }
+
+        .booru-upload-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Dark mode specific adjustments */
+        body.dark-mode .booruPopupContent {
+            background: linear-gradient(135deg, var(--dark-background-colour), var(--dark-darker-background-colour));
+            border-color: var(--dark-border-colour);
+            color: var(--dark-text-colour);
+        }
+
+        body.dark-mode .booruPopupContent details {
+            background: rgba(255, 255, 255, 0.05) !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        body.dark-mode .booruPopupContent details summary {
+            color: var(--dark-primary-colour) !important;
+        }
+
+        body.dark-mode .booruPopupContent details summary:hover {
+            background: rgba(255, 255, 255, 0.05) !important;
+            color: var(--dark-primary-colour-light) !important;
+        }
+
+        body.dark-mode .booruPopupContent details[open] summary {
+            border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        body.dark-mode .booruPopupContent details ul {
+            background: rgba(255, 255, 255, 0.02) !important;
+        }
+
+        body.dark-mode .booruPopupContent details li::before {
+            color: var(--dark-primary-colour) !important;
+        }
+
+        body.dark-mode .booru-rules-header {
+            border-bottom-color: var(--dark-border-colour);
+        }
+
+        body.dark-mode .booru-upload-actions {
+            border-top-color: var(--dark-border-colour);
+        }
+
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+            .booruPopupContent {
+                width: 95%;
+                max-width: none;
+                margin: 20px;
+            }
+            
+            .booru-upload-header {
+                padding: 20px;
+            }
+            
+            .booru-upload-header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .booru-rules-container {
+                padding: 20px;
+            }
+            
+            .booru-upload-actions {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .booru-cancel-btn,
+            .booru-upload-btn {
+                width: 100%;
+            }
+        }
+
+        /* FontAwesome icon styles */
+        .fa-upload, .fa-exclamation-triangle, .fa-ban, .fa-user-check, 
+        .fa-shield-alt, .fa-star, .fa-gavel, .fa-times, .fa-check {
+            font-size: inherit;
+        }
+    </style>
+
     <script>
         function showLoraPreviewPopup(compositeImageId) {
             console.log('[showLoraPreviewPopup] Called for compositeImageId:', compositeImageId);
@@ -1877,6 +2469,6 @@
             }
         }
 
-    </script>
+        </script>
 </body>
 </html>

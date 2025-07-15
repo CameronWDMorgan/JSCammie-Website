@@ -11,6 +11,9 @@ const userBooruCommentsSchema = new Schema({
     downvotes: { type: Array, default: [] },
 })
 
+// Add index for performance
+userBooruCommentsSchema.index({ accountId: 1 });
+
 const name = 'userBooruComments'
 
 module.exports = mongoose.models[name] || mongoose.model(name, userBooruCommentsSchema, name)

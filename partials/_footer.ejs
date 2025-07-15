@@ -1,4 +1,4 @@
-<link rel='stylesheet' href='/style.css' />
+<link rel='stylesheet' href='/style.css?v=<%= version %>' />
 <style>
     .footerBar {
         background-color: #333;
@@ -52,10 +52,68 @@
 
 <footer id="footerBar" class="footerBar">
     <div class="footerContainer">
-        <a href="javascript: location.reload(true);" class="footerLink">Refresh Website</a>
+        <a href="javascript: void(0);" onclick="hardRefresh(event)" class="footerLink">🔄 Hard Refresh</a>
         <div class="vertical-line"></div>
         <a href="/contact" class="footerLink">Contact</a>
         <div class="vertical-line"></div>
         <a href="/privacypolicy" class="footerLink">Privacy Policy</a>
     </div>
 </footer>
+
+<script>
+async function hardRefresh(event) {
+    // Ensure we have a target element
+    const targetElement = event?.target || document.querySelector('.footerLink[onclick*="hardRefresh"]');
+    if (!targetElement) {
+        console.error('Could not find target element for hard refresh');
+        // Fallback to immediate refresh
+        window.location.href = window.location.protocol + '//' + window.location.host + window.location.pathname + '?_refresh=' + Date.now();
+        return;
+    }
+    
+    // Show loading indicator
+    const originalText = targetElement.textContent;
+    targetElement.textContent = '🔄 Clearing...';
+    targetElement.style.pointerEvents = 'none';
+    
+    try {
+        // Clear service worker caches if available
+        if (typeof window.clearAllCaches === 'function') {
+            await window.clearAllCaches();
+        }
+        
+        // Clear all browser caches
+        if ('caches' in window) {
+            const cacheNames = await caches.keys();
+            await Promise.all(cacheNames.map(name => caches.delete(name)));
+        }
+        
+        // Clear local/session storage
+        if (typeof(Storage) !== "undefined") {
+            localStorage.clear();
+            sessionStorage.clear();
+        }
+        
+        // Unregister service workers
+        if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(registrations.map(registration => registration.unregister()));
+        }
+        
+        targetElement.textContent = '✅ Refreshing...';
+        
+        // Force reload with cache bypass
+        setTimeout(() => {
+            window.location.href = window.location.protocol + '//' + window.location.host + window.location.pathname + '?_refresh=' + Date.now();
+        }, 500);
+        
+    } catch (error) {
+        console.error('Hard refresh error:', error);
+        targetElement.textContent = originalText;
+        targetElement.style.pointerEvents = 'auto';
+        
+        // Ultimate fallback
+        window.location.href = window.location.protocol + '//' + window.location.host + window.location.pathname + '?_refresh=' + Date.now();
+    }
+}
+</script>

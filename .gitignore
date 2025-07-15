@@ -10,3 +10,7 @@
 JSC-Website.ps1
 scripts/moderate-prompt.js
 /temp
+.github/copilot-instructions.md
+.eslintrc
+.cursorignore
+loraimages

@@ -1,8 +1,35 @@
-function votePost(voteType, booru_id) {
+async function votePost(voteType, booru_id) {
+	// Check if user has already upvoted this post
+	let upvoteButton = document.getElementById(`upvoteButton${booru_id}`);
+	let hasUpvoted = upvoteButton && upvoteButton.classList.contains('voted');
+	
+	// If user is trying to remove their upvote, ask if they want to pay 5 credits
+	if (voteType === 'upvote' && hasUpvoted) {
+		try {
+			let response = await globalAlert({
+				message: "Removing your upvote will cost 5 credits. Do you want to continue?",
+				question: true,
+				options: {
+					yes: function() {},
+					no: function() {}
+				}
+			});
+			
+			// If user said no, don't proceed
+			if (response !== 'yes') {
+				return;
+			}
+		} catch (error) {
+			console.error('Error showing alert:', error);
+			return;
+		}
+	}
+
 	// get the vote type and the booru_id
 	let voteData = {
 		vote: voteType,
-		booru_id: booru_id
+		booru_id: booru_id,
+		removeUpvote: voteType === 'upvote' && hasUpvoted // Flag to indicate upvote removal
 	}
 
 	// send the vote data to the server:
@@ -17,11 +44,59 @@ function votePost(voteType, booru_id) {
 	.then(data => {
 		console.log(data)
 		if (data.status == "success") {
-			document.getElementById(`upvoteButton${booru_id}`).innerHTML = `${data.upvotes} ⬆️`
-			document.getElementById(`downvoteButton${booru_id}`).innerHTML = `${data.downvotes} ⬇️`
+			// Update vote counts
+			let upvoteButton = document.getElementById(`upvoteButton${booru_id}`);
+			if (upvoteButton) {
+				upvoteButton.innerHTML = `${data.upvotes} ⬆️`;
+				
+				// Toggle the voted class based on whether user has upvoted
+				if (data.userVoted) {
+					upvoteButton.classList.add('voted');
+				} else {
+					upvoteButton.classList.remove('voted');
+				}
+			}
+			
+			let downvoteButton = document.getElementById(`downvoteButton${booru_id}`);
+			if (downvoteButton) {
+				downvoteButton.innerHTML = `${data.downvotes} ⬇️`;
+				
+				// Handle downvote styling if you have it
+				if (data.userDownvoted) {
+					downvoteButton.classList.add('downvoted');
+				} else {
+					downvoteButton.classList.remove('downvoted');
+				}
+			}
+
+			// Update the master data if it exists
+			if (typeof masterBooruData !== 'undefined' && masterBooruData[booru_id]) {
+				masterBooruData[booru_id].upvotes = data.upvotesList || [];
+			}
+
+			// Update user credits display if they paid to remove upvote
+			if (data.creditsDeducted) {
+				updateUserProfileAndDisplay();
+			}
 		} else if (data.status == "error") {
-			alert(data.message)
+			globalAlert({
+				message: data.message,
+				question: true,
+				options: {
+					okay: function() {}
+				}
+			});
 		}
+	})
+	.catch(error => {
+		console.error('Error voting on post:', error);
+		globalAlert({
+			message: "Error voting on post. Please try again later.",
+			question: true,
+			options: {
+				okay: function() {}
+			}
+		});
 	})
 }
 
@@ -175,13 +250,30 @@ function booruSearchInitialize(settingsMode=false) {
             let searchValue = searchInput.value;
             let sortQuery = searchSorting.value;
             
-            let url = `https://www.jscammie.com/booru/?page=1&search=${searchValue}&safety=${safetyQuery}&sort=${sortQuery}`;
+            // Build URL with proper parameter handling
+            let urlParams = new URLSearchParams();
+            urlParams.set('page', '1');
+            
+            if (searchValue && searchValue.trim()) {
+                urlParams.set('search', searchValue.trim());
+            }
+            
+            if (safetyQuery) {
+                urlParams.set('safety', safetyQuery);
+            } else {
+                urlParams.set('safety', 'sfw'); // Default to SFW if no safety selected
+            }
+            
+            if (sortQuery) {
+                urlParams.set('sort', sortQuery);
+            }
             
             // Add following parameter if following sort is selected
             if (sortQuery === 'following') {
-                url += '&following=true';
+                urlParams.set('following', 'true');
             }
             
+            let url = `https://www.jscammie.com/booru/?${urlParams.toString()}`;
             window.location.href = url;
         }
     }

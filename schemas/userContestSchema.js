@@ -11,6 +11,9 @@ const userContestSchema = new Schema({
     entries: [entrySchema],
 })
 
+// Add index for performance
+userContestSchema.index({ accountId: 1 });
+
 const name = 'userContest'
 
 module.exports = mongoose.models[name] || mongoose.model(name, userContestSchema, name)

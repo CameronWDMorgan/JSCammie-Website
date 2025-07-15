@@ -1,7 +1,28 @@
 <!-- setup basic html template with metadata etc: -->
 <html>
 <head>
-    <title>Settings | JSCammie.com</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Settings & Preferences | JSCammie.com</title>
+    <meta name="description" content="Customize your JSCammie.com account settings, preferences, and profile options for the best AI image generation experience.">
+    <meta name="keywords" content="jscammie settings, account preferences, profile settings, ai generator settings, user preferences">
+    <meta name="author" content="JSCammie">
+    
+    <!-- Open Graph meta tags for social media -->
+    <meta property="og:title" content="Account Settings & Preferences | JSCammie.com">
+    <meta property="og:description" content="Customize your JSCammie.com account settings, preferences, and profile options for the best AI image generation experience.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://jscammie.com/settings">
+    <meta property="og:site_name" content="JSCammie.com">
+    
+    <!-- Twitter Card meta tags -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Account Settings & Preferences | JSCammie.com">
+    <meta name="twitter:description" content="Customize your JSCammie.com account settings, preferences, and profile options for the best AI image generation experience.">
+    
+    <!-- Robots directive for settings page -->
+    <meta name="robots" content="noindex, nofollow">
+    
     <link rel='stylesheet' href='/style.css'/>
     
     <%- include('../partials/_headerAll') %>
@@ -360,6 +381,21 @@
             <p id="avatarStatusMessage" class="status-message"></p>
         </div>
 
+        <!-- Username Settings -->
+        <div class="settings-section">
+            <h2>👤 Username Settings</h2>
+            <h3>Change Your Username</h3>
+            <p style="color: #f39c12; font-weight: bold; margin-bottom: 15px;">⚠️ This will update your username tag in all your booru posts!</p>
+            <p style="color: #8bc34a; margin-bottom: 10px;">📝 Usernames are automatically converted to lowercase</p>
+            <p style="color: rgba(255, 255, 255, 0.7); margin-bottom: 15px;">Current username: <strong><%= userProfile.username %></strong></p>
+            <form id="username_form">
+                <input type="hidden" name="setting" value="username">
+                <input type="text" id="usernameInput" name="value" placeholder="lowercase_letters_numbers_only" value="<%= userProfile.username %>" required minlength="3" maxlength="32">
+                <button type="submit">Change Username</button>
+                <p id="usernameStatusMessage" class="status-message"></p>
+            </form>
+        </div>
+
         <!-- Bio Settings -->
         <div class="settings-section">
             <h2>📝 Profile Bio</h2>
@@ -546,6 +582,86 @@
             };
 
             xhr.send(file);
+        });
+
+        // Username Update Script
+        // Add real-time lowercase conversion
+        document.getElementById('usernameInput').addEventListener('input', function(e) {
+            // Convert to lowercase as user types
+            const input = e.target;
+            const cursorPosition = input.selectionStart;
+            input.value = input.value.toLowerCase();
+            input.setSelectionRange(cursorPosition, cursorPosition);
+        });
+
+        document.getElementById('username_form').addEventListener('submit', function (e) {
+            e.preventDefault();
+            const statusMessage = document.getElementById('usernameStatusMessage');
+            const submitButton = e.target.querySelector('button[type="submit"]');
+
+            let formData = new FormData(document.getElementById('username_form'));
+            let newUsername = formData.get('value').trim().toLowerCase();
+            
+            // Basic validation
+            if (newUsername.length < 3) {
+                statusMessage.textContent = 'Username must be at least 3 characters long.';
+                statusMessage.className = 'status-message error';
+                return;
+            }
+            
+            if (newUsername.length > 32) {
+                statusMessage.textContent = 'Username must be no more than 32 characters long.';
+                statusMessage.className = 'status-message error';
+                return;
+            }
+            
+            // Check for invalid characters (only allow letters, numbers, underscores, and hyphens)
+            if (!/^[a-z0-9_-]+$/.test(newUsername)) {
+                statusMessage.textContent = 'Username can only contain lowercase letters, numbers, underscores, and hyphens.';
+                statusMessage.className = 'status-message error';
+                return;
+            }
+
+            // Disable button during request
+            submitButton.disabled = true;
+            submitButton.textContent = 'Updating...';
+            statusMessage.textContent = 'Updating username and booru tags...';
+            statusMessage.className = 'status-message';
+
+            let data = {
+                setting: formData.get('setting'),
+                value: newUsername
+            }
+
+            fetch('/settings/update', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            }).then(response => response.json()).then(data => {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Change Username';
+                
+                if (data.status === 'success') {
+                    statusMessage.textContent = data.message;
+                    statusMessage.className = 'status-message success';
+                    // Update the current username display
+                    document.querySelector('.settings-section p strong').textContent = newUsername;
+                    // Optionally refresh the page after a delay
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    statusMessage.textContent = data.message || 'Error updating username';
+                    statusMessage.className = 'status-message error';
+                }
+            }).catch(error => {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Change Username';
+                statusMessage.textContent = 'Error updating username.';
+                statusMessage.className = 'status-message error';
+            });
         });
 
         // Bio Update Script

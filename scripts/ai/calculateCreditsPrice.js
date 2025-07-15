@@ -14,10 +14,6 @@ function getFastqueuePrice(loraCount, model) {
 			dynamicCreditsPrice = dynamicCreditsPrice * 3.5
 			loraModifier = 5
 			break
-		case 'flux':
-			dynamicCreditsPrice = dynamicCreditsPrice * 5
-			loraModifier = 5
-			break
 		case 'illustrious':
 			dynamicCreditsPrice = dynamicCreditsPrice * 3.5
 			loraModifier = 4
@@ -57,7 +53,7 @@ function getExtrasPrice(extras, model='') {
 
 	// if { removeWatermark: true } is passed, add 150 credits
 	if (extras.removeWatermark) {
-		extrasPrice.removeWatermark += 300
+		extrasPrice.removeWatermark += 250
 	}
 
 	if (extras.upscale) {
@@ -73,9 +69,6 @@ function getExtrasPrice(extras, model='') {
 	if (extras.doubleImages) {
 		extrasPrice.doubleImages += getFastqueuePrice(1, model)
 		extrasPrice.doubleImages = Math.round(extrasPrice.doubleImages * 2.5)
-		if (model.startsWith('flux')) {
-			extrasPrice.doubleImages = Math.round(extrasPrice.doubleImages * 1.25)
-		}
 	}
 
 	// if both upscale and doubleImages are passed, multiply them to create the bonus:

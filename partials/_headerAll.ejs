@@ -1,3 +1,11 @@
+<!-- Mobile Cache Control Meta Tags -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="format-detection" content="telephone=no">
+
 <!-- Twitter conversion tracking base code -->
 <script>
 !function(e,t,n,s,u,a){e.twq||(s=e.twq=function(){s.exe?s.exe.apply(s,arguments):s.queue.push(arguments);
@@ -6,3 +14,132 @@ a=t.getElementsByTagName(n)[0],a.parentNode.insertBefore(u,a))}(window,document,
 twq('config','pzp6l');
 </script>
 <!-- End Twitter conversion tracking base code -->
+
+<!-- Service Worker Registration -->
+<script>
+if ('serviceWorker' in navigator) {
+    // Service Worker update cooldown mechanism (5 minutes)
+    let lastUpdateNotification = 0;
+    let updateCooldownTimer = null;
+    let pendingUpdateWorker = null;
+    const UPDATE_COOLDOWN = 5 * 60 * 1000; // 5 minutes in milliseconds
+    
+    function showUpdateNotification(worker) {
+        if (typeof globalAlert === 'function') {
+            globalAlert({
+                message: 'A new version of the website is available. Refreshing is not mandatory, but recommended if you are experiencing any issues. Would you like to refresh now?',
+                question: true,
+                options: {
+                    refresh: () => {
+                        if (worker) {
+                            worker.postMessage({type: 'SKIP_WAITING'});
+                        }
+                        window.location.reload();
+                    },
+                    later: () => {
+                        // User chose to update later, do nothing
+                    }
+                }
+            });
+        } else {
+            // Fallback to regular confirm if globalAlert isn't available
+            if (confirm('A new version of the website is available. Refreshing is not mandatory, but recommended if you are experiencing any issues. Refresh now?')) {
+                if (worker) {
+                    worker.postMessage({type: 'SKIP_WAITING'});
+                }
+                window.location.reload();
+            }
+        }
+        lastUpdateNotification = Date.now();
+    }
+    
+    function handleServiceWorkerUpdate(worker) {
+        const now = Date.now();
+        
+        // Clear any existing timer
+        if (updateCooldownTimer) {
+            clearTimeout(updateCooldownTimer);
+        }
+        
+        // Store the worker for later use
+        pendingUpdateWorker = worker;
+        
+        // If enough time has passed since last notification, show immediately
+        if (now - lastUpdateNotification >= UPDATE_COOLDOWN) {
+            console.log('Service worker update: showing notification immediately');
+            showUpdateNotification(worker);
+        } else {
+            // Otherwise, set a timer to show after cooldown period
+            const remainingCooldown = UPDATE_COOLDOWN - (now - lastUpdateNotification);
+            console.log(`Service worker update: delaying notification for ${Math.round(remainingCooldown / 1000)}s due to cooldown`);
+            
+            updateCooldownTimer = setTimeout(() => {
+                console.log('Service worker update: showing delayed notification');
+                showUpdateNotification(pendingUpdateWorker);
+                pendingUpdateWorker = null;
+            }, remainingCooldown);
+        }
+    }
+    
+    window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' })
+            .then(function(registration) {
+                console.log('ServiceWorker registration successful');
+                
+                // Listen for updates
+                registration.addEventListener('updatefound', function() {
+                    const newWorker = registration.installing;
+                    newWorker.addEventListener('statechange', function() {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            // New content is available, handle with cooldown
+                            handleServiceWorkerUpdate(newWorker);
+                        }
+                    });
+                });
+            })
+            .catch(function(err) {
+                console.log('ServiceWorker registration failed: ', err);
+            });
+        
+        // Listen for service worker messages
+        navigator.serviceWorker.addEventListener('message', event => {
+            if (event.data && event.data.type === 'SW_UPDATED') {
+                // Service worker updated, handle with cooldown
+                handleServiceWorkerUpdate(null);
+            }
+        });
+    });
+    
+    // Function to clear all caches (called by hard refresh)
+    window.clearAllCaches = function() {
+        return new Promise((resolve, reject) => {
+            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                // Set up message listener before sending the message
+                const messageHandler = function(event) {
+                    if (event.data && (event.data.success !== undefined || event.data.type === 'CACHE_CLEARED')) {
+                        navigator.serviceWorker.removeEventListener('message', messageHandler);
+                        if (event.data.success !== false) {
+                            resolve();
+                        } else {
+                            reject(new Error(event.data.error || 'Cache clearing failed'));
+                        }
+                    }
+                };
+                
+                navigator.serviceWorker.addEventListener('message', messageHandler);
+                
+                // Send the clear cache message
+                navigator.serviceWorker.controller.postMessage({type: 'CLEAR_CACHE'});
+                
+                // Timeout after 5 seconds if no response
+                setTimeout(() => {
+                    navigator.serviceWorker.removeEventListener('message', messageHandler);
+                    resolve(); // Don't fail the hard refresh if SW doesn't respond
+                }, 5000);
+            } else {
+                resolve();
+            }
+        });
+    };
+}
+</script>

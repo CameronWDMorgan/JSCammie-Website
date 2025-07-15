@@ -18,6 +18,9 @@ const userHistorySchema = new Schema({
     uploadedToBooru: { type: Boolean, default: false },
 })
 
+// Add index for performance
+userHistorySchema.index({ account_id: 1 });
+
 const name = 'userHistory'
 
 module.exports = mongoose.models[name] || mongoose.model(name, userHistorySchema, name)

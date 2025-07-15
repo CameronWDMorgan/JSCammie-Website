@@ -1,7 +1,28 @@
 <!-- setup basic html template with metadata etc: -->
 <html>
 <head>
-    <title><%=type%> Leaderboard | JSCammie.com</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Community Leaderboard & Top Users | JSCammie.com</title>
+    <meta name="description" content="View the JSCammie.com community leaderboard featuring top AI artists, most active users, and highest-rated content creators.">
+    <meta name="keywords" content="jscammie leaderboard, top users, community rankings, ai artists, best creators, user stats">
+    <meta name="author" content="JSCammie">
+    
+    <!-- Open Graph meta tags for social media -->
+    <meta property="og:title" content="Community Leaderboard & Top Users | JSCammie.com">
+    <meta property="og:description" content="View the JSCammie.com community leaderboard featuring top AI artists, most active users, and highest-rated content creators.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://jscammie.com/leaderboard">
+    <meta property="og:site_name" content="JSCammie.com">
+    
+    <!-- Twitter Card meta tags -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Community Leaderboard & Top Users | JSCammie.com">
+    <meta name="twitter:description" content="View the JSCammie.com community leaderboard featuring top AI artists, most active users, and highest-rated content creators.">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://jscammie.com/leaderboard">
+    
     <link rel='stylesheet' href='/style.css'/>
     
     <%- include('../partials/_headerAll') %>
@@ -27,300 +48,679 @@
     </div>
 
    <style>
-    /* Leaderboard container */
-    #leaderboard {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-        gap: 20px;
-        padding: 20px;
-        background: #1e1e1e;
-        border-radius: 12px;
-        width: 100%;
+    /* Modern Leaderboard Styles */
+    .leaderboard-container {
         margin: 0 auto;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        padding: 20px;
     }
 
-    /* Leaderboard user card */
-    .leaderboard-usercard {
+    .leaderboard-header {
+        text-align: center;
+        margin-bottom: 40px;
+    }
+
+    .leaderboard-title {
+        font-size: 3rem;
+        font-weight: 700;
+        margin-bottom: 10px;
+        background: linear-gradient(135deg, #00d0ff, #0070b0);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        text-shadow: none;
+    }
+
+    .leaderboard-subtitle {
+        font-size: 1.2rem;
+        opacity: 0.8;
+        color: var(--text-colour);
+        margin-bottom: 30px;
+    }
+
+    /* Type selector with modern tabs */
+    .leaderboard-type-selector {
         display: flex;
-        align-items: center;
-        gap: 15px;
-        padding: 15px;
-        background: #2a2a2a;
-        border-radius: 10px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        color: #ffffff;
-        font-family: Arial, sans-serif;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        justify-content: center;
+        gap: 5px;
+        margin-bottom: 40px;
+        background: var(--highlight-colour);
+        border-radius: 50px;
+        padding: 8px;
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--border-colour);
+    }
+
+    .leaderboard-type-button {
+        flex: 1;
+        padding: 12px 24px;
+        background: transparent;
+        border: none;
+        border-radius: 40px;
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-colour);
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         position: relative;
         overflow: hidden;
     }
 
-    .leaderboard-usercard:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+    .leaderboard-type-button::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--highlight-colour);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        border-radius: 40px;
     }
 
-    /* Top 3 cards styling */
-    .leaderboard-usercard.top-3 {
-        background: linear-gradient(135deg, #2a2a2a 0%, #3a3a3a 100%);
-    }
-
-    /* Rank styling */
-    [class^="leaderboard-rank-"] {
-        font-weight: bold;
-        width: 30px;
-        text-align: center;
-        font-size: 1.2rem;
-    }
-
-    /* Profile image */
-    .leaderboard-profileImg img {
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 3px solid #333;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-    }
-
-    /* Username */
-    .leaderboard-username {
-        flex: 1;
-        font-weight: bold;
-        font-size: 1.1rem;
-    }
-
-    .leaderboard-username a {
-        text-decoration: none;
-        color: #ffffff;
-        transition: color 0.2s ease;
-    }
-
-    .leaderboard-username a:hover {
-        color: #00d0ff;
-        text-decoration: underline;
-    }
-
-    /* Leaderboard-specific styles */
-    .leaderboard-credits,
-    .leaderboard-level,
-    .leaderboard-exp,
-    .leaderboard-score {
-        font-size: 0.9rem;
-        color: #b0b0b0;
-        background: rgba(0, 0, 0, 0.2);
-        padding: 5px 10px;
-        border-radius: 20px;
-        text-align: center;
-    }
-
-    /* Rank specific colors */
-    .leaderboard-rank-1 { 
-        color: gold; 
-        font-size: 1.5rem;
-        text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
-    }
-    .leaderboard-rank-2 { 
-        color: silver; 
-        font-size: 1.3rem;
-        text-shadow: 0 0 5px rgba(192, 192, 192, 0.5);
-    }
-    .leaderboard-rank-3 { 
-        color: #cd7f32; 
-        font-size: 1.1rem;
-        text-shadow: 0 0 5px rgba(205, 127, 50, 0.5);
-    }
-
-    /* Type selector buttons */
-    .leaderboard-type-selector {
-        display: flex;
-        justify-content: center;
-        gap: 15px;
-        margin-bottom: 20px;
-        flex-wrap: wrap;
-    }
-
-    .leaderboard-type-button {
-        padding: 10px 20px;
-        background: linear-gradient(135deg, #2a2a2a 0%, #3a3a3a 100%);
-        border: none;
-        border-radius: 30px;
-        font-size: 1rem;
-        font-weight: bold;
-        color: white;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    }
-
-    .leaderboard-type-button:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
-        background: linear-gradient(135deg, #3a3a3a 0%, #4a4a4a 100%);
+    .leaderboard-type-button:hover::before {
+        opacity: 0.1;
     }
 
     .leaderboard-type-button.active {
-        background: linear-gradient(135deg, #00a0c8 0%, #0070b0 100%);
+        background: linear-gradient(135deg, #00d0ff, #0070b0);
+        color: white;
+        box-shadow: 0 4px 20px rgba(0, 208, 255, 0.3);
+        transform: translateY(-2px);
     }
 
-    /* Responsive adjustments */
+    /* Stats bar */
+    .leaderboard-stats {
+        display: flex;
+        justify-content: center;
+        gap: 40px;
+        margin-bottom: 30px;
+        padding: 20px;
+        background: var(--highlight-colour);
+        border-radius: 20px;
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--border-colour);
+    }
+
+    .stat-item {
+        text-align: center;
+    }
+
+    .stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #00d0ff;
+        display: block;
+    }
+
+    .stat-label {
+        font-size: 0.9rem;
+        opacity: 0.7;
+        color: var(--text-colour);
+    }
+
+    /* Leaderboard grid */
+    .leaderboard-grid {
+        display: grid;
+        gap: 20px;
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    }
+
+    /* User cards with modern glassmorphism */
+    .leaderboard-usercard {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        padding: 24px;
+        background: var(--highlight-colour);
+        border-radius: 20px;
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--border-colour);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .leaderboard-usercard::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(0, 208, 255, 0.1), rgba(0, 112, 176, 0.1));
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .leaderboard-usercard:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        border-color: rgba(0, 208, 255, 0.5);
+    }
+
+    .leaderboard-usercard:hover::before {
+        opacity: 1;
+    }
+
+    /* Top 3 special styling */
+    .leaderboard-usercard.top-1 {
+        background: linear-gradient(135deg, var(--highlight-colour), var(--darker-background-colour));
+        border: 2px solid rgba(255, 215, 0, 0.5);
+        box-shadow: 0 8px 32px rgba(255, 215, 0, 0.2);
+        position: relative;
+    }
+
+    .leaderboard-usercard.top-1::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 215, 0, 0.05));
+        pointer-events: none;
+        border-radius: 20px;
+    }
+
+    .leaderboard-usercard.top-2 {
+        background: linear-gradient(135deg, var(--highlight-colour), var(--darker-background-colour));
+        border: 2px solid rgba(192, 192, 192, 0.5);
+        box-shadow: 0 8px 32px rgba(192, 192, 192, 0.2);
+        position: relative;
+    }
+
+    .leaderboard-usercard.top-2::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(192, 192, 192, 0.1), rgba(192, 192, 192, 0.05));
+        pointer-events: none;
+        border-radius: 20px;
+    }
+
+    .leaderboard-usercard.top-3 {
+        background: linear-gradient(135deg, var(--highlight-colour), var(--darker-background-colour));
+        border: 2px solid rgba(205, 127, 50, 0.5);
+        box-shadow: 0 8px 32px rgba(205, 127, 50, 0.2);
+        position: relative;
+    }
+
+    .leaderboard-usercard.top-3::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(205, 127, 50, 0.1), rgba(205, 127, 50, 0.05));
+        pointer-events: none;
+        border-radius: 20px;
+    }
+
+    /* Rank badge */
+    .rank-badge {
+        min-width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 1.4rem;
+        background: var(--darker-background-colour);
+        border: 3px solid var(--border-colour);
+        position: relative;
+        z-index: 2;
+        color: var(--text-colour);
+    }
+
+    .rank-badge.rank-1 {
+        background: linear-gradient(135deg, #ffd700, #ffed4e);
+        color: #fffbe6;
+        border-color: #ffd700;
+        box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 8px #ffd700;
+    }
+
+    .rank-badge.rank-2 {
+        background: linear-gradient(135deg, #c0c0c0, #e8e8e8);
+        color: #f8f8f8;
+        border-color: #c0c0c0;
+        box-shadow: 0 0 20px rgba(192, 192, 192, 0.4);
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 8px #c0c0c0;
+    }
+
+    .rank-badge.rank-3 {
+        background: linear-gradient(135deg, #cd7f32, #e89d4f);
+        color: #fff3e0;
+        border-color: #cd7f32;
+        box-shadow: 0 0 20px rgba(205, 127, 50, 0.4);
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 8px #cd7f32;
+    }
+
+    /* Profile image */
+    .profile-image {
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid var(--border-colour);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        transition: all 0.3s ease;
+    }
+
+    .leaderboard-usercard:hover .profile-image {
+        transform: scale(1.05);
+        border-color: rgba(0, 208, 255, 0.5);
+    }
+
+    /* User info */
+    .user-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .username {
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+        color: var(--text-colour);
+    }
+
+    .username a {
+        color: inherit;
+        text-decoration: none;
+        transition: color 0.3s ease;
+        position: relative;
+        z-index: 3;
+    }
+
+    .username a:hover {
+        color: #00d0ff;
+        text-shadow: 0 0 10px rgba(0, 208, 255, 0.3);
+    }
+
+    .user-stats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 8px;
+    }
+
+    .stat-chip {
+        padding: 6px 12px;
+        background: var(--darker-background-colour);
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        border: 1px solid var(--border-colour);
+        white-space: nowrap;
+    }
+
+    .stat-value {
+        color: #00d0ff;
+        font-weight: 600;
+    }
+
+    /* Trophy icon */
+    .trophy-icon {
+        font-size: 2rem;
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        z-index: 3;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+    }
+
+    /* Responsive design */
     @media (max-width: 768px) {
-        #leaderboard {
+        .leaderboard-grid {
             grid-template-columns: 1fr;
         }
         
         .leaderboard-usercard {
-            padding: 10px;
+            padding: 16px;
+            gap: 15px;
         }
-        
-        .leaderboard-profileImg img {
-            width: 50px;
+
+        .leaderboard-title {
+            font-size: 2rem;
+        }
+
+        .leaderboard-stats {
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .rank-badge {
+            min-width: 50px;
             height: 50px;
+            font-size: 1.2rem;
+        }
+
+        .profile-image {
+            width: 60px;
+            height: 60px;
+        }
+
+        .user-stats {
+            flex-direction: column;
+            gap: 8px;
         }
     }
 
-    /* Page title styling */
-    .leaderboard-title {
-        text-align: center;
-        font-size: 2.5rem;
-        font-weight: bold;
-        margin-bottom: 20px;
-        color: white;
-        text-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    @media (max-width: 480px) {
+        .leaderboard-type-selector {
+            flex-direction: column;
+            padding: 12px;
+        }
+
+        .leaderboard-usercard {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .trophy-icon {
+            position: relative;
+            top: auto;
+            right: auto;
+            margin-top: 10px;
+        }
     }
 
-    /* Trophy icons for top 3 */
-    .trophy-icon {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        font-size: 1.5rem;
+    /* Animation for cards appearing */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .leaderboard-usercard {
+        animation: fadeInUp 0.6s ease-out;
+        animation-fill-mode: both;
+    }
+
+    .leaderboard-usercard:nth-child(1) { animation-delay: 0.1s; }
+    .leaderboard-usercard:nth-child(2) { animation-delay: 0.2s; }
+    .leaderboard-usercard:nth-child(3) { animation-delay: 0.3s; }
+    .leaderboard-usercard:nth-child(4) { animation-delay: 0.4s; }
+    .leaderboard-usercard:nth-child(5) { animation-delay: 0.5s; }
+
+    /* Light/Dark mode specific adjustments */
+    body:not(.dark-mode) .leaderboard-container {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 20px;
+        padding: 30px 20px;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    body:not(.dark-mode) .leaderboard-usercard {
+        background: rgba(255, 255, 255, 0.85);
+        color: #2c2c2c;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    body:not(.dark-mode) .leaderboard-usercard:hover {
+        background: rgba(255, 255, 255, 0.95);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    }
+
+    body:not(.dark-mode) .username a {
+        color: #2c2c2c;
+    }
+
+    body:not(.dark-mode) .username a:hover {
+        color: #0070b0;
+    }
+
+    body:not(.dark-mode) .stat-chip {
+        background: rgba(0, 0, 0, 0.08);
+        color: #2c2c2c;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    body:not(.dark-mode) .stat-value {
+        color: #0070b0;
+    }
+
+    body:not(.dark-mode) .leaderboard-type-button {
+        color: #2c2c2c;
+        background: rgba(255, 255, 255, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    body:not(.dark-mode) .leaderboard-type-button:hover {
+        background: rgba(255, 255, 255, 0.9);
+    }
+
+    body:not(.dark-mode) .leaderboard-stats {
+        background: rgba(255, 255, 255, 0.7);
+        color: #2c2c2c;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    body:not(.dark-mode) .stat-label {
+        color: #555;
+    }
+
+    body:not(.dark-mode) .leaderboard-subtitle {
+        color: #555;
+    }
+
+    body:not(.dark-mode) .rank-badge {
+        background: rgba(255, 255, 255, 0.9);
+        color: #2c2c2c;
+        border: 2px solid rgba(0, 0, 0, 0.1);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    body:not(.dark-mode) .profile-image {
+        border: 3px solid rgba(0, 0, 0, 0.1);
+    }
+
+    /* Dark mode specific adjustments */
+    body.dark-mode .leaderboard-container {
+        background: rgba(26, 26, 46, 0.4);
+        border: 1px solid var(--border-colour);
+    }
+
+    body.dark-mode .leaderboard-usercard {
+        background: rgba(42, 42, 62, 0.8);
+        color: var(--text-colour);
+        border: 1px solid rgba(58, 58, 78, 0.6);
+    }
+
+    body.dark-mode .leaderboard-usercard:hover {
+        background: rgba(42, 42, 62, 0.95);
+        border-color: rgba(0, 208, 255, 0.5);
+    }
+
+    body.dark-mode .rank-badge {
+        background: rgba(58, 58, 78, 0.9);
+        border: 2px solid rgba(74, 74, 94, 0.8);
+        color: #fff !important;
+        text-shadow: 0 0 8px #00d0ff, 0 1px 2px rgba(0,0,0,0.5);
+    }
+
+    body.dark-mode .rank-badge.rank-1 {
+        color: #fffbe6 !important;
+        text-shadow: 0 0 12px #ffd700, 0 1px 2px rgba(0,0,0,0.7);
+    }
+    body.dark-mode .rank-badge.rank-2 {
+        color: #f8f8f8 !important;
+        text-shadow: 0 0 12px #c0c0c0, 0 1px 2px rgba(0,0,0,0.7);
+    }
+    body.dark-mode .rank-badge.rank-3 {
+        color: #fff3e0 !important;
+        text-shadow: 0 0 12px #cd7f32, 0 1px 2px rgba(0,0,0,0.7);
+    }
+
+    body.dark-mode .stat-chip {
+        background: rgba(26, 26, 46, 0.8);
+        border: 1px solid rgba(58, 58, 78, 0.6);
+    }
+
+    body.dark-mode .leaderboard-stats {
+        background: rgba(42, 42, 62, 0.8);
+        border: 1px solid rgba(58, 58, 78, 0.6);
+    }
+
+    body.dark-mode .leaderboard-type-selector {
+        background: rgba(42, 42, 62, 0.8);
+        border: 1px solid rgba(58, 58, 78, 0.6);
+    }
+
+    body.dark-mode .leaderboard-type-button {
+        background: rgba(26, 26, 46, 0.6);
+    }
+
+    body.dark-mode .leaderboard-type-button:hover {
+        background: rgba(26, 26, 46, 0.8);
     }
    </style>
 
     <script>
-        // Fix linter errors by adding semicolons and proper syntax
-        var type = '<%= type %>';
-        var leaderboardInfo = <%- JSON.stringify(leaderboardInfo) %>;
-        var leaderboard = [];
-        var userHtml = [];
+        // Data from server
+        const type = '<%= type %>';
+        const leaderboardInfo = <%- JSON.stringify(leaderboardInfo) %>;
+        const totalUsers = <%= totalUsers || 0 %>;
 
-        if (type == "credits") {
+        // Create leaderboard cards
+        function createLeaderboardCards() {
+            const container = document.getElementById('leaderboard-grid');
+            container.innerHTML = '';
+
             leaderboardInfo.forEach((user, index) => {
-                leaderboard.push({
-                    rank: index + 1,
-                    username: user.username,
-                    credits: user.credits,
-                    profileImg: user.profileImg,
-                    accountId: user.accountId
-                });
-            });
-
-            console.log(leaderboard);
-
-            leaderboard.forEach(user => {
-                let topClass = user.rank <= 3 ? 'top-3' : '';
+                const rank = index + 1;
+                const isTop3 = rank <= 3;
+                const topClass = isTop3 ? `top-${rank}` : '';
+                
+                // Trophy icons for top 3
                 let trophyIcon = '';
-                
-                if (user.rank === 1) trophyIcon = '<span class="trophy-icon">🏆</span>';
-                else if (user.rank === 2) trophyIcon = '<span class="trophy-icon">🥈</span>';
-                else if (user.rank === 3) trophyIcon = '<span class="trophy-icon">🥉</span>';
-                
-                userHtml.push(`
-                    <div class="leaderboard-usercard ${topClass}">
-                        <div class="leaderboard-rank-${user.rank}">${user.rank}.</div>
-                        <div class="leaderboard-profileImg"><img src="${user.profileImg || "http://www.jscammie.com/noimagefound.png"}" alt="${user.username}'s profile"></div>
-                        <div class="leaderboard-username"><a href="/profile/${user.accountId}">${user.username}</a></div>
-                        <div class="leaderboard-credits">Credits: ${user.credits.toLocaleString()}</div>
+                if (rank === 1) trophyIcon = '<div class="trophy-icon">🏆</div>';
+                else if (rank === 2) trophyIcon = '<div class="trophy-icon">🥈</div>';
+                else if (rank === 3) trophyIcon = '<div class="trophy-icon">🥉</div>';
+
+                // Create stats based on leaderboard type
+                let statsHtml = '';
+                if (type === 'credits') {
+                    statsHtml = `<div class="stat-chip">Credits: <span class="stat-value">${user.credits.toLocaleString()}</span></div>`;
+                } else if (type === 'exp') {
+                    statsHtml = `
+                        <div class="stat-chip">Level: <span class="stat-value">${user.level}</span></div>
+                        <div class="stat-chip">Exp: <span class="stat-value">${user.exp.toLocaleString()}</span></div>
+                    `;
+                } else if (type === 'booru') {
+                    const scoreDisplay = Math.round(user.score * 100) / 100;
+                    statsHtml = `<div class="stat-chip">Score: <span class="stat-value">${scoreDisplay.toLocaleString()}</span></div>`;
+                    
+                    // Add additional stats if available
+                    if (user.postCount) {
+                        statsHtml += `<div class="stat-chip">Posts: <span class="stat-value">${user.postCount}</span></div>`;
+                    }
+                    if (user.followerCount && user.followerCount > 1) {
+                        statsHtml += `<div class="stat-chip">Followers: <span class="stat-value">${user.followerCount}</span></div>`;
+                    }
+                }
+
+                const cardHtml = `
+                    <div class="leaderboard-usercard ${topClass}" style="animation-delay: ${index * 0.1}s;">
                         ${trophyIcon}
+                        <div class="rank-badge rank-${rank <= 3 ? rank : 'default'}">${rank}</div>
+                        <img class="profile-image" src="${user.profileImg || '/noimagefound.png'}" alt="${user.username}'s profile" onerror="this.src='/noimagefound.png'">
+                        <div class="user-info">
+                            <div class="username">
+                                <a href="/profile/${user.accountId}">${user.username}</a>
+                            </div>
+                            <div class="user-stats">
+                                ${statsHtml}
+                            </div>
+                        </div>
                     </div>
-                `);
-            });
-        } else if (type == "exp") {
-            leaderboardInfo.forEach((user, index) => {
-                leaderboard.push({
-                    rank: index + 1,
-                    username: user.username,
-                    level: user.level,
-                    exp: user.exp,
-                    profileImg: user.profileImg,
-                    accountId: user.accountId
-                });
-            });
-
-            console.log(leaderboard);
-
-            leaderboard.forEach(user => {
-                let topClass = user.rank <= 3 ? 'top-3' : '';
-                let trophyIcon = '';
+                `;
                 
-                if (user.rank === 1) trophyIcon = '<span class="trophy-icon">🏆</span>';
-                else if (user.rank === 2) trophyIcon = '<span class="trophy-icon">🥈</span>';
-                else if (user.rank === 3) trophyIcon = '<span class="trophy-icon">🥉</span>';
-                
-                userHtml.push(`
-                    <div class="leaderboard-usercard ${topClass}">
-                        <div class="leaderboard-rank-${user.rank}">${user.rank}.</div>
-                        <div class="leaderboard-profileImg"><img src="${user.profileImg || "http://www.jscammie.com/noimagefound.png"}" alt="${user.username}'s profile"></div>
-                        <div class="leaderboard-username"><a href="/profile/${user.accountId}">${user.username}</a></div>
-                        <div class="leaderboard-level">Level: ${user.level}</div>
-                        <div class="leaderboard-exp">Exp: ${user.exp.toLocaleString()}</div>
-                        ${trophyIcon}
-                    </div>
-                `);
-            });
-        } else if (type == "booru") {
-            leaderboardInfo.forEach((user, index) => {
-                leaderboard.push({
-                    rank: index + 1,
-                    username: user.username,
-                    // round to 2 dp:
-                    score: Math.round(user.score * 100) / 100,
-                    profileImg: user.profileImg,
-                    accountId: user.accountId
-                });
-            });
-
-            console.log(leaderboard);
-
-            leaderboard.forEach(user => {
-                let topClass = user.rank <= 3 ? 'top-3' : '';
-                let trophyIcon = '';
-                
-                if (user.rank === 1) trophyIcon = '<span class="trophy-icon">🏆</span>';
-                else if (user.rank === 2) trophyIcon = '<span class="trophy-icon">🥈</span>';
-                else if (user.rank === 3) trophyIcon = '<span class="trophy-icon">🥉</span>';
-                
-                userHtml.push(`
-                    <div class="leaderboard-usercard ${topClass}">
-                        <div class="leaderboard-rank-${user.rank}">${user.rank}.</div>
-                        <div class="leaderboard-profileImg"><img src="${user.profileImg || "http://www.jscammie.com/noimagefound.png"}" alt="${user.username}'s profile"></div>
-                        <div class="leaderboard-username"><a href="/profile/${user.accountId}">${user.username}</a></div>
-                        <div class="leaderboard-score">Booru Score: ${user.score.toLocaleString()}</div>
-                        ${trophyIcon}
-                    </div>
-                `);
+                container.innerHTML += cardHtml;
             });
         }
+
+        // Update stats display
+        function updateStats() {
+            const statsContainer = document.querySelector('.leaderboard-stats');
+            if (!statsContainer) return;
+
+            let additionalStats = '';
+            if (type === 'booru' && leaderboardInfo.length > 0) {
+                const avgScore = leaderboardInfo.reduce((sum, user) => sum + user.score, 0) / leaderboardInfo.length;
+                additionalStats = `
+                    <div class="stat-item">
+                        <span class="stat-number">${Math.round(avgScore * 100) / 100}</span>
+                        <span class="stat-label">Avg Score</span>
+                    </div>
+                `;
+            }
+
+            statsContainer.innerHTML = `
+                ${additionalStats}
+            `;
+        }
+
+        // Initialize leaderboard
+        document.addEventListener('DOMContentLoaded', function() {
+            createLeaderboardCards();
+            updateStats();
+        });
     </script>
 
-    <div class="round-frosted page-content mw75-dynamic" style="padding: 20px;">
-        <h1 class="leaderboard-title"><%= type.charAt(0).toUpperCase() + type.slice(1) %> Leaderboard</h1>
-        
-        <div class="leaderboard-type-selector">
-            <button class="leaderboard-type-button <%= type === 'credits' ? 'active' : '' %>" onclick="window.location.href = '/leaderboard?type=credits';">Credits Leaderboard</button>
-            <button class="leaderboard-type-button <%= type === 'exp' ? 'active' : '' %>" onclick="window.location.href = '/leaderboard?type=exp';">Exp Leaderboard</button>
-            <button class="leaderboard-type-button <%= type === 'booru' ? 'active' : '' %>" onclick="window.location.href = '/leaderboard?type=booru';">Booru Leaderboard</button>
+    <div class="leaderboard-container">
+        <div class="leaderboard-header">
+            <h1 class="leaderboard-title">
+                <%= type.charAt(0).toUpperCase() + type.slice(1) %> Leaderboard
+            </h1>
+            <p class="leaderboard-subtitle">
+                <% if (type === 'credits') { %>
+                    Top users by credits earned
+                <% } else if (type === 'exp') { %>
+                    Top users by experience points
+                <% } else if (type === 'booru') { %>
+                    Top community artists by engagement score
+                <% } %>
+            </p>
         </div>
         
-        <div id="leaderboard" class="leaderboard-container"></div>
-    </div>
+        <div class="leaderboard-type-selector">
+            <button class="leaderboard-type-button <%= type === 'credits' ? 'active' : '' %>" onclick="window.location.href = '/leaderboard?type=credits';">
+                💰 Credits
+            </button>
+            <button class="leaderboard-type-button <%= type === 'exp' ? 'active' : '' %>" onclick="window.location.href = '/leaderboard?type=exp';">
+                ⭐ Experience
+            </button>
+            <button class="leaderboard-type-button <%= type === 'booru' ? 'active' : '' %>" onclick="window.location.href = '/leaderboard?type=booru';">
+                🎨 Community
+            </button>
+        </div>
 
-    <script>
-        let leaderboardDiv = document.getElementById("leaderboard");
-        leaderboardDiv.innerHTML = userHtml.join("");
-    </script>
+        <div class="leaderboard-stats">
+            <!-- Stats will be populated by JavaScript -->
+        </div>
+        
+        <div class="leaderboard-grid" id="leaderboard-grid">
+            <!-- Cards will be populated by JavaScript -->
+        </div>
+    </div>
 
     <!-- get partials/_footer: -->
     <%- include('../partials/_footer') %>

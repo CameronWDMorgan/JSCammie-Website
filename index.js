@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 require('console-stamp')(console, {
 	format: ':date(HH:MM:ss)'
 });
@@ -29,6 +31,20 @@ const compression = require('compression');
 app.use(compression());
 
 app.set('view engine', 'ejs');
+
+// Version timestamp for cache busting (regenerated on server restart)
+let VERSION_TIMESTAMP = Date.now();
+
+// Make version available to all EJS templates
+app.locals.version = VERSION_TIMESTAMP;
+
+// Function to update version and force cache invalidation
+function updateVersion() {
+	VERSION_TIMESTAMP = Date.now();
+	app.locals.version = VERSION_TIMESTAMP;
+	console.log(`Version updated to: ${VERSION_TIMESTAMP}`);
+	return VERSION_TIMESTAMP;
+}
 
 const ExifReader = require('exifreader');
 
@@ -76,9 +92,37 @@ app.use(session({
 }));
 
 
-app.use(express.static(__dirname));
+// Static file serving with cache control
+app.use(express.static(__dirname, {
+	setHeaders: function (res, path, stat) {
+		// Cache static assets for a short time, but allow revalidation
+		if (path.endsWith('.css') || path.endsWith('.js')) {
+			// CSS and JS files - short cache with revalidation
+			res.setHeader('Cache-Control', 'public, max-age=300, must-revalidate');
+		} else if (path.endsWith('.png') || path.endsWith('.jpg') || path.endsWith('.jpeg') || path.endsWith('.gif') || path.endsWith('.webp') || path.endsWith('.svg')) {
+			// Images can be cached longer since they change less frequently
+			res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
+		} else if (path.endsWith('.html') || path.endsWith('.ejs')) {
+			// HTML pages should not be cached
+			res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+			res.setHeader('Pragma', 'no-cache');
+			res.setHeader('Expires', '0');
+		} else {
+			// Default for other files
+			res.setHeader('Cache-Control', 'public, max-age=300, must-revalidate');
+		}
+		
+		// Add ETag for all files to enable conditional requests
+		res.setHeader('ETag', '"' + stat.mtime.getTime() + '-' + stat.size + '"');
+	}
+}));
 
 function enforceSecureDomain(req, res, next) {
+    // Skip enforcement if host header is missing
+    if (!req.headers.host) {
+        return next();
+    }
+    
     if (req.headers.host.slice(0, 4) !== 'www.' || !req.secure && req.get('x-forwarded-proto') !== 'https') {
         const host = req.headers.host.slice(0, 4) !== 'www.' ? 'www.' + req.headers.host : req.headers.host;
         return res.redirect(301, `https://${host}${req.url}`);
@@ -89,10 +133,21 @@ app.use(enforceSecureDomain);
 
 app.set('trust proxy', true);
 
+// Middleware to prevent caching of dynamic HTML pages
+app.use((req, res, next) => {
+	// Only apply no-cache headers to HTML requests (not API endpoints)
+	if (req.accepts('html') && !req.path.startsWith('/api/')) {
+		res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+		res.setHeader('Pragma', 'no-cache');
+		res.setHeader('Expires', '0');
+	}
+	next();
+});
 
-const userProfileSchema = require('./schemas/userProfileSchema.js');
+const userProfileSchema = require('./schemas/userProfileSchemaNew.js');
 const userSuggestionSchema = require('./schemas/userSuggestionSchema.js');
 const userHistorySchema = require('./schemas/userHistorySchema.js');
+const UsernameUtils = require('./utils/usernameUtils.js');
 
 const generationLoraSchema = require('./schemas/generationLoraSchema.js');
 
@@ -122,30 +177,227 @@ app.get('/aibeta', (req, res) => {
 })
 
 app.get('/home', (req, res) => {
+	// Handle success notifications from OAuth redirects
+	let notification = null;
+	if (req.query.linked === 'google') {
+		notification = {
+			type: 'success',
+			message: 'Google account successfully linked to your profile!'
+		};
+	} else if (req.query.linked === 'discord') {
+		notification = {
+			type: 'success',
+			message: 'Discord account successfully linked to your profile!'
+		};
+	} else if (req.query.login === 'success') {
+		notification = {
+			type: 'success',
+			message: 'Welcome! You have successfully logged in.'
+		};
+	}
+	
 	res.render('home', {
-		session: req.session
-	})
+		session: req.session,
+		notification: notification
+	});
 })
 
-app.get('/login', (req, res) => {
-	// send login.ejs:
+app.get('/login', async (req, res) => {
+	let userProfile = null;
+	let connectedProviders = [];
+	let activeProviders = [];
+	let notification = null;
+	
+	// Handle logout messages
+	if (req.query.message === 'logged_out') {
+		notification = {
+			type: 'info',
+			message: 'You have been logged out successfully.'
+		};
+	} else if (req.query.message === 'logged_out_all') {
+		notification = {
+			type: 'info',
+			message: 'You have been logged out from all providers successfully.'
+		};
+	}
+	
+	// If user is already logged in, get their profile information
+	if (req.session.loggedIn && req.session.accountId) {
+		try {
+			userProfile = await userProfileSchema.findOne({
+				accountId: req.session.accountId
+			});
+			
+			if (userProfile && userProfile.oauthProviders) {
+				// Get list of connected providers from database
+				connectedProviders = Object.keys(userProfile.oauthProviders);
+			}
+			
+			// Get list of active session providers
+			if (req.session.discord) activeProviders.push('discord');
+			if (req.session.google) activeProviders.push('google');
+			
+		} catch (error) {
+			console.error('Error fetching user profile for login page:', error);
+		}
+	}
+	
 	res.render('login', {
-		session: req.session
-	})
+		session: req.session,
+		userProfile: userProfile,
+		connectedProviders: connectedProviders,
+		activeProviders: activeProviders,
+		notification: notification
+	});
 })
 
 app.get('/logout', (req, res) => {
-	req.session.loggedIn = false;
-	req.session.accountId = null;
-	// redirect to previous page:
-	res.redirect('back')
-})
+	req.session.destroy((err) => {
+		if (err) {
+			console.error("Session destruction error:", err);
+			return res.redirect('back');
+		}
+		res.redirect('/login?message=logged_out');
+	});
+});
+
+app.get('/logout-all', (req, res) => {
+	// Same as regular logout - destroy entire session
+	req.session.destroy((err) => {
+		if (err) {
+			console.error("Session destruction error:", err);
+			return res.redirect('back');
+		}
+		res.redirect('/login?message=logged_out_all');
+	});
+});
 
 app.get('/auth/discord', (req, res) => {
 	res.render('discordcallback', {
 		session: req.session
 	})
 })
+
+// Google OAuth routes
+app.get('/auth/google', (req, res) => {
+	const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+		`client_id=${process.env.GOOGLE_OAUTH_CLIENT_ID}&` +
+		`redirect_uri=${encodeURIComponent(process.env.GOOGLE_OAUTH_REDIRECT_URI)}&` +
+		`response_type=code&` +
+		`scope=openid%20profile%20email&` +
+		`access_type=offline`;
+	
+	// Debug logging
+	console.log('Google OAuth initiation:', {
+		client_id: process.env.GOOGLE_OAUTH_CLIENT_ID ? 'present' : 'missing',
+		redirect_uri: process.env.GOOGLE_OAUTH_REDIRECT_URI,
+		session: {
+			loggedIn: req.session?.loggedIn,
+			accountId: req.session?.accountId
+		},
+		googleAuthUrl: googleAuthUrl
+	});
+	
+	res.redirect(googleAuthUrl);
+});
+
+app.get('/auth/google/callback', async (req, res) => {
+	const { code, error } = req.query;
+	
+	// Debug logging
+	console.log('Google OAuth callback received:', {
+		code: code ? 'present' : 'missing',
+		error: error,
+		query: req.query,
+		session: {
+			loggedIn: req.session?.loggedIn,
+			accountId: req.session?.accountId
+		}
+	});
+	
+	if (error) {
+		console.error('Google OAuth error:', error);
+		return res.redirect('/login?error=oauth_error');
+	}
+	
+	if (!code) {
+		console.error('No authorization code received from Google');
+		return res.redirect('/login?error=no_code');
+	}
+	
+	try {
+		const AuthenticationHandler = require('./auth/AuthenticationHandler.js');
+		const authHandler = new AuthenticationHandler();
+		
+		// Exchange code for access token
+		const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/x-www-form-urlencoded',
+			},
+			body: new URLSearchParams({
+				client_id: process.env.GOOGLE_OAUTH_CLIENT_ID,
+				client_secret: process.env.GOOGLE_OAUTH_CLIENT_SECRET,
+				code: code,
+				grant_type: 'authorization_code',
+				redirect_uri: process.env.GOOGLE_OAUTH_REDIRECT_URI,
+			}),
+		});
+		
+		if (!tokenResponse.ok) {
+			throw new Error(`Token exchange failed: ${tokenResponse.statusText}`);
+		}
+		
+		const tokenData = await tokenResponse.json();
+		
+		// Get user info from Google
+		const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+			headers: {
+				'Authorization': `Bearer ${tokenData.access_token}`,
+			},
+		});
+		
+		if (!userResponse.ok) {
+			throw new Error(`User info fetch failed: ${userResponse.statusText}`);
+		}
+		
+		const googleUser = await userResponse.json();
+		
+		// Process authentication using AuthenticationHandler
+		const authResult = await authHandler.handleProviderAuth('google', {
+			id: googleUser.id,
+			email: googleUser.email,
+			name: googleUser.name,
+			picture: googleUser.picture
+		}, req);
+		
+		if (authResult.status === 'success') {
+			// Set session data
+			req.session.accountId = authResult.accountId;
+			req.session.loggedIn = true;
+			
+			// Provide feedback based on whether this was account linking or new login
+			if (authResult.isLinked) {
+				console.log(`Google account successfully linked to user ${authResult.username} (ID: ${authResult.accountId})`);
+				res.redirect('/?linked=google');
+			} else {
+				console.log(`User ${authResult.username} logged in via Google (ID: ${authResult.accountId})`);
+				res.redirect('/?login=success');
+			}
+		} else if (authResult.status === 'conflict') {
+			// Store conflict data in session and redirect to conflict resolution page
+			req.session.conflictData = authResult.conflictData;
+			res.redirect('/account-conflict');
+		} else {
+			console.error('Authentication failed:', authResult.message);
+			res.redirect('/login?error=auth_failed');
+		}
+		
+	} catch (error) {
+		console.error('Google OAuth callback error:', error);
+		res.redirect('/login?error=server_error');
+	}
+});
 
 app.get('/contact', (req, res) => {
 	res.render('contact', {
@@ -154,16 +406,12 @@ app.get('/contact', (req, res) => {
 })
 
 app.post('/toggle-darkmode', (req, res) => {
-    console.log('Toggle darkmode request received:', req.body);
-    
     // using isDarkMode from the request, toggle the darkmode:
     if (req.body.isDarkMode === 'true') {
         req.session.darkmode = true;
     } else {
         req.session.darkmode = false;
     }
-    
-    console.log('Session darkmode updated to:', req.session.darkmode);
     
     // Respond with the new state or redirect, etc.
     res.json({
@@ -201,21 +449,25 @@ app.get('/profile', async (req, res) => {
 
 })
 
-// OAuth route to handle Discord token and login
 app.post('/receive-token', async (req, res) => {
-    const accessToken = req.body.accessToken;
+    const { accessToken } = req.body;
+
+    if (!accessToken) {
+        return res.status(400).json({ status: 'error', message: 'Access token is required.' });
+    }
 
     try {
-        // Fetch user details from Discord API
-        const discordResponse = await fetch('https://discord.com/api/users/@me', {
+        // Exchange the access token for user info using the BOT_TOKEN
+        const discordResponse = await fetch(`https://discord.com/api/users/@me`, {
             headers: {
                 'Authorization': `Bearer ${accessToken}`
             }
         });
 
         if (!discordResponse.ok) {
-            console.error(`Failed to fetch Discord user: ${discordResponse.statusText}`);
-            return res.status(discordResponse.status).send({
+            const errorBody = await discordResponse.text();
+            console.error(`Failed to fetch Discord user: ${discordResponse.statusText}`, errorBody);
+            return res.status(discordResponse.status).json({
                 status: 'error',
                 message: `Discord API error: ${discordResponse.statusText}`
             });
@@ -223,57 +475,55 @@ app.post('/receive-token', async (req, res) => {
 
         const discordUser = await discordResponse.json();
 
-        if (!discordUser.username || !discordUser.id) {
-            console.error(`Invalid Discord user data received: ${JSON.stringify(discordUser)}`);
-            return res.status(400).send({
+        // Validate the user data received from Discord
+        if (!discordUser.id || !discordUser.username) {
+            console.error('Received empty or invalid user profile data');
+            return res.status(400).json({ status: 'error', message: 'Received invalid user data from Discord.' });
+        }
+        
+        // Use the AuthenticationHandler for standardized login/signup process
+        const AuthenticationHandler = require('./auth/AuthenticationHandler.js');
+        const authHandler = new AuthenticationHandler();
+        
+        const authResult = await authHandler.handleProviderAuth('discord', {
+            id: discordUser.id,
+            username: discordUser.username,
+            email: discordUser.email,
+            avatar_url: discordUser.avatar ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png` : null
+        }, req);
+        
+        // Respond based on the authentication result
+        if (authResult.status === 'success') {
+            // Log the result for debugging
+            if (authResult.isLinked) {
+                console.log(`Discord account successfully linked to user ${authResult.username} (ID: ${authResult.accountId})`);
+            } else {
+                console.log(`User ${authResult.username} logged in via Discord (ID: ${authResult.accountId})`);
+            }
+            
+            res.json({
+                status: 'success',
+                message: authResult.message,
+                accountId: authResult.accountId,
+                username: authResult.username,
+                isNewUser: authResult.isNewUser || false,
+                isLinked: authResult.isLinked || false
+            });
+        } else if (authResult.status === 'conflict') {
+            res.status(409).json({
+                status: 'conflict',
+                message: authResult.message,
+                redirectUrl: authResult.redirectUrl
+            });
+        } else {
+            res.status(500).json({
                 status: 'error',
-                message: 'Invalid Discord user data'
+                message: authResult.message || 'An internal error occurred during authentication.'
             });
         }
-
-        const newProfile = {
-            accountId: discordUser.id,
-            discordId: discordUser.id,
-            username: discordUser.username,
-            timestamp: Date.now(),
-        };
-
-        // Check if user already exists
-        let existingProfile = await userProfileSchema.findOne({ accountId: discordUser.id });
-
-        if (!existingProfile) {
-            console.log(`Creating new user profile: ${JSON.stringify(newProfile)}`);
-            const createResult = await mongolib.createSchemaDocument("userProfile", newProfile);
-            if (createResult.status === 'error') {
-                console.error(`Error creating user profile: ${createResult.message}`);
-                return res.status(500).send(createResult);
-            }
-        } else {
-            console.log(`Updating existing user profile: ${discordUser.id}`);
-            await mongolib.updateSchemaDocumentOnce(
-                "userProfile",
-                { discordId: discordUser.id },
-                { accountId: discordUser.id, discordId: discordUser.id }
-            );
-        }
-
-        // Store user session information
-        req.session.accountId = discordUser.id;
-        req.session.loggedIn = true;
-
-		res.send({
-			status: 'success',
-			message: 'User logged in',
-			account_id: discordUser.id,
-			username: discordUser.username
-		});
-
     } catch (error) {
-        console.error(`Error receiving token: ${error.message}`);
-        res.status(500).send({
-            status: 'error',
-            message: 'Server error'
-        });
+        console.error('Error during token exchange:', error);
+        res.status(500).json({ status: 'error', message: 'Server error during token processing.' });
     }
 });
 
@@ -901,8 +1151,10 @@ app.get('/image-history', async (req, res) => {
 		// Determine sort order
 		const sortOrder = sort === 'oldest' ? 1 : -1;
 
+		let results
+
 		// Perform the aggregation with pagination and total count
-		let results = await userHistorySchema.aggregate([
+		results = await userHistorySchema.aggregate([
 			{
 				$match: {
 					account_id: req.session.accountId,
@@ -925,6 +1177,9 @@ app.get('/image-history', async (req, res) => {
 				},
 			},
 		]);
+	
+
+		
 
 		// Extract the results and total count
 		let userHistory = results[0].paginatedResults;
@@ -1569,19 +1824,93 @@ let aiScripts = {
 // split on module.exports to remove it and everything after:
 aiScripts.calculateCreditsPrice = aiScripts.calculateCreditsPrice.split('module.exports')[0]
 
-// update the aiScripts every 15 seconds:
-setInterval(() => {
-	aiScripts = {
-		calculateCreditsPrice: fs.readFileSync('./scripts/ai/calculateCreditsPrice.js', 'utf8'),
-		APIForm: fs.readFileSync('./scripts/ai/API-form.js', 'utf8'),
-		imageGeneratorTour: fs.readFileSync('./scripts/ai/imageGeneratorTour.js', 'utf8'),
+// Cooldown mechanism for aiScripts updates (5 minutes)
+let lastAiScriptsUpdate = 0;
+const AI_SCRIPTS_COOLDOWN = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+function updateAiScripts() {
+	const now = Date.now();
+	if (now - lastAiScriptsUpdate < AI_SCRIPTS_COOLDOWN) {
+		console.log(`aiScripts update skipped - cooldown active (${Math.round((AI_SCRIPTS_COOLDOWN - (now - lastAiScriptsUpdate)) / 1000)}s remaining)`);
+		return;
 	}
-	aiScripts.calculateCreditsPrice = aiScripts.calculateCreditsPrice.split('module.exports')[0]
-}, 15000)
+	
+	try {
+		aiScripts = {
+			calculateCreditsPrice: fs.readFileSync('./scripts/ai/calculateCreditsPrice.js', 'utf8'),
+			APIForm: fs.readFileSync('./scripts/ai/API-form.js', 'utf8'),
+			imageGeneratorTour: fs.readFileSync('./scripts/ai/imageGeneratorTour.js', 'utf8'),
+		}
+		aiScripts.calculateCreditsPrice = aiScripts.calculateCreditsPrice.split('module.exports')[0]
+		lastAiScriptsUpdate = now;
+		console.log('aiScripts updated successfully');
+	} catch (error) {
+		console.error('Error updating aiScripts:', error);
+	}
+}
+
+// Function to reset cooldown (called when files change)
+function resetAiScriptsCooldown() {
+	lastAiScriptsUpdate = 0;
+	console.log('aiScripts cooldown reset due to file change');
+}
+
+// Watch for changes in AI script files to reset cooldown
+const aiScriptPaths = [
+	'./scripts/ai/calculateCreditsPrice.js',
+	'./scripts/ai/API-form.js',
+	'./scripts/ai/imageGeneratorTour.js'
+];
+
+// Set up file watchers for each AI script
+aiScriptPaths.forEach(scriptPath => {
+	try {
+		fs.watchFile(scriptPath, { interval: 1000 }, (curr, prev) => {
+			if (curr.mtime !== prev.mtime) {
+				console.log(`File changed: ${scriptPath}`);
+				resetAiScriptsCooldown();
+			}
+		});
+		console.log(`Watching for changes: ${scriptPath}`);
+	} catch (error) {
+		console.error(`Error setting up file watcher for ${scriptPath}:`, error);
+	}
+});
+
+// Update the aiScripts every 15 seconds (with cooldown protection):
+setInterval(updateAiScripts, 15000)
+
+// Cleanup expired notifications every hour
+setInterval(async () => {
+	try {
+		await mongolib.cleanupExpiredNotifications();
+	} catch (error) {
+		console.log(`Error running notification cleanup: ${error}`);
+	}
+}, 60 * 60 * 1000); // 1 hour
 
 app.get('/', async function(req, res) {
 	try {
 		const accountId = req.session.accountId;
+		
+		// Handle success notifications from OAuth redirects
+		let notification = null;
+		if (req.query.linked === 'google') {
+			notification = {
+				type: 'success',
+				message: 'Google account successfully linked to your profile!'
+			};
+		} else if (req.query.linked === 'discord') {
+			notification = {
+				type: 'success',
+				message: 'Discord account successfully linked to your profile!'
+			};
+		} else if (req.query.login === 'success') {
+			notification = {
+				type: 'success',
+				message: 'Welcome! You have successfully logged in.'
+			};
+		}
 
 		// Parallelize database calls
 		const [foundAccount, imageHistoryCountRaw] = await Promise.all([
@@ -1621,14 +1950,63 @@ app.get('/', async function(req, res) {
 		const imageHistoryCount = imageHistoryCountRaw[0]?.count ?? 0;
 
 		// Render the page
-		res.render('ai', {
-			userProfile: foundAccount, // Reuse foundAccount instead of querying again
-			imageHistoryCount,
-			session: req.session,
-			scripts,
-			lora_data: modifiedCachedYAMLData,
-			aiSaveSlots
-		});
+			// Preload notifications for faster initial display
+	let preloadedNotifications = [];
+	let preloadedUnreadCount = 0;
+	if (req.session.loggedIn && foundAccount) {
+		try {
+			// Get recent notifications for display
+			const notifications = await mongolib.aggregateSchemaDocuments("userNotification", [
+				{
+					$match: {
+						accountId: accountId,
+						$or: [
+							{ expiresAt: null },
+							{ expiresAt: { $gt: Date.now() } }
+						]
+					}
+				},
+				{
+					$sort: { 
+						priority: -1,
+						timestamp: -1 
+					}
+				},
+				{ $limit: 15 } // Get more for better UX
+			]);
+			preloadedNotifications = notifications || [];
+
+			// Get total unread count (no limit)
+			const unreadCount = await mongolib.aggregateSchemaDocuments("userNotification", [
+				{
+					$match: {
+						accountId: accountId,
+						read: false,
+						$or: [
+							{ expiresAt: null },
+							{ expiresAt: { $gt: Date.now() } }
+						]
+					}
+				},
+				{ $count: "unread" }
+			]);
+			preloadedUnreadCount = unreadCount[0]?.unread || 0;
+		} catch (error) {
+			console.log(`Error preloading notifications: ${error}`);
+		}
+	}
+
+	res.render('ai', {
+		userProfile: foundAccount, // Reuse foundAccount instead of querying again
+		imageHistoryCount,
+		session: req.session,
+		scripts,
+		lora_data: modifiedCachedYAMLData,
+		aiSaveSlots,
+		preloadedNotifications,
+		preloadedUnreadCount,
+		notification: notification
+	});
 	} catch (error) {
 		console.log(`Error loading tags data: ${error}`);
 		res.status(500).send('Error loading tags data');
@@ -3022,179 +3400,7 @@ app.post('/booru/ban/:accountId', async function(req, res) {
 })
 
 
-app.post('/booru/vote', async function(req, res) {
-	try {
-		let data = req.body
-		let vote = data.vote
-		let booru_id = data.booru_id
-		let account_id = req.session.accountId
 
-		let foundBooruImage = await mongolib.getSchemaDocumentOnce("userBooru", {
-			booru_id: booru_id
-		})
-
-		if (foundBooruImage == null) {
-			res.send({
-				status: "error",
-				message: "Booru image not found"
-			})
-			return
-		}
-
-		let userProfile = await mongolib.getSchemaDocumentOnce("userProfile", {
-			accountId: req.session.accountId
-		})
-		if (userProfile == null) {
-			res.send({
-				status: 'error',
-				message: 'User not found'
-			})
-			return
-		}
-
-		let creatorProfile = await mongolib.getSchemaDocumentOnce("userProfile", {
-			accountId: foundBooruImage.account_id
-		})
-		if (creatorProfile == null) {
-			res.send({
-				status: 'error',
-				message: 'Creator not found'
-			})
-			return
-		}
-
-		// if the voter is the same as the creator, then return an error:
-		if (account_id == foundBooruImage.account_id) {
-			res.send({
-				status: "error",
-				message: "User cannot vote on their own post"
-			})
-			return
-		}
-
-		// votes are stored as an array of objects, each object has a accountId and a timestamp:
-		// check if the user has already voted on the post:
-
-		creatorCreditsToGain = 1.75
-		creatorExpToGain = 2
-
-		userCreditsToGain = 0.5
-		userExpToGain = 0.5
-
-		switch (vote) {
-			case 'upvote':
-				// check if the user has already upvoted:
-				// votes are stored as an array of objects, each object has a accountId and a timestamp:
-				if (foundBooruImage.upvotes.some(vote => vote.accountId == account_id)) {
-					res.send({
-						status: "success",
-						message: "User has already upvoted",
-						upvotes: foundBooruImage.upvotes.length,
-						downvotes: foundBooruImage.downvotes.length
-					})
-					return
-				}
-				// check if the user has already downvoted:
-				if (foundBooruImage.downvotes.some(vote => vote.accountId == account_id)) {
-					// remove the downvote:
-					await mongolib.updateSchemaDocumentOnce("userBooru", {
-						booru_id: booru_id
-					}, {
-						$pull: {
-							downvotes: {
-								accountId: account_id
-							}
-						}
-					})
-
-				} else {
-
-					await mongolib.modifyUserCredits(account_id, userCreditsToGain, '+', `You Upvoted a <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a>`)
-					await mongolib.modifyUserExp(account_id, userExpToGain, '+')
-
-					if (creatorProfile != null) {
-						await mongolib.modifyUserCredits(creatorProfile.accountId, creatorCreditsToGain, '+', `Someone upvoted your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a>`)
-						await mongolib.modifyUserExp(creatorProfile.accountId, creatorExpToGain, '+')
-						if (creatorProfile.settings?.notification_booruVote == true || creatorProfile.settings?.notification_booruVote == undefined) {
-							await mongolib.createUserNotification(creatorProfile.accountId, `Someone upvoted your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a>`, 'booru')
-						}
-					}
-
-				}
-				// add the upvote:
-				await mongolib.updateSchemaDocumentOnce("userBooru", {
-					booru_id: booru_id
-				}, {
-					$push: {
-						upvotes: {
-							accountId: account_id,
-							timestamp: Date.now()
-						}
-					}
-				})
-				break
-			case 'downvote':
-
-				// disable downvotes for now:
-				res.send({
-					status: "error",
-					message: "Downvotes are disabled"
-				})
-				return
-
-				// check if the user has already downvoted:
-				if (foundBooruImage.downvotes.some(vote => vote.accountId == account_id)) {
-					res.send({
-						status: "success",
-						message: "User has already downvoted",
-						upvotes: foundBooruImage.upvotes.length,
-						downvotes: foundBooruImage.downvotes.length
-					})
-					return
-				}
-				// check if the user has already upvoted:
-				if (foundBooruImage.upvotes.some(vote => vote.accountId == account_id)) {
-					// remove the upvote:
-					await mongolib.updateSchemaDocumentOnce("userBooru", {
-						booru_id: booru_id
-					}, {
-						$pull: {
-							upvotes: {
-								accountId: account_id
-							}
-						}
-					})
-				}
-				// add the downvote:
-				await mongolib.updateSchemaDocumentOnce("userBooru", {
-					booru_id: booru_id
-				}, {
-					$push: {
-						downvotes: {
-							accountId: account_id,
-							timestamp: Date.now()
-						}
-					}
-				})
-				break
-		}
-
-		let newBooruImage = await mongolib.getSchemaDocumentOnce("userBooru", {
-			booru_id: booru_id
-		})
-
-		res.send({
-			status: "success",
-			message: "Vote added",
-			upvotes: newBooruImage.upvotes.length,
-			downvotes: newBooruImage.downvotes.length
-		})
-
-	} catch (error) {
-		console.log(`Error voting: ${error}`);
-		res.status(500).send('Error voting');
-	}
-})
 
 app.post('/booru/comment/post/:booru_id', async function(req, res) {
 	booru_id = req.param('booru_id')
@@ -3253,7 +3459,20 @@ app.post('/booru/comment/post/:booru_id', async function(req, res) {
 	})
 
 	if (creatorProfile.settings?.notification_booruComment ?? true) {
-		await mongolib.createUserNotification(foundBooruImage.account_id, `${foundAccount.username} commented on your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a>`, 'booru')
+		await mongolib.createUserNotification(
+			foundBooruImage.account_id, 
+			`${foundAccount.username} commented on your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a>`, 
+			'booru',
+			{
+				actionUrl: `https://www.jscammie.com/booru/post/${booru_id}`,
+				priority: 'normal',
+				metadata: {
+					commenterId: req.session.accountId,
+					commenterUsername: foundAccount.username,
+					booruId: booru_id
+				}
+			}
+		)
 	}
 
 	res.send({
@@ -3462,11 +3681,21 @@ app.get('/booru/comment/get/:booru_id', async function(req, res) {
 
 		for (const comment of foundBooruComments) {
 			// found accounts is an array of objects, each object has an accountId, username and profileImg:
-			let foundAccount = foundAccounts.find(account => account.accountId == comment.accountId)
+			let foundAccount = foundAccounts.find(account => account && account.accountId == comment.accountId)
 			if (foundAccount == undefined) {
 				foundAccount = await mongolib.getSchemaDocumentOnce("userProfile", {
 					accountId: comment.accountId
 				})
+				
+				// Handle case where user profile doesn't exist (deleted user, etc.)
+				if (foundAccount == null) {
+					foundAccount = {
+						accountId: comment.accountId,
+						username: "Deleted User",
+						profileImg: "https://www.jscammie.com/noimagefound.png"
+					}
+				}
+				
 				foundAccounts.push(foundAccount)
 			}
 			comments.push({
@@ -3488,6 +3717,10 @@ app.get('/booru/comment/get/:booru_id', async function(req, res) {
 
 	} catch(error) {
 		console.log(`Error getting comments: ${error}`);
+		res.send({
+			status: "error",
+			message: "Failed to load comments"
+		})
 		return
 	}
 
@@ -3529,7 +3762,20 @@ app.post('/booru/report', async function(req, res) {
 
 		console.log(`User ${req.session.accountId} reported booru image ${booru_id} for: ${reason}`)
 		
-		await mongolib.createUserNotification(1039574722163249233, `A user has reported a <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a> for: ${reason}`, 'moderation')
+		await mongolib.createUserNotification(
+			1039574722163249233, 
+			`A user has reported a <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a> for: ${reason}`, 
+			'moderation',
+			{
+				priority: 'high',
+				actionUrl: `https://www.jscammie.com/booru/post/${booru_id}`,
+				metadata: {
+					reporterId: req.session.accountId,
+					booruId: booru_id,
+					reason: reason
+				}
+			}
+		)
 
 		// reports: { type: Array, default: [] }, [{accountId, timestamp, reason}]
 		await mongolib.updateSchemaDocumentOnce("userBooru", {
@@ -3878,10 +4124,13 @@ app.post('/get-notifications', async function(req, res) {
 	}
 
 	let receivedNotifications = new Set(data.notificationsReceived);
+	const refreshOnly = data.refreshOnly || false;
 
 	// set req.session.notificationsChecked to the current time:
 	if (data.popupOpened) {
 		req.session.notificationsChecked = Date.now()
+		// Mark notifications as read when popup is opened
+		await mongolib.markNotificationsAsRead(req.session.accountId);
 	}
 
 	// if the req.session.notificationsChecked is not set, set it to the current time:
@@ -3889,25 +4138,242 @@ app.post('/get-notifications', async function(req, res) {
 		req.session.notificationsChecked = Date.now()
 	}
 	
+	// Support pagination for infinite scroll
+	const skip = parseInt(data.skip) || 0;
+	const limit = refreshOnly ? 5 : 15; // Smaller limit for refresh-only requests
+
+	// Enhanced aggregation with priority sorting and filtering
+	let matchQuery = {
+		accountId: req.session.accountId,
+		// Don't show expired notifications
+		$or: [
+			{ expiresAt: null },
+			{ expiresAt: { $gt: Date.now() } }
+		]
+	};
+	
+	// For refresh-only requests, only get new notifications
+	if (refreshOnly) {
+		matchQuery.notificationId = { $nin: Array.from(receivedNotifications) };
+		matchQuery.timestamp = { $gt: req.session.notificationsChecked || 0 };
+	} else {
+		matchQuery.notificationId = { $nin: Array.from(receivedNotifications) };
+	}
+	
 	let notifications = await mongolib.aggregateSchemaDocuments("userNotification", [
+		{ $match: matchQuery },
+		{
+			$sort: { 
+				// Sort by priority first (urgent, high, normal, low), then by timestamp
+				priority: -1,
+				timestamp: -1 
+			}
+		},
+		{ $skip: skip },
+		{ $limit: limit }
+	]);
+
+	// No date cutoff - show all notifications regardless of age
+	// Users can dismiss notifications they don't want to see anymore
+
+	// Count ALL unread notifications (no date restrictions)
+	const unreadCount = await mongolib.aggregateSchemaDocuments("userNotification", [
 		{
 			$match: {
 				accountId: req.session.accountId,
-				notificationId: { $nin: Array.from(receivedNotifications) }
+				read: false,
+				// Only exclude truly expired notifications
+				$or: [
+					{ expiresAt: null },
+					{ expiresAt: { $gt: Date.now() } }
+				]
 			}
 		},
-		{
-			$sort: { timestamp: -1 }
-		},
-		{ $limit: 30 }
+		{ $count: "unread" }
 	]);
 
-		// if the notification is older than 7 days, dont send it:
-		notifications = notifications.filter(notification => notification.timestamp > req.session.notificationsChecked - 604800000)
+	const unreadNotifications = unreadCount[0]?.unread || 0;
 
+	// Get total count of all notifications for pagination
+	const totalCount = await mongolib.aggregateSchemaDocuments("userNotification", [
+		{
+			$match: {
+				accountId: req.session.accountId,
+				$or: [
+					{ expiresAt: null },
+					{ expiresAt: { $gt: Date.now() } }
+				]
+			}
+		},
+		{ $count: "total" }
+	]);
 
-		res.send({ status: 'success', notifications: notifications, notificationsChecked: req.session.notificationsChecked })
+	const totalNotifications = totalCount[0]?.total || 0;
+
+	res.send({ 
+		status: 'success', 
+		notifications: notifications, 
+		notificationsChecked: req.session.notificationsChecked,
+		unreadCount: unreadNotifications,
+		totalCount: totalNotifications,
+		hasMore: (skip + limit) < totalNotifications,
+		refreshOnly: refreshOnly
 	})
+})
+
+// New endpoint to mark specific notifications as read
+app.post('/mark-notifications-read', async function(req, res) {
+	if (!req.session.loggedIn) {
+		res.status(401).send({ status: 'error', message: 'Not logged in' });
+		return;
+	}
+
+	const { notificationIds } = req.body;
+	const result = await mongolib.markNotificationsAsRead(req.session.accountId, notificationIds);
+	res.send(result);
+});
+
+// New endpoint to dismiss/delete specific notifications
+app.post('/dismiss-notifications', async function(req, res) {
+	if (!req.session.loggedIn) {
+		res.status(401).send({ status: 'error', message: 'Not logged in' });
+		return;
+	}
+
+	try {
+		const { notificationIds } = req.body;
+		
+		// Delete multiple notifications - need to use deleteMany through aggregation
+		await mongolib.aggregateSchemaDocuments("userNotification", [
+			{
+				$match: {
+					accountId: req.session.accountId,
+					notificationId: { $in: notificationIds }
+				}
+			},
+			{
+				$count: "deleted"
+			}
+		]);
+
+		// Actually delete them using the schema
+		for (const notificationId of notificationIds) {
+			await mongolib.deleteSchemaDocument("userNotification", {
+				accountId: req.session.accountId,
+				notificationId: notificationId
+			});
+		}
+
+		res.send({ status: 'success', message: 'Notifications dismissed' });
+	} catch (error) {
+		console.log(`Error dismissing notifications: ${error}`);
+		res.status(500).send({ status: 'error', message: 'Error dismissing notifications' });
+	}
+});
+
+// New endpoint to mark ALL notifications as read
+app.post('/mark-all-notifications-read', async function(req, res) {
+	if (!req.session.loggedIn) {
+		res.status(401).send({ status: 'error', message: 'Not logged in' });
+		return;
+	}
+
+	try {
+		const result = await mongolib.markNotificationsAsRead(req.session.accountId, []);
+		res.send(result);
+	} catch (error) {
+		console.log(`Error marking all notifications as read: ${error}`);
+		res.status(500).send({ status: 'error', message: 'Error marking all notifications as read' });
+	}
+});
+
+// New endpoint to clear ALL notifications
+app.post('/clear-all-notifications', async function(req, res) {
+	if (!req.session.loggedIn) {
+		res.status(401).send({ status: 'error', message: 'Not logged in' });
+		return;
+	}
+
+	try {
+		// Delete all notifications for this user
+		const result = await mongolib.aggregateSchemaDocuments("userNotification", [
+			{
+				$match: { accountId: req.session.accountId }
+			},
+			{ $count: "total" }
+		]);
+
+		const totalToDelete = result[0]?.total || 0;
+
+		// Use MongoDB native deleteMany for efficiency
+		const userNotificationSchema = require('./schemas/userNotificationSchema.js');
+		await userNotificationSchema.deleteMany({ accountId: req.session.accountId });
+
+		res.send({ 
+			status: 'success', 
+			message: `Cleared ${totalToDelete} notifications`,
+			deletedCount: totalToDelete
+		});
+	} catch (error) {
+		console.log(`Error clearing all notifications: ${error}`);
+		res.status(500).send({ status: 'error', message: 'Error clearing all notifications' });
+	}
+});
+
+// New endpoint to get notification statistics
+app.get('/notification-stats', async function(req, res) {
+	if (!req.session.loggedIn) {
+		res.status(401).send({ status: 'error', message: 'Not logged in' });
+		return;
+	}
+
+	try {
+		const stats = await mongolib.aggregateSchemaDocuments("userNotification", [
+			{
+				$match: { accountId: req.session.accountId }
+			},
+			{
+				$group: {
+					_id: null,
+					total: { $sum: 1 },
+					unread: { $sum: { $cond: [{ $eq: ["$read", false] }, 1, 0] } },
+					byType: {
+						$push: {
+							type: "$type",
+							read: "$read",
+							priority: "$priority"
+						}
+					}
+				}
+			}
+		]);
+
+		const typeStats = {};
+		if (stats[0]?.byType) {
+			stats[0].byType.forEach(notif => {
+				if (!typeStats[notif.type]) {
+					typeStats[notif.type] = { total: 0, unread: 0 };
+				}
+				typeStats[notif.type].total++;
+				if (!notif.read) {
+					typeStats[notif.type].unread++;
+				}
+			});
+		}
+
+		res.send({
+			status: 'success',
+			stats: {
+				total: stats[0]?.total || 0,
+				unread: stats[0]?.unread || 0,
+				byType: typeStats
+			}
+		});
+	} catch (error) {
+		console.log(`Error getting notification stats: ${error}`);
+		res.status(500).send({ status: 'error', message: 'Error getting notification stats' });
+	}
+});
 
 app.get('/settings', async function(req, res) {
 	let userProfile = await mongolib.getSchemaDocumentOnce("userProfile", {
@@ -4196,6 +4662,38 @@ app.post('/settings/update', async function(req, res) {
 				accountId: req.session.accountId
 			})
 			console.log(`Verification - saved color:`, verifyProfile?.settings?.profile_background_color)
+
+		} else if (settingWanted == 'username') {
+
+			try {
+				// Use the shared username utility for comprehensive username change
+				const result = await UsernameUtils.updateUsernameWithBooruTags(
+					req.session.accountId,
+					settingValue.trim()
+				);
+
+				if (result.status === 'error') {
+					res.send({
+						status: "error",
+						message: result.message
+					});
+					return;
+				}
+
+				res.send({
+					status: "success",
+					message: result.message
+				});
+				return;
+
+			} catch (error) {
+				console.log(`Error updating username: ${error}`);
+				res.send({
+					status: "error",
+					message: "An error occurred while updating your username"
+				});
+				return;
+			}
 
 		} else {
 			res.send({
@@ -4679,7 +5177,8 @@ app.get('/leaderboard', async function(req, res) {
 				res.render('leaderboard', {
 					session: req.session,
 					leaderboardInfo: leaderboardInfo,
-					type: 'credits'
+					type: 'credits',
+					totalUsers: leaderboardInfo.length
 				});
 				break;
 
@@ -4699,7 +5198,8 @@ app.get('/leaderboard', async function(req, res) {
 				res.render('leaderboard', {
 					session: req.session,
 					leaderboardInfo: leaderboardInfoExp,
-					type: 'exp'
+					type: 'exp',
+					totalUsers: leaderboardInfoExp.length
 				});
 				break;
 
@@ -4805,7 +5305,9 @@ app.get('/leaderboard', async function(req, res) {
 				res.render('leaderboard', {
 					session: req.session,
 					leaderboardInfo: allUserBooruAccounts,
-					type: 'booru'
+					type: 'booru',
+					totalUsers: allUserBooruAccounts.length,
+					scoringConfig: SCORING_CONFIG
 				});
 				break;
 
@@ -5303,8 +5805,32 @@ app.post('/admin/lora-preview-moderation/approve', async (req, res) => {
 	}
 })
 
+// Admin endpoint to force version update (for cache busting)
+app.post('/admin/update-version', async (req, res) => {
+	try {
+		if (!req.session.loggedIn) {
+			return res.status(401).json({ status: 'error', message: 'Not logged in' });
+		}
 
+		const userProfile = await mongolib.getSchemaDocumentOnce("userProfile", { accountId: req.session.accountId });
 
+		if (!userProfile || userProfile.badges?.moderator !== true) {
+			return res.status(403).json({ status: 'error', message: 'Access denied. Moderator privileges required.' });
+		}
+
+		const newVersion = updateVersion();
+		
+		res.json({ 
+			status: 'success', 
+			message: 'Version updated successfully. All users will get the latest version on their next page load.', 
+			newVersion: newVersion 
+		});
+
+	} catch (error) {
+		console.error('Error updating version:', error);
+		res.status(500).json({ status: 'error', message: 'Internal Server Error' });
+	}
+});
 
 
 // Profile Upgrades Page

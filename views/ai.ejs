@@ -28,8 +28,8 @@
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
 
-    <link rel="stylesheet" href="../style.css">
-    <link rel="stylesheet" href="../ai-style.css">
+    <link rel="stylesheet" href="../style.css?v=<%= version %>">
+    <link rel="stylesheet" href="../ai-style.css?v=<%= version %>">
 
     <style>
 
@@ -285,56 +285,56 @@
             -webkit-appearance: none; /* Removes default styling */
             width: 1rem; /* Adjust as needed */
             height: 1rem; /* Adjust as needed */
-            background-color: #c259ff; /* Adjust as needed */
+            background-color: var(--highlight-colour-hover); /* Adjust as needed */
             border-radius: 50%;
             cursor: pointer;
             transform: translateY(-0.25rem);
-            box-shadow: 0 0 0 0.075rem #ffffff; /* Adjust as needed */
+            box-shadow: 0 0 0 0.075rem var(--text-colour); /* Adjust as needed */
         }
         .form-control.inline-slider input[type="range"]::-moz-range-thumb {
             width: 1rem; /* Adjust as needed */
             height: 1rem; /* Adjust as needed */
-            background-color: #c259ff; /* Adjust as needed */
+            background-color: var(--highlight-colour-hover); /* Adjust as needed */
             border-radius: 50%;
             cursor: pointer;
             transform: translateY(-0.25rem);
-            box-shadow: 0 0 0 0.075rem #ffffff; /* Adjust as needed */
+            box-shadow: 0 0 0 0.075rem var(--text-colour); /* Adjust as needed */
         }
         .form-control.inline-slider input[type="range"]::-ms-thumb {
             width: 1rem; /* Adjust as needed */
             height: 1rem; /* Adjust as needed */
-            background-color: #c259ff; /* Adjust as needed */
+            background-color: var(--highlight-colour-hover); /* Adjust as needed */
             border-radius: 50%;
             cursor: pointer;
             transform: translateY(-0.25rem);
-            box-shadow: 0 0 0 0.075rem #ffffff; /* Adjust as needed */
+            box-shadow: 0 0 0 0.075rem var(--text-colour); /* Adjust as needed */
         }
 
 
         .form-control.inline-slider input[type="range"]::-webkit-slider-runnable-track {
             width: 100%;
             height: 0.5rem; /* Adjust as needed */
-            background-color: #ffffff15; /* Adjust as needed */
+            background-color: var(--highlight-colour); /* Adjust as needed */
             border-radius: 4px;
         }
         .form-control.inline-slider input[type="range"]::-moz-range-track {
             width: 100%;
             height: 0.5rem; /* Adjust as needed */
-            background-color: #ffffff15; /* Adjust as needed */
+            background-color: var(--highlight-colour); /* Adjust as needed */
             border-radius: 4px;
         }
         .form-control.inline-slider input[type="range"]::-ms-track {
             width: 100%;
             height: 0.5rem; /* Adjust as needed */
-            background-color: #ffffff15; /* Adjust as needed */
+            background-color: var(--highlight-colour); /* Adjust as needed */
             border-radius: 4px;
         }
         .form-control.inline-slider input[type="range"]::-ms-fill-lower {
-            background-color: #ffffff15; /* Adjust as needed */
+            background-color: var(--highlight-colour); /* Adjust as needed */
             border-radius: 4px;
         }
         .form-control.inline-slider input[type="range"]::-ms-fill-upper {
-            background-color: #ffffff15; /* Adjust as needed */
+            background-color: var(--highlight-colour); /* Adjust as needed */
             border-radius: 4px;
         }
         .form-control.inline-slider input[type="range"]::-ms-tooltip {
@@ -465,8 +465,12 @@
             transform: scale(0.7) rotate(-1deg); 
         }
         img#generatedImage {
-            display: block; /* added display block to remove bottom margin of image */
+            display: block;
             margin-top: 2rem;
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+            background: #181818;
         }
         .instructions ul {
             text-align: left;
@@ -500,12 +504,16 @@
             grid-template-rows: auto auto;
             grid-column-gap: 20px;
             grid-row-gap: 20px;
+            min-height: 400px; /* Reserve space to reduce CLS */
         }
 
         .imagesContainer img {
             width: 100% !important;
-            height: auto !important; /* Maintains aspect ratio */
-            object-fit: contain; /* Maintains aspect ratio without stretching the image */
+            height: auto !important;
+            object-fit: contain;
+            aspect-ratio: 1 / 1; /* Fallback for unknown aspect ratio, prevents layout shift */
+            background: rgba(0, 0, 0, 0);
+            display: block;
         }
 
         .loraCardGrid {
@@ -1042,7 +1050,7 @@
         <%- include('../partials/_bannerAdvert') %>
     </div>
 
-    <div class="container rounded page-content mw75-dynamic" style="margin-bottom: 12rem;">
+    <div class="container rounded page-content mw75-dynamic" style="margin-bottom: 12rem; min-height: 1200px;">
         
         <div class="flex-div" style="padding-left: 20px; padding-bottom: 0px; justify-content: center;">
 
@@ -1665,24 +1673,13 @@
                                 seed: document.getElementById('seed').value,
                             }
 
-                            // Get the selected Loras:
-                            let loraSelectionContainers = document.getElementsByClassName('loraSelection');
-
-                            // get all loraSelectionsSummarys to get the lora strength from them:
-                            document.querySelectorAll('#loraSelectionsSummary .lora-details input[type="range"]').forEach(slider => {
-                                aiData.lora_strengths.push(slider.value)
-                            })
-
-                            for (let i = 0; i < loraSelectionContainers.length; i++) {
-                                const loraSelection = loraSelectionContainers[i];
-                                // Get all checkboxes within the current loraSelection container
-                                const checkboxes = loraSelection.querySelectorAll('input[type="checkbox"]:checked');
-                                
-                                // Loop through the checked checkboxes and add their value (assuming value is used as ID) to the loras string
-                                checkboxes.forEach(checkbox => {
-                                    aiData.loras.push(checkbox.value);
-                                });
-                            }
+                            // Get the selected Loras from masterLoraData:
+                            Object.keys(masterLoraData).forEach(loraId => {
+                                if (masterLoraData[loraId].selected) {
+                                    aiData.loras.push(loraId);
+                                    aiData.lora_strengths.push(masterLoraData[loraId].strength);
+                                }
+                            });
 
                             // export it to a yaml file:
                             let yamlData = {
@@ -1699,7 +1696,7 @@
                             }
 
                             // save it to a file and download it without jsyaml:
-                            let yamlString = `${aiData.prompt}<SPLIT>${aiData.negativeprompt}<SPLIT>${aiData.aspectRatio}<SPLIT>${aiData.model}<SPLIT>${aiData.loras}<SPLIT>${aiData.lora_strengths}<SPLIT>${aiData.steps}<SPLIT>${aiData.quantity}<SPLIT>${aiData.cfg}<SPLIT>${aiData.seed}`
+                            let yamlString = `${aiData.prompt}<SPLIT>${aiData.negativeprompt}<SPLIT>${aiData.aspectRatio}<SPLIT>${aiData.model}<SPLIT>${aiData.loras.join(',')}<SPLIT>${aiData.lora_strengths.join(',')}<SPLIT>${aiData.steps}<SPLIT>${aiData.quantity}<SPLIT>${aiData.cfg}<SPLIT>${aiData.seed}`
 
                             let blob = new Blob([yamlString], {type: 'text/yaml'});
                             let url = URL.createObjectURL(blob);
@@ -1759,10 +1756,15 @@
                             }
 
                             // replace any -sdxl in loras with -pdxl:
-                            loras = yamlData[4].replace('[','').replace(']','').split(',').map(lora => lora.replace(/'/g, '').trim())
-                            
-                            for (let i = 0; i < loras.length; i++) {
-                                loras[i] = loras[i].replace('-sdxl', '-pdxl');
+                            let lorasString = yamlData[4].replace('[','').replace(']','').trim();
+                            if (lorasString === '') {
+                                loras = [];
+                            } else {
+                                loras = lorasString.split(',').map(lora => lora.replace(/'/g, '').trim()).filter(lora => lora !== '');
+                                
+                                for (let i = 0; i < loras.length; i++) {
+                                    loras[i] = loras[i].replace('-sdxl', '-pdxl');
+                                }
                             }
 
                             let aiData = {
@@ -1771,7 +1773,7 @@
                                 aspectRatio: yamlData[2],
                                 model: yamlData[3],
                                 loras: loras,
-                                lora_strengths: yamlData[5].replace('[','').replace(']','').split(',').map(strength => strength.replace(/'/g, '').trim()),
+                                lora_strengths: yamlData[5] ? yamlData[5].replace('[','').replace(']','').trim() === '' ? [] : yamlData[5].replace('[','').replace(']','').split(',').map(strength => strength.replace(/'/g, '').trim()).filter(strength => strength !== '') : [],
                                 steps: yamlData[6],
                                 cfg: yamlData[8],
                                 seed: yamlData[9]
@@ -1804,19 +1806,18 @@
                                 aiData.model = aiData.model.replace('sdxl-', 'pdxl-');
                             }
 
-                            // Set the values in the form
-                            setValueSafelyIfNotUndefinedOrNull('prompt', aiData.prompt);
-                            setValueSafelyIfNotUndefinedOrNull('negativeprompt', aiData.negativeprompt);
-                            setValueSafelyIfNotUndefinedOrNull('aspectRatio', aiData.aspectRatio);
-                            setValueSafelyIfNotUndefinedOrNull('model', aiData.model);
-                            loadLoras();
-                            setValueSafelyIfNotUndefinedOrNull('steps', aiData.steps);
-                            setValueSafelyIfNotUndefinedOrNull('cfguidance', aiData.cfg);
-                            setValueSafelyIfNotUndefinedOrNull('seed', aiData.seed);
+                                        // Set the values in the form
+            setValueSafelyIfNotUndefinedOrNull('prompt', aiData.prompt);
+            setValueSafelyIfNotUndefinedOrNull('negativeprompt', aiData.negativeprompt);
+            setValueSafelyIfNotUndefinedOrNull('aspectRatio', aiData.aspectRatio);
+            setValueSafelyIfNotUndefinedOrNull('model', aiData.model);
+            setValueSafelyIfNotUndefinedOrNull('steps', aiData.steps);
+            setValueSafelyIfNotUndefinedOrNull('cfguidance', aiData.cfg);
+            setValueSafelyIfNotUndefinedOrNull('seed', aiData.seed);
 
-                            // refresh prompt negpromt on input stuff:
-                            document.getElementById('prompt').dispatchEvent(new Event('change'));
-                            document.getElementById('negativeprompt').dispatchEvent(new Event('change'));
+            // refresh prompt negpromt on input stuff:
+            document.getElementById('prompt').dispatchEvent(new Event('change'));
+            document.getElementById('negativeprompt').dispatchEvent(new Event('change'));
 
                             // if the model value starts pdxl- AND isnt in the select box then default to pdxl-autismmix:
                             if (!document.getElementById('model').querySelector(`option[value="${aiData.model}"]`)) {
@@ -1838,8 +1839,6 @@
 
                             // fire the change event for the model select box and the aspect ratio select box:
                             document.getElementById('model').dispatchEvent(new Event('change'));
-
-
                             document.getElementById('aspectRatio').dispatchEvent(new Event('change'));
 
                             // set all masterDataLoras to be unselected first:
@@ -1851,21 +1850,24 @@
                             // if there are no loras then dont do anything:
                             if (aiData.loras.length > 0) {
                                 // check the checkboxes for the loras in the save slot:
-                                for (let i = 0; i < aiData.loras.length;) {
+                                for (let i = 0; i < aiData.loras.length; i++) {
                                     let loraId = aiData.loras[i];
                                     let loraStrength = aiData.lora_strengths[i];
 
                                     if (!loraId) {
-                                        i++;
                                         continue;
                                     }
 
-                                    masterLoraData[loraId].selected = true;
-                                    masterLoraData[loraId].strength = Number(loraStrength);
-                                
-                                    i++
+                                    if (masterLoraData[loraId]) {
+                                        masterLoraData[loraId].selected = true;
+                                        masterLoraData[loraId].strength = Number(loraStrength);
+                                    }
                                 }
                             }
+
+                            // Load loras after setting all selections
+                            loadLoras();
+                            updateLoraSelectionsSummary();
                                 
                         }
 
@@ -2342,6 +2344,17 @@
                             -ms-user-select: none; /* IE10+/Edge */
                             user-select: none; /* Standard */
                         }
+                        
+                        /* Allow text selection for lora words */
+                        #loraSelectionsSummaryDetails .lora-words {
+                            -webkit-user-select: text !important;
+                            -moz-user-select: text !important;
+                            -ms-user-select: text !important;
+                            user-select: text !important;
+                            cursor: text !important;
+                        }
+
+
 
                       </style>
 
@@ -2360,71 +2373,192 @@
                         <!-- Somewhere in your HTML -->
 
                         <style>
-                            /* styling for the sorting buttons, make sure they are next to eachother horizontally and not above/below! 
-                            use purple colours and active class to show which one is selected! */
+                            /* Modern Lora Selection Interface - Inspired by Credits Shop Design */
                             
+                            /* Sorting Buttons */
                             .sorting-btn {
-                                background-color: #4caf6a40;
-                                border: 3px solid #4caf6a !important;
+                                background: linear-gradient(135deg, #60a5fa, #3b82f6);
+                                border: 1px solid #60a5fa;
                                 color: white;
-                                padding: 7px 15px;
+                                padding: 10px 16px;
                                 text-align: center;
-                                font-size: 16px;
-                                border-radius: 10px;
+                                font-size: 14px;
+                                font-weight: 500;
+                                border-radius: 8px;
                                 cursor: pointer;
                                 display: inline-block;
-                                margin: 4px 2px;
-                                transition: background-color 0.3s, transform 0.7s !important;
-                                transform-origin: center;
+                                margin: 4px 3px;
+                                transition: all 0.3s ease;
+                                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                                position: relative;
+                                overflow: hidden;
+                            }
+
+                            .sorting-btn::before {
+                                content: '';
+                                position: absolute;
+                                top: 0;
+                                left: -100%;
+                                width: 100%;
+                                height: 100%;
+                                background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+                                transition: left 0.5s ease;
+                            }
+
+                            .sorting-btn:hover::before {
+                                left: 100%;
                             }
 
                             .sorting-btn:hover {
-                                background-color: #4CAF50;
-                                transform: scale(1.08) rotate(1deg);
+                                background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+                                transform: translateY(-2px);
+                                box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
                             }
 
-                            /* detect active class and apply style: */
-
                             .sorting-btn.active {
-                                background-color: #4CAF50;
-                                transform: scale(1.08)
+                                background: linear-gradient(135deg, #00ff88, #10b981);
+                                border-color: #00ff88;
+                                box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
+                                transform: translateY(-2px);
+                            }
+
+                            /* Category Buttons */
+                            .category-btn {
+                                background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+                                border: 1px solid #8b5cf6;
+                                color: white;
+                                padding: 10px 16px;
+                                text-align: center;
+                                font-size: 14px;
+                                font-weight: 500;
+                                border-radius: 8px;
+                                cursor: pointer;
+                                display: inline-block;
+                                margin: 4px 3px;
+                                transition: all 0.3s ease;
+                                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                                position: relative;
+                                overflow: hidden;
+                            }
+
+                            .category-btn::before {
+                                content: '';
+                                position: absolute;
+                                top: 0;
+                                left: -100%;
+                                width: 100%;
+                                height: 100%;
+                                background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+                                transition: left 0.5s ease;
+                            }
+
+                            .category-btn:hover::before {
+                                left: 100%;
+                            }
+
+                            .category-btn:hover {
+                                background: linear-gradient(135deg, #7c3aed, #6d28d9);
+                                transform: translateY(-2px);
+                                box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+                            }
+
+                            .category-btn.active {
+                                background: linear-gradient(135deg, #ffd700, #f59e0b);
+                                border-color: #ffd700;
+                                color: #1f2937;
+                                box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+                                transform: translateY(-2px);
                             }
 
                             .category-btn.deactive {
-                                background-color: #24242440;
-                                border: 3px solid #000000 !important;
-                                color: rgb(94, 94, 94);
-                                padding: 7px 15px;
-                                text-align: center;
-                                font-size: 16px;
-                                border-radius: 10px;
-                                cursor: pointer;
-                                display: inline-block;
-                                margin: 4px 2px;
-                                transition: background-color 0.3s, transform 0.7s !important;
-                                transform-origin: center;
+                                background: linear-gradient(135deg, #374151, #1f2937);
+                                border: 1px solid #4b5563;
+                                color: #9ca3af;
+                                cursor: not-allowed;
+                                opacity: 0.6;
+                                transform: none;
+                                box-shadow: none;
                             }
-                            .category-btn {
-                                background-color: #8c4caf40;
-                                border: 3px solid #8c4caf !important;
-                                color: white;
-                                padding: 7px 15px;
-                                text-align: center;
-                                font-size: 16px;
-                                border-radius: 10px;
-                                cursor: pointer;
-                                display: inline-block;
-                                margin: 4px 2px;
-                                transition: background-color 0.3s, transform 0.7s !important;
-                                transform-origin: center;
+
+                            .category-btn.deactive:hover {
+                                background: linear-gradient(135deg, #374151, #1f2937);
+                                transform: none;
+                                box-shadow: none;
                             }
-                            .category-btn:hover {
-                                background-color: #ce9be9;
-                                transform: scale(1.08) rotate(1deg);
+
+                            /* Dark Mode Support for Buttons */
+                            body.dark-mode .sorting-btn {
+                                background: linear-gradient(135deg, #475569, #334155);
+                                border-color: #64748b;
+                                box-shadow: 0 2px 4px rgba(0,0,0,0.4);
                             }
-                            .category-btn.active {
-                                background-color: #8C4CAF;
-                                transform: scale(1.08) 
+
+                            body.dark-mode .sorting-btn:hover {
+                                background: linear-gradient(135deg, #334155, #1e293b);
+                                box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+                            }
+
+                            body.dark-mode .sorting-btn.active {
+                                background: linear-gradient(135deg, #059669, #047857);
+                                border-color: #10b981;
+                                box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+                            }
+
+                            body.dark-mode .category-btn {
+                                background: linear-gradient(135deg, #6b21a8, #581c87);
+                                border-color: #7c2d92;
+                                box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+                            }
+
+                            body.dark-mode .category-btn:hover {
+                                background: linear-gradient(135deg, #581c87, #4c1d95);
+                                box-shadow: 0 4px 12px rgba(107, 33, 168, 0.4);
+                            }
+
+                            body.dark-mode .category-btn.active {
+                                background: linear-gradient(135deg, #f59e0b, #d97706);
+                                border-color: #f59e0b;
+                                color: #1f2937;
+                                box-shadow: 0 0 20px rgba(245, 158, 11, 0.4);
+                            }
+
+                            /* Light Mode Support for Buttons */
+                            body:not(.dark-mode) .sorting-btn {
+                                background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+                                border-color: #93c5fd;
+                                color: #1e40af;
+                                box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+                            }
+
+                            body:not(.dark-mode) .sorting-btn:hover {
+                                background: linear-gradient(135deg, #bfdbfe, #93c5fd);
+                                box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+                            }
+
+                            body:not(.dark-mode) .sorting-btn.active {
+                                background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+                                border-color: #16a34a;
+                                color: #15803d;
+                                box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+                            }
+
+                            body:not(.dark-mode) .category-btn {
+                                background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+                                border-color: #c4b5fd;
+                                color: #6d28d9;
+                                box-shadow: 0 2px 4px rgba(139, 92, 246, 0.2);
+                            }
+
+                            body:not(.dark-mode) .category-btn:hover {
+                                background: linear-gradient(135deg, #ddd6fe, #c4b5fd);
+                                box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+                            }
+
+                            body:not(.dark-mode) .category-btn.active {
+                                background: linear-gradient(135deg, #fef3c7, #fde68a);
+                                border-color: #f59e0b;
+                                color: #92400e;
+                                box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
                             }
                             
                         </style>
@@ -2538,6 +2672,153 @@
                             </div>
                         </div>
 
+                        <style>
+                            /* Modern Lora Container - Matching Credits Shop Design */
+                            .loraContainer {
+                                background: linear-gradient(135deg, #1a1a2e, #16213e);
+                                border: 1px solid #333;
+                                border-radius: 10px;
+                                padding: 20px;
+                                margin: 15px 0;
+                                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                                transition: all 0.3s ease;
+                            }
+
+                            .loraContainer:hover {
+                                box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+                                transform: translateY(-2px);
+                            }
+
+                            .loraCardGrid {
+                                display: grid;
+                                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+                                gap: 15px;
+                                margin-top: 10px;
+                            }
+
+                            /* Individual Lora Cards */
+                            .lorabox {
+                                background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+                                border: 1px solid rgba(255,255,255,0.1);
+                                border-radius: 12px;
+                                padding: 15px;
+                                transition: all 0.3s ease;
+                                position: relative;
+                                overflow: hidden;
+                                cursor: pointer;
+                            }
+
+                            .lorabox::before {
+                                content: '';
+                                position: absolute;
+                                top: 0;
+                                left: 0;
+                                right: 0;
+                                height: 3px;
+                                background: linear-gradient(90deg, #60a5fa, #00ff88, #ffd700);
+                                opacity: 0;
+                                transition: opacity 0.3s ease;
+                            }
+
+                            .lorabox:hover {
+                                transform: translateY(-4px);
+                                border-color: #60a5fa;
+                                box-shadow: 0 6px 20px rgba(96, 165, 250, 0.2);
+                            }
+
+                            .lorabox:hover::before {
+                                opacity: 1;
+                            }
+
+                            /* Dark Mode Support for Lora Container */
+                            body.dark-mode .loraContainer {
+                                background: linear-gradient(135deg, #0f0f23, #1a1a2e);
+                                border-color: #374151;
+                                color: #e2e8f0;
+                            }
+
+                            body.dark-mode .lorabox {
+                                background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));
+                                border-color: rgba(255,255,255,0.15);
+                                color: #e2e8f0;
+                            }
+
+                            body.dark-mode .lorabox:hover {
+                                border-color: #60a5fa;
+                                box-shadow: 0 6px 20px rgba(96, 165, 250, 0.3);
+                            }
+
+                            /* Light Mode Support for Lora Container */
+                            body:not(.dark-mode) .loraContainer {
+                                background: transparent;
+                                border: 2px solid var(--light-highlight-colour);
+                                color: var(--light-text-colour);
+                            }
+
+                            body:not(.dark-mode) .lorabox {
+                                background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.05));
+                                border-color: rgba(59, 130, 246, 0.2);
+                                color: #1e293b;
+                            }
+
+                            body:not(.dark-mode) .lorabox:hover {
+                                border-color: #3b82f6;
+                                box-shadow: 0 6px 20px rgba(59, 130, 246, 0.2);
+                            }
+
+                            /* Search Input Styling */
+                            #loraSearch {
+                                width: 100%;
+                                padding: 12px 16px;
+                                margin-bottom: 8px;
+                                box-sizing: border-box;
+                                border: 2px solid #60a5fa;
+                                border-radius: 8px;
+                                background: linear-gradient(135deg, rgba(96, 165, 250, 0.1), rgba(96, 165, 250, 0.05));
+                                color: inherit;
+                                font-size: 14px;
+                                transition: all 0.3s ease;
+                            }
+
+                            #loraSearch:focus {
+                                outline: none;
+                                border-color: #00ff88;
+                                box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+                                background: linear-gradient(135deg, rgba(0, 255, 136, 0.1), rgba(0, 255, 136, 0.05));
+                            }
+
+                            body.dark-mode #loraSearch {
+                                background: linear-gradient(135deg, rgba(96, 165, 250, 0.1), rgba(96, 165, 250, 0.05));
+                                border-color: #60a5fa;
+                                color: #e2e8f0;
+                            }
+
+                            body:not(.dark-mode) #loraSearch {
+                                background: linear-gradient(135deg, rgba(96, 165, 250, 0.15), rgba(96, 165, 250, 0.08));
+                                border-color: #3b82f6;
+                                color: #1e293b;
+                            }
+
+                            /* Safety Rating Checkboxes Container */
+                            .safety-checkbox-container {
+                                background: rgba(255,255,255,0.05);
+                                border-radius: 8px;
+                                padding: 12px;
+                                margin: 10px 0;
+                                border: 1px solid rgba(255,255,255,0.1);
+                            }
+
+                            body.dark-mode .safety-checkbox-container {
+                                background: rgba(255,255,255,0.05);
+                                border-color: rgba(255,255,255,0.1);
+                            }
+
+                            body:not(.dark-mode) .safety-checkbox-container {
+                                background: rgba(59, 130, 246, 0.1);
+                                border-color: rgba(59, 130, 246, 0.2);
+                            }
+                        </style>
+
                         <div id="loraSelectionsSummary">
 
                         </div>
@@ -2559,7 +2840,7 @@
 
                             let savedFavoritedIds = lastRequestSD.favoriteLoras || [];
 
-                            if (userProfile?.favoriteLoras? userProfile.favoriteLoras : false) {
+                            if (userProfile?.favoriteLoras ? userProfile.favoriteLoras : false) {
                                 savedFavoritedIds = userProfile.favoriteLoras;
                             }
 
@@ -2593,7 +2874,7 @@
                                             image: `<%= value.image %>`,
                                             selected: false,
                                             defaultStrength: <%= value.strength || 'Null' %>,
-                                            usesCount: BigInt(`<%= value.usesCount || '0' %>`),
+                                            usesCount: parseInt(`<%= value.usesCount || '0' %>`),
                                             lastUsed: `<%= value.lastUsed || '0' %>`
                                         }
                                     <% }); %>
@@ -2661,7 +2942,7 @@
                                 // }
 
                                 // split the loraSearch into an array of words by spaces and commas:
-                                loraSearchArray = loraSearch.split(/[\s,]+/);
+                                const loraSearchArray = loraSearch.split(/[\s,]+/);
                                 
                                 // check if the lora .name, .words, .description, key, have all of the words in the loraSearchArray anywhere in them:
                                 if (!loraSearchArray.every(word => name.includes(word) || value.words.includes(word) || key.includes(word) || value.description.includes(word))) {
@@ -2677,16 +2958,16 @@
                                 let loraGridContainer = document.getElementById('loraGridContainer');
                                 loraGridContainer.innerHTML = '';
 
-                                modelRaw = document.getElementById('model');
+                                const modelRaw = document.getElementById('model');
 
-                                model = modelRaw.options[modelRaw.selectedIndex].value;
+                                const model = modelRaw.options[modelRaw.selectedIndex].value;
                                 
-                                showSafe = document.getElementById('showSafeCheckbox').checked;
-                                showSuggestive = document.getElementById('showSuggestiveCheckbox').checked;
-                                showNSFW = document.getElementById('showNSFWCheckbox').checked;
-                                showNA = document.getElementById('showNACheckbox').checked; 
+                                const showSafe = document.getElementById('showSafeCheckbox').checked;
+                                const showSuggestive = document.getElementById('showSuggestiveCheckbox').checked;
+                                const showNSFW = document.getElementById('showNSFWCheckbox').checked;
+                                const showNA = document.getElementById('showNACheckbox').checked; 
 
-                                loraSearch = document.getElementById('loraSearch').value.toLowerCase();
+                                const loraSearch = document.getElementById('loraSearch').value.toLowerCase();
 
                                 // sorting logic:
                                 let sortAlphaBtn = document.getElementById('sortAlphaBtn');
@@ -2714,6 +2995,26 @@
                                     }));
                                 }
 
+                                // if there's a search term, prioritize direct word matches at the top
+                                if (loraSearch.trim()) {
+                                    masterLoraData = Object.fromEntries(Object.entries(masterLoraData).sort((a, b) => {
+                                        // Split names into words and check for exact word matches
+                                        const aWords = a[1].name.toLowerCase().split(/[\s\(\)\-_,\.]+/).filter(word => word.length > 0);
+                                        const bWords = b[1].name.toLowerCase().split(/[\s\(\)\-_,\.]+/).filter(word => word.length > 0);
+                                        
+                                        const aNameMatch = aWords.includes(loraSearch);
+                                        const bNameMatch = bWords.includes(loraSearch);
+                                        
+                                        if (bNameMatch && !aNameMatch) {
+                                            return 1;
+                                        } else if (aNameMatch && !bNameMatch) {
+                                            return -1;
+                                        } else {
+                                            return 0;
+                                        }
+                                    }));
+                                }
+
                                 // sort any loras that are favorited or have .selected true to the top of the list, with favorited loras being at the very top:
                                 masterLoraData = Object.fromEntries(Object.entries(masterLoraData).sort((a, b) => {
                                     if (favorites[b[0]] && !favorites[a[0]]) {
@@ -2734,7 +3035,7 @@
                                 // Create the Lora elements
                                 Object.entries(masterLoraData).forEach(([key, value]) => {
 
-                                    name = value.name.toLowerCase();
+                                    const name = value.name.toLowerCase();
 
                                     // Check if the Lora is compatible with the selected model
 
@@ -2748,9 +3049,6 @@
                                         }
                                     }
 
-                                    
-
-                                    
                                     let loraElement = document.createElement('div');
                                     loraElement.classList.add('lorabox');
                                     loraElement.innerHTML = `
@@ -2770,7 +3068,6 @@
                                     checkbox.addEventListener('change', function() {
                                         let loraId = this.value;
                                         masterLoraData[loraId].selected = this.checked;
-                                        loadLoras();
                                         updateLoraSelectionsSummary();
                                     })
                                 })
@@ -2902,7 +3199,7 @@
                                     })
                                 })
 
-                                document.getElementById('sortAlphaBtn').classList.add('active');
+                                document.getElementById('sortUsesBtn').classList.add('active');
                                 document.getElementById('style-CategoryButton').classList.add('active');
 
                                 // trigger model change event:
@@ -2936,6 +3233,11 @@
                                 }
 
                                 document.getElementById('model').dispatchEvent(new Event('change'));
+                                
+                                // Initial call to updateLoraSelectionsSummary with a small delay to ensure DOM is ready
+                                setTimeout(() => {
+                                    updateLoraSelectionsSummary();
+                                }, 100);
       
                             })
 
@@ -3106,12 +3408,16 @@
                             }
 
                             function updateLoraSelectionsSummary() {
-                                loraSelectionsSummary = document.getElementById('loraSelectionsSummary');
+                                const loraSelectionsSummary = document.getElementById('loraSelectionsSummary');
+                                if (!loraSelectionsSummary) {
+                                    console.error('loraSelectionsSummary element not found');
+                                    return;
+                                }
                                 loraSelectionsSummary.innerHTML = '';
-                                selectedLoras = Object.entries(masterLoraData).filter(([key, value]) => value.selected);
+                                const selectedLoras = Object.entries(masterLoraData).filter(([key, value]) => value.selected);
                                 
                                 // total loras needs to respect the model type
-                                totalLoras = Object.entries(masterLoraData).filter(([key, value]) => {
+                                const totalLoras = Object.entries(masterLoraData).filter(([key, value]) => {
                                     if (document.getElementById('model').value.startsWith("pdxl")) {
                                         return key.includes("-pdxl");
                                     } else if (document.getElementById('model').value.startsWith("flux")) {
@@ -3128,6 +3434,7 @@
 
                                 if (selectedLoras.length === 0) {
                                     loraSelectionsSummary.innerHTML = '<p>No Loras selected</p>';
+                                    console.log('Safari Debug: Set loraSelectionsSummary to "No Loras selected"');
                                     // Remove floating buttons if no loras selected
                                     const floatingContainer = document.getElementById('loraButtonsFloatingContainer');
                                     if (floatingContainer) {
@@ -3147,14 +3454,16 @@
                                     }
                                 } else {
                                     // Show traditional layout in summary AND create floating buttons for PC/Tablet
+                                    console.log('Safari Debug: Rendering traditional layout for desktop/tablet');
                                     renderTraditionalLoraLayout(selectedLoras, loraSelectionsSummary);
                                     createFloatingLoraButtons(selectedLoras);
                                 }
                             }
 
                             function renderTraditionalLoraLayout(selectedLoras, container) {
+                                console.log('Safari Debug: renderTraditionalLoraLayout called with', selectedLoras.length, 'loras');
                                 selectedLoras.forEach(([key, value]) => {
-                                    loraSummary = document.createElement('div');
+                                    const loraSummary = document.createElement('div');
                                     loraSummary.classList.add('lora-details');
 
                                     let wordsFormatted = ""
@@ -3171,7 +3480,7 @@
                                     console.log(value.words)
 
                                     value.words.split(';').map((word, index) => {
-                                        noWhitespaceWord = word.trim()
+                                        let noWhitespaceWord = word.trim()
                                         // remove any start or end commas:
                                         if (noWhitespaceWord.startsWith(',')) {
                                             noWhitespaceWord = noWhitespaceWord.slice(1)
@@ -3186,7 +3495,7 @@
                                         } else {
                                             wordsFormatted += `<a class="lora-words">
                                                 Words ${index + 1}: ${noWhitespaceWord}<br>
-                                                <button class="lora-words-copy-button" onclick="copyXWordsToClipboard(\`${noWhitespaceWord}\`)">Copy Words</button>
+                                                <button class="lora-words-copy-button" onclick="copyXWordsToClipboard('${noWhitespaceWord.replace(/'/g, "\\'")}')">Copy Words</button>
                                             </a><br>`
                                         }
                                     })
@@ -3199,10 +3508,10 @@
 
                                     let loraIdFormatted = ""
 
-                                    allowedUsers = ['1039574722163249233', '550239177837379594']
+                                    const allowedUsers = ['1039574722163249233', '550239177837379594']
 
                                     if (allowedUsers.includes(document.getElementById('user-session').value)) {
-                                        loraIdFormatted = `<a class="lora-id"><strong>ID:</strong> ${key}<br><button class="lora-words-copy-button" onclick="copyXWordsToClipboard(\`${key}\`)">Copy ID</button></a>`
+                                        loraIdFormatted = `<a class="lora-id"><strong>ID:</strong> ${key}<br><button class="lora-words-copy-button" onclick="copyXWordsToClipboard('${key}')">Copy ID</button></a>`
                                     }
 
                                     loraSummary.innerHTML = `
@@ -3218,7 +3527,7 @@
                                             <p class="lora-strength"><strong>Default Strength:</strong> ${value.strength || 'Null'}</p>
                                             ${wordsFormatted}
                                             <p class="lora-strength-slider"> 
-                                                <input type="range" id="strength-${key}" name="strength-${key}" min="-3" max="3" step="0.05" value="${value.strength}" style="width: 90%;">
+                                                <input type="range" id="strength-${key}" name="strength-${key}" min="-3" max="3" step="0.05" value="${value.strength}" style="width: 85%;">
                                                 <a id="strength-${key}-value" style="transform: translateY(-32px) !important; margin: 4px; font-size: 28px">${value.strength}</a>
                                             </p>
                                             <button class="lora-reset-strength-button" onclick="setStrength('${key}', '${value.defaultStrength}')">Reset Strength</button>
@@ -3233,7 +3542,7 @@
                                 // Add event listeners for the strength sliders
                                 document.querySelectorAll('.lora-strength-slider input').forEach(slider => {
                                     slider.addEventListener('input', function() {
-                                        loraId = slider.id.split('-').slice(1).join('-');
+                                        const loraId = slider.id.split('-').slice(1).join('-');
                                         setStrength(loraId, slider.value);
                                         document.getElementById(`strength-${loraId}-value`).innerText = slider.value;
                                     })
@@ -3884,81 +4193,49 @@
                                 pointer-events: none;
                             }
                             
-                            /* Override all webkit sliders */
+                            /* CFG slider styling to match lora strength slider */
+                            #cfguidance {
+                                background: var(--highlight-colour);
+                                border-radius: 4px;
+                                outline: none;
+                                -webkit-appearance: none;
+                                height: 6px;
+                                cursor: pointer;
+                                accent-color: var(--highlight-colour-hover);
+                            }
+                            
+                            /* Override webkit track styling */
+                            #cfguidance::-webkit-slider-runnable-track {
+                                background: var(--highlight-colour) !important;
+                                height: 6px !important;
+                                border-radius: 4px !important;
+                                border: none !important;
+                            }
+                            
+                            /* Override moz track styling */
+                            #cfguidance::-moz-range-track {
+                                background: var(--highlight-colour) !important;
+                                height: 6px !important;
+                                border-radius: 4px !important;
+                                border: none !important;
+                            }
+                            
+                            /* Override webkit thumb styling */
                             #cfguidance::-webkit-slider-thumb {
                                 -webkit-appearance: none !important;
                                 appearance: none !important;
-                                width: 18px !important;
-                                height: 18px !important;
+                                background: var(--highlight-colour-hover) !important;
+                                border: none !important;
                                 border-radius: 50% !important;
-                                background: #c259ff !important;
                                 cursor: pointer !important;
-                                border: 2px solid white !important;
-                                box-shadow: 0 0 5px rgba(0, 0, 0, 0.5) !important;
-                                position: relative !important;
-                                z-index: 2 !important;
-                                transition: all 0.2s ease !important;
-                                transform: scale(1) translateY(-50%) !important;
-                                transform-origin: center center !important;
-                                top: 50% !important;
-                                margin-top: 0 !important;
                             }
                             
-                            /* Override all moz sliders */
+                            /* Override moz thumb styling */
                             #cfguidance::-moz-range-thumb {
-                                width: 18px !important;
-                                height: 18px !important;
+                                background: var(--highlight-colour-hover) !important;
+                                border: none !important;
                                 border-radius: 50% !important;
-                                background: #c259ff !important;
                                 cursor: pointer !important;
-                                border: 2px solid white !important;
-                                box-shadow: 0 0 5px rgba(0, 0, 0, 0.5) !important;
-                                position: relative !important;
-                                z-index: 2 !important;
-                                transition: all 0.2s ease !important;
-                                transform: scale(1) translateY(-50%) !important;
-                                transform-origin: center center !important;
-                                top: 50% !important;
-                                margin-top: 0 !important;
-                            }
-                            
-                            /* Track styling for consistency */
-                            #cfguidance::-webkit-slider-runnable-track {
-                                height: 6px;
-                                border-radius: 5px;
-                                background: transparent;
-                            }
-                            
-                            #cfguidance::-moz-range-track {
-                                height: 6px;
-                                border-radius: 5px;
-                                background: transparent;
-                            }
-                            
-                            /* Hover effects with !important to override any global styles */
-                            #cfguidance:hover::-webkit-slider-thumb {
-                                background: #8a3aff !important;
-                                transform: scale(1.1) translateY(-50%) !important;
-                                box-shadow: 0 0 8px rgba(194, 89, 255, 0.7) !important;
-                            }
-                            
-                            #cfguidance:hover::-moz-range-thumb {
-                                background: #8a3aff !important;
-                                transform: scale(1.1) translateY(-50%) !important;
-                                box-shadow: 0 0 8px rgba(194, 89, 255, 0.7) !important;
-                            }
-                            
-                            /* Active states */
-                            #cfguidance:active::-webkit-slider-thumb {
-                                background: #6a11cb !important;
-                                transform: scale(1.2) translateY(-50%) !important;
-                                box-shadow: 0 0 12px rgba(194, 89, 255, 0.9) !important;
-                            }
-                            
-                            #cfguidance:active::-moz-range-thumb {
-                                background: #6a11cb !important;
-                                transform: scale(1.2) translateY(-50%) !important;
-                                box-shadow: 0 0 12px rgba(194, 89, 255, 0.9) !important;
                             }
                             
                             /* Tick marks */
@@ -3974,7 +4251,8 @@
                             .tick {
                                 width: 1px;
                                 height: 5px;
-                                background-color: rgba(255, 255, 255, 0.5);
+                                background-color: var(--text-colour);
+                                opacity: 0.5;
                             }
                         </style>
                         <input form="generatorForm" type="range" id="cfguidance" name="cfguidance" min="1" max="24" step="0.5" value="6">
@@ -4177,19 +4455,30 @@
                 <style>
                     /* Credits Shop Container - matching ETA display style */
                     .credits-shop-container {
-                        background: linear-gradient(135deg, #1a1a2e, #16213e);
+                        background: var(--darker-background-colour);
                         padding: 15px;
                         border-radius: 10px;
-                        border: 1px solid #333;
+                        border: 1px solid var(--border-colour);
                         margin: 10px 0;
-                        color: #e2e8f0;
+                        color: var(--text-colour);
+                    }
+                    
+                    /* Light mode specific adjustments for credits shop */
+                    body:not(.dark-mode) .credits-shop-container {
+                        background: rgba(0, 0, 0, 0.1);
+                        border: 2px solid var(--light-highlight-colour);
+                        color: var(--light-text-colour);
                     }
 
                     .credits-shop-header {
                         text-align: center;
                         margin-bottom: 15px;
                         padding-bottom: 10px;
-                        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                        border-bottom: 1px solid var(--border-colour);
+                    }
+                    
+                    body:not(.dark-mode) .credits-shop-header {
+                        border-bottom: 1px solid var(--light-highlight-colour);
                     }
 
                     .credits-total-cost {
@@ -4248,14 +4537,24 @@
                     }
 
                     .credit-option-title {
-                        color: #e2e8f0;
+                        color: var(--text-colour);
                         font-weight: 500;
                         font-size: 14px;
                     }
 
                     .credit-option-price {
                         font-size: 12px;
-                        color: #94a3b8;
+                        color: var(--text-colour);
+                        opacity: 0.7;
+                    }
+                    
+                    body:not(.dark-mode) .credit-option-title {
+                        color: var(--light-text-colour);
+                    }
+                    
+                    body:not(.dark-mode) .credit-option-price {
+                        color: var(--light-text-colour);
+                        opacity: 0.7;
                     }
 
                     .credit-option-controls {
@@ -4527,6 +4826,522 @@
                 }
             </style>
 
+            <style>
+                /* Enhanced Booru Upload Popup Styles */
+                .booruPopupContent {
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: linear-gradient(135deg, var(--background-colour), var(--darker-background-colour));
+                    padding: 0;
+                    border-radius: 15px;
+                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+                    z-index: 2000;
+                    max-width: 600px;
+                    width: 85%;
+                    max-height: 85vh;
+                    overflow-y: auto;
+                    display: none;
+                    color: var(--text-colour);
+                    border: 2px solid var(--border-colour);
+                    font-family: 'Roboto', sans-serif;
+                }
+
+                .booru-upload-header {
+                    background: linear-gradient(135deg, #006de2, #0084ff);
+                    padding: 25px;
+                    border-radius: 13px 13px 0 0;
+                    text-align: center;
+                    border-bottom: 2px solid var(--border-colour);
+                }
+
+                .booru-upload-header h1 {
+                    margin: 0;
+                    font-size: 2rem;
+                    font-weight: 700;
+                    color: white;
+                    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+                }
+
+                .booru-upload-header i {
+                    margin-right: 10px;
+                    font-size: 1.8rem;
+                }
+
+                .booru-subtitle {
+                    margin: 8px 0 0 0;
+                    font-size: 1.1rem;
+                    color: rgba(255, 255, 255, 0.9);
+                    font-weight: 300;
+                }
+
+                .booru-rules-container {
+                    padding: 30px;
+                }
+
+                .booru-rules-header {
+                    text-align: center;
+                    margin-bottom: 30px;
+                    padding-bottom: 20px;
+                    border-bottom: 2px solid var(--border-colour);
+                }
+
+                .booru-rules-header h2 {
+                    margin: 0 0 10px 0;
+                    font-size: 1.5rem;
+                    font-weight: 600;
+                    color: var(--text-colour);
+                }
+
+                .booru-rules-header p {
+                    margin: 0;
+                    font-size: 1rem;
+                    color: rgba(255, 255, 255, 0.8);
+                }
+
+                .booru-rules-sections {
+                    display: grid;
+                    gap: 20px;
+                    margin-bottom: 30px;
+                }
+
+                .rule-section {
+                    background: rgba(255, 255, 255, 0.05);
+                    border-radius: 10px;
+                    padding: 20px;
+                    border-left: 4px solid;
+                    transition: transform 0.2s ease, box-shadow 0.2s ease;
+                }
+
+                .rule-section:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+                }
+
+                .rule-section.critical {
+                    border-left-color: #ff4757;
+                    background: rgba(255, 71, 87, 0.1);
+                }
+
+                .rule-section.warning {
+                    border-left-color: #ffa502;
+                    background: rgba(255, 165, 2, 0.1);
+                }
+
+                .rule-section.info {
+                    border-left-color: #3742fa;
+                    background: rgba(55, 66, 250, 0.1);
+                }
+
+                .rule-section.success {
+                    border-left-color: #2ed573;
+                    background: rgba(46, 213, 115, 0.1);
+                }
+
+                .rule-section h3 {
+                    margin: 0 0 15px 0;
+                    font-size: 1.2rem;
+                    font-weight: 600;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                }
+
+                .rule-section.critical h3 {
+                    color: #ff6b7a;
+                }
+
+                .rule-section.warning h3 {
+                    color: #ffb142;
+                }
+
+                .rule-section.info h3 {
+                    color: #5c7cfa;
+                }
+
+                .rule-section.success h3 {
+                    color: #51cf66;
+                }
+
+                .rule-section ul {
+                    margin: 0;
+                    padding-left: 20px;
+                    list-style: none;
+                }
+
+                .rule-section li {
+                    margin: 12px 0;
+                    padding-left: 20px;
+                    position: relative;
+                    line-height: 1.5;
+                    font-size: 0.95rem;
+                }
+
+                .rule-section li::before {
+                    content: "•";
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    font-weight: bold;
+                    font-size: 1.2rem;
+                }
+
+                .rule-section.critical li::before {
+                    color: #ff6b7a;
+                }
+
+                .rule-section.warning li::before {
+                    color: #ffb142;
+                }
+
+                .rule-section.info li::before {
+                    color: #5c7cfa;
+                }
+
+                .rule-section.success li::before {
+                    color: #51cf66;
+                }
+
+                .rule-section strong {
+                    font-weight: 600;
+                    color: var(--text-colour);
+                }
+
+                /* Details element styling for booru popup */
+                .booruPopupContent details {
+                    margin: 15px 0 !important;
+                    padding: 0 !important;
+                    display: block !important;
+                    visibility: visible !important;
+                    opacity: 1 !important;
+                    background: rgba(0, 0, 0, 0.05) !important;
+                    border-radius: 8px !important;
+                    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+                }
+
+                .booruPopupContent details summary {
+                    padding: 12px 15px !important;
+                    font-weight: 600 !important;
+                    color: var(--primary-colour) !important;
+                    cursor: pointer !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    gap: 8px !important;
+                    border-radius: 8px !important;
+                    transition: all 0.2s ease !important;
+                }
+
+                .booruPopupContent details summary:hover {
+                    background: rgba(0, 0, 0, 0.05) !important;
+                    color: var(--primary-colour-light) !important;
+                }
+
+                .booruPopupContent details[open] summary {
+                    border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
+                    border-radius: 8px 8px 0 0 !important;
+                }
+
+                .booruPopupContent details ul {
+                    margin: 0 !important;
+                    padding: 15px 20px !important;
+                    background: rgba(0, 0, 0, 0.02) !important;
+                    border-radius: 0 0 8px 8px !important;
+                    list-style: none !important;
+                }
+
+                .booruPopupContent details li {
+                    margin: 8px 0 !important;
+                    padding-left: 20px !important;
+                    position: relative !important;
+                    font-size: 0.9rem !important;
+                    line-height: 1.4 !important;
+                }
+
+                .booruPopupContent details li::before {
+                    content: "•" !important;
+                    position: absolute !important;
+                    left: 0 !important;
+                    color: var(--primary-colour) !important;
+                    font-weight: bold !important;
+                }
+
+                .booru-consequences {
+                    background: rgba(255, 71, 87, 0.15);
+                    border: 1px solid rgba(255, 71, 87, 0.3);
+                    border-radius: 10px;
+                    padding: 20px;
+                    margin-bottom: 20px;
+                }
+
+                .booru-consequences h3 {
+                    margin: 0 0 10px 0;
+                    font-size: 1.1rem;
+                    color: #ff6b7a;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+
+                .booru-consequences p {
+                    margin: 0;
+                    font-size: 0.9rem;
+                    line-height: 1.5;
+                    color: rgba(255, 255, 255, 0.9);
+                }
+
+                .booru-upload-actions {
+                    display: flex;
+                    gap: 15px;
+                    justify-content: center;
+                    padding: 25px;
+                    background: rgba(0, 0, 0, 0.1);
+                    border-radius: 0 0 13px 13px;
+                    border-top: 2px solid var(--border-colour);
+                }
+
+                .booru-cancel-btn,
+                .booru-upload-btn {
+                    padding: 12px 30px;
+                    border: none;
+                    border-radius: 8px;
+                    font-size: 1rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    min-width: 140px;
+                    justify-content: center;
+                }
+
+                .booru-cancel-btn {
+                    background: linear-gradient(135deg, #6c757d, #5a6169);
+                    color: white;
+                    border: 2px solid transparent;
+                }
+
+                .booru-cancel-btn:hover {
+                    background: linear-gradient(135deg, #5a6169, #495057);
+                    transform: translateY(-2px);
+                    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+                }
+
+                .booru-upload-btn {
+                    background: linear-gradient(135deg, #2ed573, #26d0ce);
+                    color: white;
+                    border: 2px solid transparent;
+                }
+
+                .booru-upload-btn:hover {
+                    background: linear-gradient(135deg, #26d0ce, #2ed573);
+                    transform: translateY(-2px);
+                    box-shadow: 0 5px 15px rgba(46, 213, 115, 0.4);
+                }
+
+                .booru-upload-btn:active {
+                    transform: translateY(0);
+                }
+
+                /* Dark mode specific adjustments */
+                body.dark-mode .booruPopupContent {
+                    background: linear-gradient(135deg, var(--dark-background-colour), var(--dark-darker-background-colour));
+                    border-color: var(--dark-border-colour);
+                    color: var(--dark-text-colour);
+                }
+
+                body.dark-mode .booruPopupContent details {
+                    background: rgba(255, 255, 255, 0.05) !important;
+                    border-color: rgba(255, 255, 255, 0.1) !important;
+                }
+
+                body.dark-mode .booruPopupContent details summary {
+                    color: var(--dark-primary-colour) !important;
+                }
+
+                body.dark-mode .booruPopupContent details summary:hover {
+                    background: rgba(255, 255, 255, 0.05) !important;
+                    color: var(--dark-primary-colour-light) !important;
+                }
+
+                body.dark-mode .booruPopupContent details[open] summary {
+                    border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+                }
+
+                body.dark-mode .booruPopupContent details ul {
+                    background: rgba(255, 255, 255, 0.02) !important;
+                }
+
+                body.dark-mode .booruPopupContent details li::before {
+                    color: var(--dark-primary-colour) !important;
+                }
+
+                body.dark-mode .booru-rules-header {
+                    border-bottom-color: var(--dark-border-colour);
+                }
+
+                body.dark-mode .booru-upload-actions {
+                    border-top-color: var(--dark-border-colour);
+                }
+
+                .overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background-color: rgba(0, 0, 0, 0.7);
+                    z-index: 1999;
+                    display: none;
+                }
+
+                /* Mobile responsive */
+                @media (max-width: 768px) {
+                    .booruPopupContent {
+                        width: 92%;
+                        max-width: none;
+                        margin: 15px;
+                        max-height: 80vh;
+                    }
+                    
+                    .booru-upload-header {
+                        padding: 15px;
+                    }
+                    
+                    .booru-upload-header h1 {
+                        font-size: 1.4rem;
+                    }
+                    
+                    .booru-subtitle {
+                        font-size: 0.95rem;
+                    }
+                    
+                    .booru-rules-container {
+                        padding: 15px;
+                    }
+                    
+                    .booru-rules-header {
+                        margin-bottom: 20px;
+                        padding-bottom: 15px;
+                    }
+                    
+                    .booru-rules-header h2 {
+                        font-size: 1.2rem;
+                    }
+                    
+                    .rule-section {
+                        margin-bottom: 15px;
+                        padding: 12px;
+                    }
+                    
+                    .rule-section h3 {
+                        font-size: 1rem;
+                    }
+                    
+                    .rule-section li {
+                        font-size: 0.9rem;
+                        margin-bottom: 6px;
+                    }
+                    
+                    .booru-upload-actions {
+                        flex-direction: column;
+                        gap: 10px;
+                        padding: 15px;
+                    }
+                    
+                    .booru-cancel-btn,
+                    .booru-upload-btn {
+                        width: 100%;
+                        font-size: 0.9rem;
+                        padding: 10px;
+                    }
+                }
+                
+                /* Tablet optimization */
+                @media (min-width: 769px) and (max-width: 1024px) {
+                    .booruPopupContent {
+                        max-width: 550px;
+                        width: 80%;
+                    }
+                }
+                
+                /* Very small screens */
+                @media (max-width: 480px) {
+                    .booruPopupContent {
+                        width: 95%;
+                        margin: 10px;
+                        max-height: 85vh;
+                    }
+                    
+                    .booru-upload-header {
+                        padding: 12px;
+                    }
+                    
+                    .booru-upload-header h1 {
+                        font-size: 1.2rem;
+                    }
+                    
+                    .booru-subtitle {
+                        font-size: 0.9rem;
+                    }
+                    
+                    .booru-rules-container {
+                        padding: 12px;
+                    }
+                    
+                    .rule-section {
+                        padding: 10px;
+                        margin-bottom: 12px;
+                    }
+                    
+                    .rule-section h3 {
+                        font-size: 0.95rem;
+                    }
+                    
+                    .rule-section li {
+                        font-size: 0.85rem;
+                        margin-bottom: 4px;
+                    }
+                    
+                    .booru-upload-actions {
+                        padding: 12px;
+                        gap: 8px;
+                    }
+                    
+                    .booru-cancel-btn,
+                    .booru-upload-btn {
+                        font-size: 0.85rem;
+                        padding: 8px;
+                    }
+                }
+
+                /* Close button styling */
+                .closeButton {
+                    position: absolute;
+                    top: 15px;
+                    right: 15px;
+                    background: rgba(255, 255, 255, 0.1);
+                    border: none;
+                    color: white;
+                    font-size: 24px;
+                    cursor: pointer;
+                    border-radius: 50%;
+                    width: 40px;
+                    height: 40px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 2001;
+                    transition: all 0.3s ease;
+                }
+
+                .closeButton:hover {
+                    background: rgba(255, 255, 255, 0.2);
+                    transform: scale(1.1);
+                }
+            </style>
+
             <div class="booruAdvert">
                 <button class="booruButton" onclick="window.open('https://jscammie.com/booru', '_blank')">View Other's Images on Booru!</button>
             </div>
@@ -4631,13 +5446,6 @@
 
                     let model = document.getElementById('model').value
 
-                    extras = {
-                        removeWatermark: true,
-                        upscale: true,
-                        doubleImages: true,
-                        removeBackground: true,
-                    }
-
                     let runningCost = 0
 
                     activeExtras = {
@@ -4647,7 +5455,7 @@
                         removeBackground: document.getElementById('removeBackgroundCheckbox').checked,
                     }
                     activeBonus = {
-                        remoteWatermark: false,
+                        removeWatermark: false,
                         upscale: false,
                         doubleImages: false,
                         removeBackground: false,
@@ -4658,20 +5466,29 @@
                         runningCost += fastqueueCost
                     }
 
-                    extrasCosts = getExtrasPrice(extras, model)
+                    // Calculate prices for all extras (for display purposes)
+                    allExtrasPrices = getExtrasPrice({
+                        removeWatermark: true,
+                        upscale: true,
+                        doubleImages: true,
+                        removeBackground: true,
+                    }, model)
+
+                    // Calculate prices only for selected extras (for actual cost)
+                    selectedExtrasCosts = getExtrasPrice(activeExtras, model)
 
                     if (activeExtras.removeWatermark) {
-                        runningCost += extrasCosts.removeWatermark
+                        runningCost += selectedExtrasCosts.removeWatermark
                     }
                     if (activeExtras.upscale) {
-                        runningCost += extrasCosts.upscale
+                        runningCost += selectedExtrasCosts.upscale
                     }
                     if (activeExtras.doubleImages) {
-                        runningCost += extrasCosts.doubleImages
+                        runningCost += selectedExtrasCosts.doubleImages
                     }
 
                     if (activeExtras.removeBackground) {
-                        runningCost += extrasCosts.removeBackground
+                        runningCost += selectedExtrasCosts.removeBackground
                     }
 
                     // activate bonus for upscale and doubleImages IF they are both active:
@@ -4683,29 +5500,25 @@
                         activeBonus.doubleImages = false
                     }
 
-                    // if there are any bonus, add them to the runningCost and the respective extrasCosts:
-                    if (extrasCosts.removeWatermarkBonus > 0 && activeExtras.removeWatermark && activeBonus.remoteWatermark) {
-                        runningCost += extrasCosts.removeWatermarkBonus
-                        extrasCosts.removeWatermark += extrasCosts.removeWatermarkBonus
+                    // if there are any bonus, add them to the runningCost:
+                    if (selectedExtrasCosts.removeWatermarkBonus > 0 && activeExtras.removeWatermark && activeBonus.removeWatermark) {
+                        runningCost += selectedExtrasCosts.removeWatermarkBonus
                     }
-                    if (extrasCosts.upscaleBonus > 0 && activeExtras.upscale && activeBonus.upscale) {
-                        runningCost += extrasCosts.upscaleBonus
-                        extrasCosts.upscale += extrasCosts.upscaleBonus
+                    if (selectedExtrasCosts.upscaleBonus > 0 && activeExtras.upscale && activeBonus.upscale) {
+                        runningCost += selectedExtrasCosts.upscaleBonus
                     }
-                    if (extrasCosts.doubleImagesBonus > 0 && activeExtras.doubleImages && activeBonus.doubleImages) {
-                        runningCost += extrasCosts.doubleImagesBonus
-                        extrasCosts.doubleImages += extrasCosts.doubleImagesBonus
+                    if (selectedExtrasCosts.doubleImagesBonus > 0 && activeExtras.doubleImages && activeBonus.doubleImages) {
+                        runningCost += selectedExtrasCosts.doubleImagesBonus
                     }
-                    if (extrasCosts.removeBackgroundBonus > 0 && activeExtras.removeBackground && activeBonus.removeBackground) {
-                        runningCost += extrasCosts.removeBackgroundBonus
-                        extrasCosts.removeBackground += extrasCosts.removeBackgroundBonus
+                    if (selectedExtrasCosts.removeBackgroundBonus > 0 && activeExtras.removeBackground && activeBonus.removeBackground) {
+                        runningCost += selectedExtrasCosts.removeBackgroundBonus
                     }
 
                     
-                    document.getElementById('removeWatermarkCreditsPrice').innerText = extrasCosts.removeWatermark
-                    document.getElementById('upscaleCreditsPrice').innerText = extrasCosts.upscale
-                    document.getElementById('doubleImagesCreditsPrice').innerText = extrasCosts.doubleImages
-                    document.getElementById('removeBackgroundCreditsPrice').innerText = extrasCosts.removeBackground
+                    document.getElementById('removeWatermarkCreditsPrice').innerText = allExtrasPrices.removeWatermark
+                    document.getElementById('upscaleCreditsPrice').innerText = allExtrasPrices.upscale
+                    document.getElementById('doubleImagesCreditsPrice').innerText = allExtrasPrices.doubleImages
+                    document.getElementById('removeBackgroundCreditsPrice').innerText = allExtrasPrices.removeBackground
 
 
 
@@ -5489,11 +6302,11 @@
 
         .strength-controls input[type="range"] {
             flex: 1;
-            accent-color: #96ff90;
+            accent-color: var(--highlight-colour-hover);
         }
 
         .strength-value {
-            color: #96ff90;
+            color: var(--highlight-colour-hover);
             font-weight: bold;
             min-width: 40px;
             text-align: center;
@@ -5960,6 +6773,178 @@
             z-index: 10;
         }
     </style>
+
+    <script>
+        // Enhanced Booru Upload Functions
+        function showBooruPopup(imageData) {
+            const booruPopupContent = document.getElementById('booruPopupContent');
+            const overlay = document.getElementById('overlayBooru');
+
+            // Store imageData globally for use in the button click
+            window.currentBooruImageData = imageData;
+
+            // if they click off the popup, close it:
+            overlay.onclick = function() {
+                closeBooruPopup();
+            }
+
+            booruPopupContent.innerHTML = `
+                <button class="closeButton" onclick="closeBooruPopup()">×</button>
+                <div class="booru-upload-header">
+                    <h1><i class="fas fa-upload"></i> Upload to Booru</h1>
+                    <p class="booru-subtitle">Share your creation with the community</p>
+                </div>
+                
+                <div class="booru-rules-container">
+                    <div class="booru-rules-header">
+                        <h2><i class="fas fa-exclamation-triangle"></i> Community Guidelines</h2>
+                        <p>Please carefully review these rules before uploading:</p>
+                    </div>
+                    
+                    <div class="booru-rules-sections">
+                        <div class="rule-section critical">
+                            <h3><i class="fas fa-ban"></i> Prohibited Content</h3>
+                            <ul>
+                                <li><strong>NO Child/Cub/Loli NSFW content</strong> - Zero tolerance policy</li>
+                                <li><strong>NO Scat or Vore</strong> - Not allowed under any circumstances</li>
+                                <li><strong>NO Inappropriate tags</strong> - Prompts containing banned keywords (e.g., "loli") will be removed even if SFW</li>
+                                <li><strong>NO Low-quality spam</strong> - Avoid uploading excessive variations of the same image</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="rule-section warning">
+                            <h3><i class="fas fa-user-check"></i> Age-Up Guidelines</h3>
+                            <ul>
+                                <li>Aged-up characters must <strong>clearly appear over 18</strong> in proportions and appearance</li>
+                                <li>Characters must look mature in clothing, body type, and facial features</li>
+                                <li>When in doubt, don't upload - moderators will remove questionable content</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="rule-section info">
+                            <h3><i class="fas fa-shield-alt"></i> Moderation Process</h3>
+                            <ul>
+                                <li>All uploads are <strong>hidden by default</strong> until approved</li>
+                                <li>Moderators assign safety ratings: SFW, Suggestive, or NSFW</li>
+                                <li>Generation settings are publicly visible for transparency</li>
+                            </ul>
+                            <br>
+                            <details>
+                                <summary><i class="fas fa-info-circle"></i> Additional Notes on What Constitutes as Suggestive/Nsfw/Extreme</summary>
+                                <ul>
+                                    <li>Suggestive: Provocative poses, large breasts, cleavage, suggestive clothing and suggestive angles</li>
+                                    <li>NSFW: Nudity, sexual content, or explicit themes, x-ray </li>
+                                    <li>Extreme: Gore, excessive violence, pregnancy, egg laying, giantess/macro, hyper-proportions, tentacles, inflation, or other extreme content</li>
+                                </ul>
+                            </details>
+                        </div>
+                        
+                        <div class="rule-section success">
+                            <h3><i class="fas fa-star"></i> Quality Standards</h3>
+                            <ul>
+                                <li>Upload your <strong>best generations</strong> - quality over quantity</li>
+                                <li>Ensure good composition and minimal artifacts</li>
+                                <li>Unique and creative content is especially welcomed</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="booru-consequences">
+                        <h3><i class="fas fa-gavel"></i> Consequences</h3>
+                        <p>Violations may result in content removal, warnings, or account restrictions on posting to the booru.</p>
+                    </div>
+                </div>
+                
+                <div class="booru-upload-actions">
+                    <button class="booru-cancel-btn" onclick="closeBooruPopup()">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button class="booru-upload-btn" onclick="confirmBooruUpload(window.currentBooruImageData)">
+                        <i class="fas fa-check"></i> I Agree - Upload to Booru
+                    </button>
+                </div>
+            `;
+
+            document.getElementById('overlayBooru').style.display = 'block';
+            document.getElementById('booruPopupContent').style.display = 'block';
+
+            // Listen for the ESC key to close the popup
+            document.addEventListener('keydown', escCloseBooruPopup);
+        }
+
+        async function confirmBooruUpload(imageData) {
+            // Hide the booru popup while showing the confirmation dialog
+            document.getElementById('booruPopupContent').style.display = 'none';
+            
+            const options = {
+                message: 'Are you sure you want to upload this image to the booru?\\n\\nBy clicking "Yes", you confirm that:\\n• Your image follows all community guidelines\\n• You understand the moderation process\\n• You accept potential consequences for violations',
+                question: true,
+                options: {
+                    yes: function() { console.log("Upload confirmed"); },
+                    no: function() { console.log("Upload cancelled"); }
+                }
+            };
+            
+            const userResponse = await globalAlert(options);
+            
+            if (userResponse === 'yes') {
+                // Close the popup completely and proceed with upload
+                closeBooruPopup();
+                uploadToBooruFromAI(imageData);
+            } else {
+                // If 'no', show the booru popup again
+                document.getElementById('booruPopupContent').style.display = 'block';
+            }
+        }
+
+        async function uploadToBooruFromAI(imageData) {
+            console.log('Uploading image to booru from AI page:', imageData);
+
+            try {
+                const response = await fetch('/create-booru-image', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(imageData)
+                });
+                
+                const result = await response.json();
+                
+                const options = {
+                    message: result.message,
+                    question: false,
+                };
+                
+                await globalAlert(options);
+                
+            } catch (error) {
+                console.error('Error uploading to booru:', error);
+                const options = {
+                    message: 'Error uploading to booru. Please try again.',
+                    question: false,
+                };
+                await globalAlert(options);
+            }
+        }
+
+        function closeBooruPopup() {
+            const booruPopupContent = document.getElementById('booruPopupContent');
+            const overlay = document.getElementById('overlayBooru');
+            
+            booruPopupContent.style.display = 'none';
+            overlay.style.display = 'none';
+            
+            // Remove event listener
+            document.removeEventListener('keydown', escCloseBooruPopup);
+        }
+
+        function escCloseBooruPopup(event) {
+            if (event.key === 'Escape') {
+                closeBooruPopup();
+            }
+        }
+    </script>
 
 </body>
 </html>

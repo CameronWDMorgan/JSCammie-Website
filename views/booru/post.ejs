@@ -1,27 +1,31 @@
 <!-- setup basic html template with metadata etc: -->
 <html>
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- use metadata from booruImage to fill title and tags etc etc: -->
     <title><%=booruImage.safety.toUpperCase()%> | <%= booruImage.prompt %> | JSCammie.com</title>
-    <meta name="description" content="<%= booruImage.prompt %>"/>
-    <meta name="keywords" content="<%= booruImage.prompt %>"/>
+    <meta name="description" content="<%= booruImage.prompt %> - AI generated image using <%= booruImage.model %> by <%= postProfile.username %> on JSCammie.com"/>
+    <meta name="keywords" content="<%= booruImage.prompt %>, ai generated art, <%= booruImage.model %>, <%= booruImage.safety %>, booru"/>
     <meta name="author" content="JSCammie"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://jscammie.com/booru/post/<%= booruImage.booru_id %>">
 
-    <!-- embed the image: -->
-    <!-- <meta content="Embed Title" property="og:title" />
-    <meta content="Site Description" property="og:description" />
-    <meta content="https://embed.com/this-is-the-site-url" property="og:url" />
-    <meta content="https://embed.com/embedimage.png" property="og:image" />
-    <meta content="#43B581" data-react-helmet="true" name="theme-color" /> -->
-
+    <!-- Open Graph meta tags for social media -->
     <meta property="og:title" content="<%= booruImage.title? booruImage.title : postProfile.username %> | <%= booruImage.model %> | JSCammie.com" />
+    <meta property="og:description" content="<%= booruImage.prompt %> - AI generated image using <%= booruImage.model %> by <%= postProfile.username %>" />
     <meta property="og:image" content="<%= booruImage.content_url %>" />
     <meta property="og:url" content="https://jscammie.com/booru/post/<%= booruImage.booru_id %>" />
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="JSCammie.com" />
     <meta content="#43B581" data-react-helmet="true" name="theme-color" />
+    
+    <!-- Twitter Card meta tags -->
     <meta name="twitter:card" content="summary_large_image">
-
-
+    <meta name="twitter:title" content="<%= booruImage.title? booruImage.title : postProfile.username %> | <%= booruImage.model %> | JSCammie.com">
+    <meta name="twitter:description" content="<%= booruImage.prompt %> - AI generated image using <%= booruImage.model %> by <%= postProfile.username %>">
+    <meta name="twitter:image" content="<%= booruImage.content_url %>">
 
     <link rel='stylesheet' href='/style.css'/>
     
@@ -536,7 +540,54 @@
                 badges: {
                     owner: <%= userProfile?.badges?.owner ? "true" : "false" %>,
                     moderator: <%= userProfile?.badges?.moderator ? "true" : "false" %>
+                },
+                favoriteBooruPosts: <%- JSON.stringify(userProfile?.favoriteBooruPosts || []) %>
+            }
+
+            async function favoritePost(booruId) {
+                console.log("favoritePost", booruId)
+                console.log("userProfile.favoriteBooruPosts", userProfile.favoriteBooruPosts)
+
+                body = {
+                    booru_id: booruId
                 }
+
+                fetch(`/booru/favorite`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(body)
+                })
+                .then((res) => res.json())
+                .then((data) => {
+                    if (data.status == "success") {
+                        console.log("data.message", data.message)
+                        // update the favorite button text:
+                        let favoriteButton = document.getElementById(`favoriteButton${booruId}`)
+                        if (favoriteButton) {
+                            if (data.favorited) {
+                                favoriteButton.innerHTML = "⭐ Unfavorite"
+                            } else {
+                                favoriteButton.innerHTML = "⭐ Favorite"
+                            }
+                        }
+                    } else {
+                        globalAlert({
+                            message: "Failed to favorite/unfavorite post. Please try again later.",
+                            question: true,
+                            options: { okay: function(){} }
+                        })
+                    }
+                })
+                .catch((err) => {
+                    console.error(err)
+                    globalAlert({
+                        message: "Failed to favorite/unfavorite post. Please try again later.",
+                        question: true,
+                        options: { okay: function(){} }
+                    })
+                })
             }
 
             async function deletePost() {
@@ -590,6 +641,7 @@
             <br>
             <select id="searchSorting">
                 <option value="trending">🔥 Trending</option>
+                <option value="recommended">✨ Recommended</option>
                 <option value="following">🤍 Following</option>
                 <option value="votes">⬆️ Votes</option>
                 <option value="recent">⏱️ Recent</option>
@@ -691,6 +743,7 @@
                         <button class="action-upvote" id="upvoteButton${booruImage.booru_id}" onclick="votePost('upvote', '${booruImage.booru_id}')">
                             ⬆️ Upvote${booruImage.upvotes.length > 0 ? ` (${booruImage.upvotes.length})` : ''}
                         </button>
+                        ${userProfile.accountId ? `<button id="favoriteButton${booruImage.booru_id}" onclick="favoritePost('${booruImage.booru_id}')">${userProfile.favoriteBooruPosts.some(post => post.booru_id === booruImage.booru_id) ? "⭐ Unfavorite" : "⭐ Favorite"}</button>` : ''}
                         ${postActionButtons}
                         <button onclick="exportAIData()">💾 Export to .AIDATA</button>
                         <button onclick="openInGenerator()">🎨 Open in Generator</button>
@@ -802,23 +855,35 @@
                 }
 
                 function renderComment(comment) {
+                    // Add safety checks for comment data
+                    if (!comment || !comment.commentId) {
+                        console.error("Invalid comment data:", comment);
+                        return;
+                    }
+
                     const isOwner = userProfile.accountId === comment.accountId;
-                    const isMod = userProfile.badges.moderator;
+                    const isMod = userProfile.badges && userProfile.badges.moderator;
                     
-                    let commentButtons = `<button class="voteButton" data-id="${comment.commentId}">${comment.upvotes}⬆️</button>`;
+                    let commentButtons = `<button class="voteButton" data-id="${comment.commentId}">${comment.upvotes || "0"}⬆️</button>`;
 
                     if (isOwner || isMod) {
                         commentButtons = `<button class="deleteButton" data-id="${comment.commentId}">${isOwner ? "Delete" : "Mod Delete"}</button>` + commentButtons;
                     }
 
+                    // Add fallbacks for missing data
+                    const username = comment.username || "Unknown User";
+                    const profileImg = comment.profileImg || "https://www.jscammie.com/noimagefound.png";
+                    const commentText = comment.comment || "";
+                    const timestamp = comment.timestamp ? new Date(Number(comment.timestamp)).toLocaleString() : "Unknown time";
+
                     commentsDiv.innerHTML += `
                         <div id="commentId-${comment.commentId}" class="commentDiv">
-                            <a href="/profile/${comment.accountId}" class="commentInfo">
-                                <img src="${comment.profileImg}" alt="Profile Image" class="commentProfileImage" loading="lazy"/>
-                                <h1>${comment.username}</h1>
+                            <a href="/profile/${comment.accountId || ''}" class="commentInfo">
+                                <img src="${profileImg}" alt="Profile Image" class="commentProfileImage" loading="lazy" onerror="this.src='https://www.jscammie.com/noimagefound.png'"/>
+                                <h1>${username}</h1>
                             </a>
-                            <p class="commentContent">${comment.comment}</p>
-                            <span class="timestamp">${new Date(Number(comment.timestamp)).toLocaleString()}</span>
+                            <p class="commentContent">${commentText}</p>
+                            <span class="timestamp">${timestamp}</span>
                             <div class="commentButtons">${commentButtons}</div>
                         </div>`;
                 }

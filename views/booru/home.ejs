@@ -170,6 +170,7 @@
             <br>
             <select id="searchSorting">
                 <option value="trending">🔥 Trending</option>
+                <option value="recommended">✨ Recommended</option>
                 <option value="following">🤍 Following</option>
                 <option value="votes">⬆️ Votes</option>
                 <option value="recent">⏱️ Recent</option>
@@ -272,6 +273,13 @@
 
         <script>
             let masterBooruData = {}
+
+            // Helper function to create proper page URLs
+            function createPageUrl(pageNum) {
+                let url = new URL(window.location);
+                url.searchParams.set('page', pageNum);
+                return url.toString();
+            }
 
             // class="${value.downvotedOn == true ? 'downvoted' : ''}"
 
@@ -853,33 +861,25 @@
                 let firstPageButton = document.createElement("button")
                 firstPageButton.innerHTML = "&laquo; First"
                 firstPageButton.onclick = () => {
-                    let url = window.location.href
-                    let newUrl = url.replace(/page=\d+/, `page=1`)
-                    window.location.href = newUrl
+                    window.location.href = createPageUrl(1);
                 }
 
                 let previousPageButton = document.createElement("button")
                 previousPageButton.innerHTML = "&lt; Previous"
                 previousPageButton.onclick = () => {
-                    let url = window.location.href
-                    let newUrl = url.replace(/page=\d+/, `page=${Math.max(page - 1, 1)}`)
-                    window.location.href = newUrl
+                    window.location.href = createPageUrl(Math.max(page - 1, 1));
                 }
 
                 let nextPageButton = document.createElement("button")
                 nextPageButton.innerHTML = "Next &gt;"
                 nextPageButton.onclick = () => {
-                    let url = window.location.href
-                    let newUrl = url.replace(/page=\d+/, `page=${Math.min(page + 1, totalPages)}`)
-                    window.location.href = newUrl
+                    window.location.href = createPageUrl(Math.min(page + 1, totalPages));
                 }
 
                 let lastPageButton = document.createElement("button")
                 lastPageButton.innerHTML = "Last &raquo;"
                 lastPageButton.onclick = () => {
-                    let url = window.location.href
-                    let newUrl = url.replace(/page=\d+/, `page=${totalPages}`)
-                    window.location.href = newUrl
+                    window.location.href = createPageUrl(totalPages);
                 }
 
                 paginationDiv.appendChild(firstPageButton)
@@ -893,9 +893,7 @@
                     let skipBackButton = document.createElement("button")
                     skipBackButton.innerHTML = page - 15
                     skipBackButton.onclick = () => {
-                        let url = window.location.href
-                        let newUrl = url.replace(/page=\d+/, `page=${Math.max(page - 15, 1)}`)
-                        window.location.href = newUrl
+                        window.location.href = createPageUrl(Math.max(page - 15, 1));
                     }
                     paginationDiv.appendChild(skipBackButton)
                 }
@@ -905,9 +903,7 @@
                     let pageButton = document.createElement("button")
                     pageButton.innerHTML = i
                     pageButton.onclick = () => {
-                        let url = window.location.href
-                        let newUrl = url.replace(/page=\d+/, `page=${i}`)
-                        window.location.href = newUrl
+                        window.location.href = createPageUrl(i);
                     }
                     if (i === page) {
                         pageButton.classList.add("active")
@@ -920,9 +916,7 @@
                     let skipForwardButton = document.createElement("button")
                     skipForwardButton.innerHTML = page + 15
                     skipForwardButton.onclick = () => {
-                        let url = window.location.href
-                        let newUrl = url.replace(/page=\d+/, `page=${Math.min(page + 15, totalPages)}`)
-                        window.location.href = newUrl
+                        window.location.href = createPageUrl(Math.min(page + 15, totalPages));
                     }
                     paginationDiv.appendChild(skipForwardButton)
                 }

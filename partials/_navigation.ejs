@@ -1,4 +1,5 @@
-<link rel='stylesheet' href='/style.css' />
+<link rel='stylesheet' href='/style.css?v=<%= version %>' />
+<link rel='stylesheet' href='/css/dark-mode.css?v=<%= version %>' />
 
 <!-- <script id="aclib" type="text/javascript" src="//acscdn.com/script/aclib.js"></script> -->
 
@@ -15,6 +16,18 @@
         background-color: rgba(0, 0, 0, 0.5);
         transition: all 0.75s;
         z-index: 992;
+    }
+    #creditsButtonDiv {
+        position: relative;
+        z-index: 1200;
+    }
+    #creditsNav {
+        z-index: 1201;
+        position: relative;
+    }
+    #creditsDisplay {
+        z-index: 1202;
+        position: relative;
     }
 
 </style>
@@ -214,6 +227,9 @@
                     if (btn12hr) btn12hr.textContent = 'Log in to claim';
                     if (btn24hr) btn24hr.textContent = 'Log in to claim';
                     if (btn168hr) btn168hr.textContent = 'Log in to claim';
+                    
+                    // Stop the dailies timer when not logged in
+                    stopDailiesTimer();
                     return;
                 }
                 
@@ -238,6 +254,9 @@
 
             // Update the dailies timers
             updateDailiesTimers();
+            
+            // Start the timer to continuously update the dailies display
+            startDailiesTimer();
         } catch (error) {
             console.error("Error updating profile display:", error);
         }
@@ -272,11 +291,15 @@
         const btn168hr = document.getElementById('168hrCreditsButton');
         const btn168hrTimeLeft = document.getElementById('168hrCreditsButtonTimeLeft');
         
+        // Track how many rewards are ready for animation
+        let readyRewardsCount = 0;
+        
         // 3hr button
         if (btn3hr && btn3hrTimeLeft) {
             if (timestamp3hr + timestamp3hrDifferenceRequired < currentTime || timestamp3hr == 0) {
                 btn3hr.disabled = false;
                 btn3hrTimeLeft.textContent = 'Claimable';
+                readyRewardsCount++;
             } else {
                 btn3hr.disabled = true;
                 const timeLeft = timestamp3hr + timestamp3hrDifferenceRequired - currentTime;
@@ -292,6 +315,7 @@
             if (timestamp12hr + timestamp12hrDifferenceRequired < currentTime || timestamp12hr == 0) {
                 btn12hr.disabled = false;
                 btn12hrTimeLeft.textContent = 'Claimable';
+                readyRewardsCount++;
             } else {
                 btn12hr.disabled = true;
                 const timeLeft = timestamp12hr + timestamp12hrDifferenceRequired - currentTime;
@@ -307,6 +331,7 @@
             if (timestamp24hr + timestamp24hrDifferenceRequired < currentTime || timestamp24hr == 0) {
                 btn24hr.disabled = false;
                 btn24hrTimeLeft.textContent = 'Claimable';
+                readyRewardsCount++;
             } else {
                 btn24hr.disabled = true;
                 const timeLeft = timestamp24hr + timestamp24hrDifferenceRequired - currentTime;
@@ -322,6 +347,7 @@
             if (timestamp168hr + timestamp168hrDifferenceRequired < currentTime || timestamp168hr == 0) {
                 btn168hr.disabled = false;
                 btn168hrTimeLeft.textContent = 'Claimable';
+                readyRewardsCount++;
             } else {
                 // show it as D H M S left:
                 btn168hr.disabled = true;
@@ -333,7 +359,71 @@
                 btn168hrTimeLeft.textContent = timeLeftDays + 'd ' + timeLeftHours + 'h ' + timeLeftMinutes + 'm ' + timeLeftSeconds + 's';
             }
         }
+        
+        // Update credits button animation based on ready rewards
+        updateCreditsButtonAnimation(readyRewardsCount);
     }
+    
+    // Function to update credits button animation based on ready rewards
+    function updateCreditsButtonAnimation(readyCount) {
+        const creditsButton = document.getElementById('creditsNav');
+        if (!creditsButton) return;
+        
+        // Remove all animation classes first
+        creditsButton.classList.remove('daily-ready', 'multiple-ready');
+        
+        if (readyCount > 0) {
+            if (readyCount >= 2) {
+                // Multiple rewards ready - more intense animation
+                creditsButton.classList.add('multiple-ready');
+            } else {
+                // Single reward ready - basic animation
+                creditsButton.classList.add('daily-ready');
+            }
+        }
+    }
+
+    // Set up a timer to update the dailies timers every second
+    let dailiesTimerInterval = null;
+    let pageVisible = !document.hidden;
+    
+    function startDailiesTimer() {
+        // Clear any existing timer first
+        if (dailiesTimerInterval) {
+            clearInterval(dailiesTimerInterval);
+        }
+        
+        // Update immediately
+        updateDailiesTimers();
+        
+        // Set up the interval to update every second, but only when page is visible
+        dailiesTimerInterval = setInterval(() => {
+            // Only update if page is visible and user has profile data
+            if (pageVisible && userProfileNavigation) {
+                updateDailiesTimers();
+            }
+        }, 1000);
+    }
+
+    function stopDailiesTimer() {
+        if (dailiesTimerInterval) {
+            clearInterval(dailiesTimerInterval);
+            dailiesTimerInterval = null;
+        }
+    }
+
+    // Handle page visibility changes to optimize performance
+    document.addEventListener('visibilitychange', () => {
+        pageVisible = !document.hidden;
+        
+        if (pageVisible && userProfileNavigation && sessionData.loggedIn) {
+            // Page became visible, restart timer if user is logged in
+            startDailiesTimer();
+        } else if (!pageVisible) {
+            // Page became hidden, we can keep the timer running at reduced frequency
+            // but for now, let's keep it simple and continue running
+        }
+    });
 
 </script>
 
@@ -400,12 +490,79 @@
     align-items: center;
     transition: all 0.3s ease;
     font-size: 0.95em;
+    position: relative;
+    overflow: hidden;
 }
 
 #creditsNav:hover {
     background-color: rgba(255, 255, 255, 0.2);
     border-color: rgba(255, 255, 255, 0.4);
     transform: translateY(-1px);
+}
+
+/* Credits button animations for daily rewards ready */
+#creditsNav.daily-ready {
+    animation: creditsButtonPulse 2s ease-in-out infinite;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+    border-color: rgba(255, 215, 0, 0.8);
+}
+
+#creditsNav.daily-ready::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+        45deg,
+        transparent,
+        rgba(255, 215, 0, 0.3),
+        transparent
+    );
+    transform: rotate(45deg);
+    animation: shine 3s ease-in-out infinite;
+}
+
+@keyframes creditsButtonPulse {
+    0%, 100% {
+        transform: scale(1);
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+    50% {
+        transform: scale(1.05);
+        background-color: rgba(255, 215, 0, 0.2);
+    }
+}
+
+@keyframes shine {
+    0% {
+        transform: translateX(-100%) translateY(-100%) rotate(45deg);
+    }
+    50% {
+        transform: translateX(100%) translateY(100%) rotate(45deg);
+    }
+    100% {
+        transform: translateX(-100%) translateY(-100%) rotate(45deg);
+    }
+}
+
+/* Additional glow effect for multiple rewards ready */
+#creditsNav.multiple-ready {
+    animation: creditsButtonIntensePulse 1.5s ease-in-out infinite;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.8), 0 0 30px rgba(255, 165, 0, 0.4);
+    border-color: rgba(255, 165, 0, 1);
+}
+
+@keyframes creditsButtonIntensePulse {
+    0%, 100% {
+        transform: scale(1);
+        background-color: rgba(255, 215, 0, 0.1);
+    }
+    50% {
+        transform: scale(1.08);
+        background-color: rgba(255, 215, 0, 0.3);
+    }
 }
 
 #creditsDisplay {
@@ -583,7 +740,7 @@
         <!-- Desktop Navigation Links -->
         <div class="navigationLinksWrapper">
             <a id="navigationLink-generator" class="navigationLink" href="/">AI Generator</a>
-            <a id="navigationLink-booru" class="navigationLink" href="/booru">Booru</a>
+            <a id="navigationLink-booru" class="navigationLink" href="/booru/?page=1&safety=sfw&sort=trending">Booru</a>
             <a id="navigationLink-leaderboard" class="navigationLink" href="/leaderboard?type=booru">Leaderboard</a>
             <a id="navigationLink-download" class="navigationLink" href="/download">Download</a>
             <a id="navigationLink-paypalshop" class="navigationLink" href="/paypal-shop">Buy Credits</a>
@@ -593,6 +750,8 @@
             <a id="navigationLink-redeem" class="navigationLink" href="/redeem-code">Redeem</a>
             <% if (!session.loggedIn) { %>
                 <a class="navigationLink" href="/login">Login</a>
+            <% } else { %>
+                <a class="navigationLink" href="/login">Link Accounts</a>
             <% } %>
             
         </div>
@@ -604,7 +763,7 @@
         <div class="mobileMenu frosted" id="mobileMenu">
             <a href="/">AI Generator</a>
             <a href="/projects">Projects</a>
-            <a href="/booru">Booru</a>
+            <a href="/booru/?page=1&safety=sfw&sort=trending">Booru</a>
             <a href="/leaderboard?type=booru">Leaderboard</a>
             <a href="https://discord.gg/AvbQuRmh7t">Discord</a>
             <a href="/download">Download</a>
@@ -616,6 +775,7 @@
                 <a href="/booru/creator-stats">Creator Stats</a>
                 <a href="/profile-upgrades">Profile Upgrades</a>
                 <a href="/settings/">Settings</a>
+                <a href="/login">Link</a>
             <% } else { %>
                 <a href="/login">Login</a>
             <% } %>
@@ -652,14 +812,32 @@
                     <a href="/booru/creator-stats" class="profileLink">Creator Stats</a>
                     <a href="/profile-upgrades" class="profileLink">Profile Upgrades</a>
                     <a href="/settings/" class="profileLink">Settings</a>
+                    <div style="border-top: 1px solid var(--border-colour); margin: 8px 0; padding-top: 8px;"></div>
                     <button id="darkModeButton" class="profileLink darkModeButton">
                         <span id="darkModeIcon" class="darkModeIcon">🌙</span>
                         <span class="darkModeText">Dark Mode</span>
                     </button>
+                    <div style="border-top: 1px solid var(--border-colour); margin: 8px 0; padding-top: 8px;"></div>
+                    <!-- Provider Session Status -->
+                    <div style="padding: 8px 12px; border-bottom: 1px solid var(--border-colour); margin-bottom: 8px;">
+                        <div style="font-size: 0.8em; color: var(--text-colour); opacity: 0.7; margin-bottom: 4px;">Active Sessions:</div>
+                        <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                            <% if (session.discord) { %>
+                                <span style="background-color: #7289DA; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.75em;">🎮 Discord</span>
+                            <% } %>
+                            <% if (session.google) { %>
+                                <span style="background-color: #4285F4; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.75em;">🔍 Google</span>
+                            <% } %>
+                            <% if (!session.discord && !session.google) { %>
+                                <span style="color: var(--text-colour); opacity: 0.6; font-size: 0.75em;">None active</span>
+                            <% } %>
+                        </div>
+                    </div>
+                    
                     <% if (session.accountId == 1039574722163249233 ) { %>
                         <a href="/admin/lora-preview-moderation" class="profileLink">Lora Preview Moderation</a>
                     <% } %>
-                    <a href="/logout" class="profileLink">Logout</a>
+                    <a href="/logout-all" class="profileLink">🚪 Logout All</a>
                 </div>
             </div>
         </div>
@@ -830,14 +1008,6 @@
         transform: rotate(15deg);
     }
 
-    /* Dark Mode Styles */
-    .dark-mode {
-        --background-colour: #1a1a1a;
-        --text-colour: #ffffff;
-        --border-colour: #333333;
-        --highlight-colour: #2a2a2a;
-    }
-
     /* Show dropdown when profileDisplay is clicked */
     .profileDisplay.active + .profileDropdown {
         display: block;
@@ -936,9 +1106,9 @@
         }
     }
 
-    // Execute profile display update once the DOM is loaded
-    document.addEventListener('DOMContentLoaded', () => {
-        console.log("DOM loaded, initializing profile display");
+    // Initialize profile display immediately and as backup on DOM load
+    function initializeProfileDisplay() {
+        console.log("Initializing profile display");
         
         // Set initial login state from server-side data
         const loginStateElement = document.getElementById('loggedIn');
@@ -948,17 +1118,42 @@
             loginStateElement.textContent = serverLoginStateElement.textContent;
         }
         
-        // Allow a small delay for all elements to be created and rendered
-        setTimeout(() => {
-            console.log("Running delayed initialization");
-            updateUserProfileAndDisplay();
+        // Try immediate profile update
+        updateUserProfileAndDisplay();
+        
+        // Start the dailies timer if user is logged in and has profile data
+        if (sessionData.loggedIn && userProfileNavigation) {
+            startDailiesTimer();
+        }
+    }
+
+    // Execute immediately if possible, otherwise wait for DOM
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("DOM loaded, initializing profile display");
+            initializeProfileDisplay();
             
-            // Only do one additional update attempt with longer delay
+            // Backup update with small delay for elements that might load async
             setTimeout(() => {
-                console.log("Running second delayed initialization");
+                console.log("Running backup initialization");
                 updateUserProfileAndDisplay();
-            }, 3000); // Increased to 3000ms
-        }, 500); // Increased to 500ms
+            }, 200);
+        });
+    } else {
+        // DOM is already loaded, initialize immediately
+        initializeProfileDisplay();
+        
+        // Small backup delay for any async elements
+        setTimeout(() => {
+            updateUserProfileAndDisplay();
+        }, 100);
+    }
+
+    // Clean up timers when the page is about to unload
+    window.addEventListener('beforeunload', () => {
+        stopDailiesTimer();
+        // Clean up any existing intervals
+        intervalIds.forEach(id => clearInterval(id));
     });
 </script>
 
@@ -989,7 +1184,7 @@
             document.getElementById('navigationLink-generator').classList.add('navigationLinkActive');
             break;
 
-        case '/booru':
+        case '/booru/?page=1&safety=sfw&sort=trending':
             document.getElementById('navigationLink-booru').classList.add('navigationLinkActive');
             break;
 
@@ -1063,7 +1258,7 @@
 <script>
     let topSiteTextArray = [
         {
-            message: "Check out the <a id='advert-link-colour' href='https://www.jscammie.com/booru'>'Booru'</a> for some cool user-created images & to earn credits!",
+            message: "Check out the <a id='advert-link-colour' href='https://www.jscammie.com/booru/?page=1&safety=sfw&sort=trending'>'Booru'</a> for some cool user-created images & to earn credits!",
             linkcolour: "rgba(0, 255, 38, 1)",
             active: true
         },
@@ -1156,11 +1351,21 @@
 </script>
 
 <div id="notificationsPopup" style="display: none;">
-    <h2> - Notifications:</h2>
+    <div class="notification-header-section">
+        <h2>🔔 Notifications</h2>
+        <div class="notification-stats">
+            <span id="notificationCount">0 notifications</span>
+            <span id="unreadCount">0 unread</span>
+        </div>
+    </div>
     <div class="notificationList" id="notificationsList">
         <p>No notifications</p>
     </div>
-    <button id="loadNotificationsButton">Load more</button>
+    <div class="notification-actions">
+        <button id="loadNotificationsButton">Load more</button>
+        <button id="markAllReadButton">Mark all read</button>
+        <button id="clearAllButton">Clear all forever</button>
+    </div>
 </div>
 
 <style>
@@ -1182,22 +1387,137 @@
         width: 75%;
     }
 
+    .notification-header-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .notification-header-section h2 {
+        margin: 0;
+        font-size: 20px;
+    }
+
+    .notification-stats {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        font-size: 12px;
+        opacity: 0.8;
+    }
+
+    .notification-stats span {
+        margin: 2px 0;
+    }
+
+    .notification-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid rgba(255, 255, 255, 0.2);
+        justify-content: space-between;
+    }
+
+    .notification-actions button {
+        background-color: rgba(0, 0, 0, 0.2);
+        color: white;
+        padding: 8px 12px;
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: all 0.3s ease;
+        flex: 1;
+        margin: 0 2px;
+    }
+
+    .notification-actions button:hover {
+        background-color: var(--highlight-colour-hover);
+        transform: translateY(-1px);
+    }
+
     .notification {
         display: flex;
         flex-direction: column;
         margin: 8px;
-        padding: 8px;
+        padding: 12px;
         border: 2px solid rgba(255, 255, 255, 0.2);
         border-radius: 8px;
+        position: relative;
+        transition: all 0.3s ease;
+    }
+
+    .notification:hover {
+        border-color: rgba(255, 255, 255, 0.4);
+        transform: translateY(-1px);
+    }
+
+    .notification-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+
+    .notification-controls {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .notification-action, .notification-dismiss {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: all 0.2s ease;
+    }
+
+    .notification-action:hover {
+        background: rgba(0, 123, 255, 0.3);
+        border-color: rgba(0, 123, 255, 0.5);
+    }
+
+    .notification-dismiss:hover {
+        background: rgba(255, 0, 0, 0.3);
+        border-color: rgba(255, 0, 0, 0.5);
+    }
+
+    .notification-read {
+        opacity: 0.7;
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .notification-unread {
+        box-shadow: 0 0 8px rgba(255, 157, 252, 0.3);
+    }
+
+    .notification-metadata {
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        color: rgba(255, 255, 255, 0.7);
     }
 
     .notificationType {
-        font-size: 18px;
+        font-size: 14px;
         color: #ffffff;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 6px;
     }
 
     .notificationMessage {
         font-size: 16px;
+        line-height: 1.4;
     }
 
     .notificationList {
@@ -1207,8 +1527,64 @@
         overflow-y: scroll;
     }
 
+    .loading-more-notifications {
+        text-align: center;
+        padding: 10px;
+        color: rgba(255, 255, 255, 0.6);
+        font-style: italic;
+    }
+
     #notificationsNav {
         transition: all 0.5s ease;
+        position: relative;
+    }
+
+    .notifications-loading {
+        opacity: 0.6;
+    }
+
+    .notifications-loading::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 12px;
+        height: 12px;
+        margin: -6px 0 0 -6px;
+        border: 2px solid transparent;
+        border-top: 2px solid #fff;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .notification-badge {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        background: #ff4444;
+        color: white;
+        border-radius: 50%;
+        padding: 2px 6px;
+        font-size: 11px;
+        font-weight: bold;
+        min-width: 18px;
+        height: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1001;
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+        100% { transform: scale(1); }
     }
 
 
@@ -1278,14 +1654,50 @@
 
     let notificationsArray = []
     let notificationsChecked = '<%=session.notificationsChecked%>'
+    let unreadNotificationCount = 0
+    let notificationSkip = 0
+    let hasMoreNotifications = true
+    let loadingMoreNotifications = false
+
+    // Preload notifications from server-side rendering for instant display
+    <% if (typeof preloadedNotifications !== 'undefined' && preloadedNotifications.length > 0) { %>
+        let preloadedNotifications = <%- JSON.stringify(preloadedNotifications) %>;
+        
+        // Add preloaded notifications to the array immediately
+        preloadedNotifications.forEach(notification => {
+            if (!notificationsReceived.includes(notification.notificationId)) {
+                notificationsReceived.push(notification.notificationId);
+                notificationsArray.push(notification);
+            }
+        });
+        
+        // Use server-provided unread count for accuracy
+        <% if (typeof preloadedUnreadCount !== 'undefined') { %>
+            unreadNotificationCount = <%= preloadedUnreadCount %>;
+        <% } else { %>
+            unreadNotificationCount = preloadedNotifications.filter(n => !n.read).length;
+        <% } %>
+        
+        // Display preloaded notifications immediately
+        setTimeout(() => {
+            buildNotificationsFromArray(notificationsChecked, unreadNotificationCount);
+        }, 50); // Very small delay to ensure DOM elements exist
+    <% } %>
 
     let notificationCount = 0
 
-    function buildNotificationsFromArray(newNotificationsChecked) {
+    function buildNotificationsFromArray(newNotificationsChecked, unreadCount = 0) {
         
         Number(notificationsChecked)
 
         notificationsChecked = newNotificationsChecked ?? notificationsChecked
+        unreadNotificationCount = unreadCount;
+
+        // Update the notification badge
+        updateNotificationBadge();
+
+        // Update notification counts in popup header
+        updateNotificationCounts();
 
         if (notificationsArray.length == 0) {
             notificationsList.innerHTML = "<p>No notifications</p>";
@@ -1303,9 +1715,7 @@
             }
         }
 
-
         // if the notifications havent changed, then don't update the notificationsList
-
         if (notificationCount == notificationsArray.length) {
             return;
         } else {
@@ -1317,42 +1727,234 @@
         }
 
         notificationsArray.forEach(notification => {
+            // Enhanced notification HTML with priority indicators and action buttons
+            const priorityIcon = getPriorityIcon(notification.priority || 'normal');
+            const readClass = notification.read ? 'notification-read' : 'notification-unread';
+            const actionButton = notification.actionUrl ? 
+                `<button class="notification-action" onclick="handleNotificationAction('${notification.notificationId}', '${notification.actionUrl}')">View</button>` : '';
+            
             notificationHTML = `
-                <div class="notification notification-${notification.type}">
-                    <div class="notificationType"> ${notification.type} | ${new Date(Number(notification.timestamp)).toLocaleString()} </div>
-                    <div class="notificationMessage"> ${notification.message} </div>
+                <div class="notification notification-${notification.type} ${readClass}" data-notification-id="${notification.notificationId}">
+                    <div class="notification-header">
+                        <div class="notificationType">
+                            ${priorityIcon} ${notification.type} | ${new Date(Number(notification.timestamp)).toLocaleString()}
+                        </div>
+                        <div class="notification-controls">
+                            ${actionButton}
+                            <button class="notification-dismiss" onclick="dismissNotification('${notification.notificationId}')">✕</button>
+                        </div>
+                    </div>
+                    <div class="notificationMessage">${notification.message}</div>
+                    ${notification.metadata && notification.metadata.groupedCount ? 
+                        `<div class="notification-metadata">
+                            <small>Grouped: ${notification.metadata.groupedCount} notifications</small>
+                        </div>` : ''}
                 </div>
             `
 
             notificationsList.innerHTML += notificationHTML;
         });
+
+        // Add load more indicator if there are more notifications
+        if (hasMoreNotifications && !loadingMoreNotifications) {
+            const loadMoreIndicator = document.createElement('div');
+            loadMoreIndicator.className = 'loading-more-notifications';
+            loadMoreIndicator.id = 'loadMoreIndicator';
+            loadMoreIndicator.innerHTML = '• • • Scroll to load more • • •';
+            notificationsList.appendChild(loadMoreIndicator);
+        }
+
+        // Add infinite scroll listener to notifications list
+        setupInfiniteScroll();
     }
 
-    const MAX_NOTIFICATIONS = 50;
+    function setupInfiniteScroll() {
+        const notificationsList = document.getElementById('notificationsList');
+        if (!notificationsList) return;
 
-    function getNotifications() {
+        // Remove existing listener
+        notificationsList.removeEventListener('scroll', handleInfiniteScroll);
+        
+        // Add new listener
+        notificationsList.addEventListener('scroll', handleInfiniteScroll);
+    }
+
+    function handleInfiniteScroll() {
+        const notificationsList = document.getElementById('notificationsList');
+        if (!notificationsList || loadingMoreNotifications || !hasMoreNotifications) return;
+
+        const scrollTop = notificationsList.scrollTop;
+        const scrollHeight = notificationsList.scrollHeight;
+        const clientHeight = notificationsList.clientHeight;
+
+        // Load more when within 100px of bottom
+        if (scrollTop + clientHeight >= scrollHeight - 100) {
+            loadMoreNotifications();
+        }
+    }
+
+    function loadMoreNotifications() {
+        if (loadingMoreNotifications || !hasMoreNotifications) return;
+
+        const loadMoreIndicator = document.getElementById('loadMoreIndicator');
+        if (loadMoreIndicator) {
+            loadMoreIndicator.innerHTML = 'Loading more notifications...';
+        }
+
+        getNotifications(true);
+    }
+
+    // Helper function to get priority icon
+    function getPriorityIcon(priority) {
+        switch(priority) {
+            case 'urgent': return '🚨';
+            case 'high': return '❗';
+            case 'normal': return '📢';
+            case 'low': return '💬';
+            default: return '📢';
+        }
+    }
+
+    // Update notification badge/counter
+    function updateNotificationBadge() {
+        const notificationsNav = document.getElementById('notificationsNav');
+        const existingBadge = document.querySelector('.notification-badge');
+        
+        if (existingBadge) {
+            existingBadge.remove();
+        }
+
+        // Always show badge if there are unread notifications, regardless of age
+        if (unreadNotificationCount > 0) {
+            const badge = document.createElement('span');
+            badge.className = 'notification-badge';
+            badge.textContent = unreadNotificationCount > 999 ? '999+' : unreadNotificationCount;
+            badge.title = `${unreadNotificationCount} unread notification${unreadNotificationCount === 1 ? '' : 's'}`;
+            notificationsNav.appendChild(badge);
+        }
+    }
+
+    // Update notification counts in popup header
+    function updateNotificationCounts() {
+        const notificationCountElement = document.getElementById('notificationCount');
+        const unreadCountElement = document.getElementById('unreadCount');
+        
+        if (notificationCountElement) {
+            const totalCount = notificationsArray.length;
+            notificationCountElement.textContent = `${totalCount} notification${totalCount === 1 ? '' : 's'}`;
+        }
+        
+        if (unreadCountElement) {
+            unreadCountElement.textContent = `${unreadNotificationCount} unread`;
+            unreadCountElement.style.color = unreadNotificationCount > 0 ? '#ff4444' : 'rgba(255, 255, 255, 0.6)';
+        }
+    }
+
+    // Handle notification action clicks
+    function handleNotificationAction(notificationId, actionUrl) {
+        // Mark as read when action is clicked
+        markNotificationAsRead([notificationId]);
+        
+        // Open the action URL
+        if (actionUrl.startsWith('http')) {
+            window.open(actionUrl, '_blank');
+        } else {
+            window.location.href = actionUrl;
+        }
+    }
+
+    // Dismiss individual notification
+    async function dismissNotification(notificationId) {
+        try {
+            const response = await fetch('/dismiss-notifications', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ notificationIds: [notificationId] })
+            });
+
+            if (response.ok) {
+                // Remove from local array
+                notificationsArray = notificationsArray.filter(n => n.notificationId !== notificationId);
+                notificationsReceived.push(notificationId);
+                
+                // Rebuild the display
+                buildNotificationsFromArray(notificationsChecked, unreadNotificationCount - 1);
+            }
+        } catch (error) {
+            console.error('Error dismissing notification:', error);
+        }
+    }
+
+    // Mark notifications as read
+    async function markNotificationAsRead(notificationIds) {
+        try {
+            await fetch('/mark-notifications-read', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ notificationIds })
+            });
+        } catch (error) {
+            console.error('Error marking notifications as read:', error);
+        }
+    }
+
+    function getNotifications(loadMore = false, refreshOnly = false) {
         // Skip if not logged in or if the request is already in progress
         if (document.getElementById('loggedIn')?.textContent !== 'true' || window.notificationsRequestInProgress) {
-            return;
+            return Promise.resolve();
+        }
+
+        // If loading more but no more notifications available, skip
+        if (loadMore && (!hasMoreNotifications || loadingMoreNotifications)) {
+            return Promise.resolve();
         }
         
         window.notificationsRequestInProgress = true;
+        if (loadMore) {
+            loadingMoreNotifications = true;
+        }
         
-        // Add timeout to the fetch request
+        // Show loading indicator only for full refreshes, not refreshOnly checks
+        const notificationsNav = document.getElementById('notificationsNav');
+        if (notificationsNav && !loadMore && !refreshOnly) {
+            notificationsNav.classList.add('notifications-loading');
+        }
+        
+        // Add timeout to the fetch request - shorter for faster loading
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
         
-        fetch('/get-notifications', {
+        const currentSkip = loadMore ? notificationSkip : 0;
+        
+        return fetch('/get-notifications', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 notificationsReceived,
-                popupOpened: document.getElementById('notificationsPopup').classList.contains('activeNotificationsPopup')
+                popupOpened: document.getElementById('notificationsPopup')?.classList.contains('activeNotificationsPopup') || false,
+                skip: currentSkip,
+                refreshOnly: refreshOnly
             }),
             signal: controller.signal
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
+            // Only reset the array for full refreshes or when loading more
+            // Don't reset for refreshOnly checks to prevent clearing existing notifications
+            if (!loadMore && !refreshOnly) {
+                console.log("Full refresh: clearing existing notifications");
+                notificationsArray = [];
+                notificationsReceived = [];
+                notificationSkip = 0;
+            } else if (refreshOnly) {
+                console.log("Refresh-only mode: preserving existing notifications");
+            }
+
             data.notifications.forEach(notification => {
                 if (!notificationsReceived.includes(notification.notificationId)) {
                     notificationsReceived.push(notification.notificationId);
@@ -1360,26 +1962,42 @@
                 }
             });
 
+            // Update pagination info
+            hasMoreNotifications = data.hasMore || false;
+            notificationSkip += data.notifications.length;
+
+            // Sort by priority first, then timestamp (urgent notifications at top)
             notificationsArray.sort((a, b) => {
+                const priorityOrder = { 'urgent': 4, 'high': 3, 'normal': 2, 'low': 1 };
+                const aPriority = priorityOrder[a.priority] || 2;
+                const bPriority = priorityOrder[b.priority] || 2;
+                
+                if (aPriority !== bPriority) {
+                    return bPriority - aPriority;
+                }
                 return b.timestamp - a.timestamp;
             });
 
-            // Trim notifications to prevent memory buildup
-            if (notificationsArray.length > MAX_NOTIFICATIONS) {
-                notificationsArray = notificationsArray.slice(0, MAX_NOTIFICATIONS);
-            }
-
-            buildNotificationsFromArray(data.notificationsChecked);
+            buildNotificationsFromArray(data.notificationsChecked, data.unreadCount);
+            return data;
         })
         .catch(error => {
             // Don't log AbortError as it's expected when timeout occurs
             if (error.name !== 'AbortError') {
                 console.error("Error fetching notifications:", error);
             }
+            return null;
         })
         .finally(() => {
             clearTimeout(timeoutId);
             window.notificationsRequestInProgress = false;
+            loadingMoreNotifications = false;
+            
+            // Remove loading indicator
+            const notificationsNav = document.getElementById('notificationsNav');
+            if (notificationsNav && !loadMore && !refreshOnly) {
+                notificationsNav.classList.remove('notifications-loading');
+            }
         });
     }
 
@@ -1402,186 +2020,530 @@
 
     <% if (session.loggedIn) { %>
         document.getElementById('loadNotificationsButton').addEventListener('click', () => {
-            getNotifications();
+            loadMoreNotifications();
+        });
+
+        // Mark ALL notifications as read (database-wide)
+        document.getElementById('markAllReadButton').addEventListener('click', async () => {
+            try {
+                const response = await fetch('/mark-all-notifications-read', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (response.ok) {
+                    // Mark all local notifications as read
+                    notificationsArray.forEach(notification => {
+                        notification.read = true;
+                    });
+                    unreadNotificationCount = 0;
+                    buildNotificationsFromArray(notificationsChecked, 0);
+                    
+                    // Refresh notifications to get updated read status
+                    setTimeout(() => {
+                        notificationSkip = 0;
+                        hasMoreNotifications = true;
+                        getNotifications();
+                    }, 500);
+                }
+            } catch (error) {
+                console.error('Error marking all notifications as read:', error);
+            }
+        });
+
+        // Clear ALL notifications (database-wide)
+        document.getElementById('clearAllButton').addEventListener('click', async () => {
+            if (confirm('Are you sure you want to clear ALL notifications? This will delete every notification you have ever received and cannot be undone.')) {
+                try {
+                    const response = await fetch('/clear-all-notifications', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        
+                        // Clear local arrays
+                        notificationsArray = [];
+                        notificationsReceived = [];
+                        unreadNotificationCount = 0;
+                        notificationSkip = 0;
+                        hasMoreNotifications = false;
+                        
+                        buildNotificationsFromArray(notificationsChecked, 0);
+                        
+                        // Show success message
+                        alert(`Successfully cleared ${data.deletedCount} notifications`);
+                    }
+                } catch (error) {
+                    console.error('Error clearing all notifications:', error);
+                }
+            }
         });
 
         getNotifications();
 
         setInterval(() => {
-            getNotifications();
-        }, 10000);
+            // Only refresh if we're at the top (don't interrupt infinite scroll)
+            // Check for new notifications without clearing existing ones
+            if (notificationSkip === 0 || notificationsArray.length < 15) {
+                // Don't clear existing notifications, just check for new ones
+                getNotifications(false, true); // Add refreshOnly parameter
+            }
+        }, 15000); // Slightly longer interval to not interfere with scrolling
     <% } %>
 
 </script>
 
-<div id="creditsDailyPopup" style="display: none;">
-    <div class="dailiesDivGrid">
-        <div class="dailiesDivSideBySide">
-            <p class="topTextCreditsButton">3 Hours Rewards (50 Credits)</p>
-            <button id="3hrCreditsButton" class="creditsButton"><span id="3hrCreditsButtonTimeLeft"></span> / 3 Hours</button>
+<div id="creditsDailyPopup" class="credits-popup" style="display: none;">
+    <div class="credits-dailies-grid">
+        <div class="credits-daily-item">
+            <button id="3hrCreditsButton" class="credits-daily-btn">
+                <div class="credits-daily-time">3h</div>
+                <div class="credits-daily-amount">+50</div>
+                <div class="credits-daily-status" id="3hrCreditsButtonTimeLeft">Loading...</div>
+            </button>
         </div>
-        <div class="dailiesDivSideBySide">
-            <p class="topTextCreditsButton">12 Hours Rewards (100 Credits)</p>
-            <button id="12hrCreditsButton" class="creditsButton"><span id="12hrCreditsButtonTimeLeft"></span> / 12 Hours</button>
+        <div class="credits-daily-item">
+            <button id="12hrCreditsButton" class="credits-daily-btn">
+                <div class="credits-daily-time">12h</div>
+                <div class="credits-daily-amount">+100</div>
+                <div class="credits-daily-status" id="12hrCreditsButtonTimeLeft">Loading...</div>
+            </button>
         </div>
-        <div class="dailiesDivSideBySide">
-            <p class="topTextCreditsButton">24 Hours Rewards (200 Credits)</p>
-            <button id="24hrCreditsButton" class="creditsButton"><span id="24hrCreditsButtonTimeLeft"></span> / 24 Hours</button>
+        <div class="credits-daily-item">
+            <button id="24hrCreditsButton" class="credits-daily-btn">
+                <div class="credits-daily-time">24h</div>
+                <div class="credits-daily-amount">+200</div>
+                <div class="credits-daily-status" id="24hrCreditsButtonTimeLeft">Loading...</div>
+            </button>
         </div>
-        <div class="dailiesDivSideBySide">
-            <p class="topTextCreditsButton">7 Days Rewards (500 Credits)</p>
-            <button id="168hrCreditsButton" class="creditsButton"><span id="168hrCreditsButtonTimeLeft"></span> / 7 Days</button>
+        <div class="credits-daily-item">
+            <button id="168hrCreditsButton" class="credits-daily-btn">
+                <div class="credits-daily-time">7d</div>
+                <div class="credits-daily-amount">+500</div>
+                <div class="credits-daily-status" id="168hrCreditsButtonTimeLeft">Loading...</div>
+            </button>
         </div>
     </div>
-
-    <div class="dailiesDivSideBySide">
-        <p class="topTextCreditsButton">Credits History</p>
-        <!-- <a href="/credits-history" target="_blank" class="creditsButton">View</a> -->
-        <button class="creditsButton" onclick="window.open('/credits-history', '_blank')">View Credits History</button>
+    <div class="credits-popup-header">
+        <div class="credits-popup-balance">
+            <span class="credits-popup-balance-label">Your Credits</span>
+            <span class="credits-popup-balance-count" id="creditsPopupDisplay">0</span>
+        </div>
+        <div class="credits-popup-actions">
+            <button class="credits-popup-buy-btn" onclick="window.open('/paypal-shop', '_blank')">
+                <i class="fas fa-shopping-cart"></i> Buy Credits
+            </button>
+            <button class="credits-popup-history-btn" onclick="window.open('/credits-history', '_blank')">View Credits History</button>
+        </div>
     </div>
-
-     <div class="dailiesDivSideBySide">
-        <p class="topTextCreditsButton">Buy Credits!</p>
-        <button class="creditsButton" onclick="window.open('/paypal-shop', '_blank')">Buy Credits</button>
-    </div>
-
-    <div class="howToGainCredits">
-    
-        <details>
-
-            <summary class="creditsHowToSummary">How to gain credits:</summary>
-
-            <!-- <li>
-                <p>Every 3 hours, 12 hours, 24 hours, and 7 days you can claim free credits! The amount of credits you can claim increases the longer you wait between claims.</p>
-                <p>Posting on the <a href="https://www.jscammie.com/booru">Booru</a> can also earn you credits when the image gets approved! (rated SFW/SUGGESTIVE/NSFW/EXTREME, by default they will be rated as NA and wont be visible to others)</p>
-                <p>Voting on posts on the <a href="https://www.jscammie.com/booru">Booru</a> can also earn you credits!</p>
-                <p>Getting 1st, 2nd, or 3rd place in the discord contests can earn you credits!</p>
-            </li> -->
-
-            <!-- make the above a list: -->
-            <ul>
-                <li>Every 3 hours, 12 hours, 24 hours, and 7 days you can claim free credits! The amount of credits you can claim increases the longer you wait between claims.</li>
-                <br>
-                <li>Posting on the <a href="https://www.jscammie.com/booru">Booru</a> can also earn you credits when the image gets approved! (rated SFW / SUGGESTIVE / NSFW / EXTREME, by default they will be rated as NA and wont be visible to others)</li>
-                <br>
-                <li>Voting on posts on the <a href="https://www.jscammie.com/booru">Booru</a> can also earn you credits!</li>
-                <br>
-                <li>Competing in the discord contests can earn you credits!</li>
-                <br>
-                <li>Logging in gives you 500 credits as a starting bonus!</li>
-                <br>
-                <li>You can pay for credits by clicking the "Buy" button above!</li>
+    <div class="credits-popup-section">
+        <details class="credits-details">
+            <summary class="credits-summary">How to Earn Credits</summary>
+            <ul class="credits-popup-list">
+                <li><b>Daily Rewards:</b> Claim free credits every 3h, 12h, 24h, and weekly from the generator page.</li>
+                <li><b>Booru Engagement:</b> Earn credits by posting, upvoting, and commenting on images in the <a href="/booru/?page=1&safety=sfw&sort=trending">Booru</a>.</li>
+                <li><b>Contests:</b> Participate in site or Discord contests for large credit prizes.</li>
+                <li><b>Purchase:</b> Buy credits instantly in the <a href="/paypal-shop">PayPal Shop</a> (best value in bulk).</li>
             </ul>
-
         </details>
-  
-    
     </div>
-
+    <div class="credits-popup-section">
+        <details class="credits-details">
+            <summary class="credits-summary">What Can Credits Buy?</summary>
+            <ul class="credits-popup-list">
+                <li><b>Upgrades & Extras:</b> Spend credits for upscaling, watermark removal, skipping the queue, and more.</li>
+                <li><b>Expanded Image History:</b> Unlock more image history slots for your account.</li>
+            </ul>
+        </details>
+    </div>
+    <div class="credits-popup-footer">
+        <span class="credits-popup-tip">Tip: The more you participate, the more you earn!</span>
+    </div>
 </div>
 
 <style>
 
 /* add a blur and darken effect to anything behind the creditsDailyPopup, also add a clean transition: */
-    #creditsDailyPopup {
+    .credits-popup {
         position: fixed;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        background-color: var(--background-colour);
-        color: white;
-        padding: 8px;
-        border-radius: 12px;
-        border: 2px solid rgb(255, 143, 246);
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-        z-index: 1000;
-        max-width: 700px;
-        width: 75%;
-    }
-
-    .dailiesDivGrid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 10px;
-    }
-
-    .dailiesDivSideBySide {
-        display: flex;
-        flex-direction: column;
-        text-align: center;
+        background: linear-gradient(135deg, rgba(40,0,60,0.98) 0%, rgba(60,0,80,0.98) 100%);
+        color: #fff;
+        padding: 24px;
+        border-radius: 18px;
+        border: 2px solid #ff9dfc;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+        z-index: 2000;
+        max-width: 520px;
+        width: 92vw;
+        max-height: 85vh;
+        overflow-y: auto;
+        font-family: 'Segoe UI', 'Arial', sans-serif;
+        animation: fadeInCreditsPopup 0.3s;
     }
     
-    .topTextCreditsButton {
-        font-size: 18px;
-        margin-bottom: 2px;
+    .credits-dailies-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-bottom: 24px;
+    }
+    
+    .credits-daily-item {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .credits-daily-btn {
+        background: linear-gradient(135deg, rgba(255,157,252,0.15) 0%, rgba(162,0,255,0.15) 100%);
+        border: 1px solid rgba(255,157,252,0.4);
+        border-radius: 12px;
+        padding: 12px 8px;
+        color: #fff;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        min-height: 80px;
+        justify-content: center;
+    }
+    
+    .credits-daily-btn:hover {
+        background: linear-gradient(135deg, rgba(255,157,252,0.25) 0%, rgba(162,0,255,0.25) 100%);
+        border-color: rgba(255,157,252,0.7);
+        transform: translateY(-2px) scale(1.02);
+    }
+    
+    .credits-daily-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none !important;
+    }
+    
+    .credits-daily-time {
+        font-size: 1.1em;
+        font-weight: 600;
         color: #ff9dfc;
     }
-
-    .howToGainCredits {
-        margin-top: 10px;
-        border-radius: 8px;
-        padding: 8px;
-        background-color: rgba(0, 0, 0, 0.2);
-    }
-
-    .creditsButton {
-        background-color: rgba(0, 0, 0, 0.2);
-        color: white;
-        padding: 12px;
-        border: 2px solid rgba(255, 255, 255, 0.2);
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 16px;
-        /* center: */
-        margin: 0 auto;
-        width: 100%;
-        transition: background-color 0.3s ease, transform 0.2s ease;
-    }
-
-    .creditsButton:hover {
-        background-color: var(--highlight-colour-hover);
-        transform: translateY(-2px);
-    }
-
-    .creditsButton:active {
-        background-color: var(--highlight-colour-active);
-        transform: translateY(0);
-    }
-
-    .creditsButton:disabled {
-        background-color: rgba(0, 0, 0, 0.2);
-        cursor: not-allowed;
-        opacity: 0.6;
-    }
-
-    .creditsButton span {
+    
+    .credits-daily-amount {
+        font-size: 1.3em;
         font-weight: bold;
+        color: #fff;
+        text-shadow: 0 1px 4px rgba(162,0,255,0.5);
+    }
+    
+    .credits-daily-status {
+        font-size: 0.75em;
+        color: rgba(255,255,255,0.8);
+        text-align: center;
+        line-height: 1.2;
+    }
+    @keyframes fadeInCreditsPopup {
+        from { opacity: 0; transform: translate(-50%, -60%); }
+        to { opacity: 1; transform: translate(-50%, -50%); }
+    }
+    .credits-popup-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid rgba(255,157,252,0.2);
+    }
+    .credits-popup-balance {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .credits-popup-balance-label {
+        font-size: 1em;
+        color: #ff9dfc;
+        font-weight: 500;
+        margin-bottom: 2px;
+    }
+    .credits-popup-balance-count {
+        font-size: 2em;
+        font-weight: bold;
+        color: #fff;
+        letter-spacing: 1px;
+        text-shadow: 0 2px 8px #a200ff44;
+    }
+    .credits-popup-history-btn {
+        background: linear-gradient(90deg, #ff9dfc 0%, #a200ff 100%);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 8px 16px;
+        font-size: 0.9em;
+        font-weight: 500;
+        cursor: pointer;
+        box-shadow: 0 2px 8px #a200ff33;
+        transition: background 0.2s, transform 0.2s;
+    }
+    .credits-popup-history-btn:hover {
+        background: linear-gradient(90deg, #a200ff 0%, #ff9dfc 100%);
+        transform: translateY(-2px) scale(1.04);
+    }
+    .credits-popup-actions {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        justify-content: center;
+        margin-top: 12px;
+    }
+    .credits-popup-buy-btn {
+        background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 10px 16px;
+        font-size: 1.0em;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        position: relative;
+    }
+    .credits-popup-buy-btn:hover {
+        background: linear-gradient(135deg, #45a049 0%, #4CAF50 100%);
+        transform: translateY(-2px) scale(1.02);
+        box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+    }
+    .credits-popup-buy-btn:active {
+        transform: translateY(-1px) scale(1.0);
+    }
+    .credits-popup-section {
+        margin-bottom: 16px;
+    }
+    .credits-details {
+        border: 1px solid rgba(255,157,252,0.2);
+        border-radius: 8px;
+        background: rgba(255,157,252,0.05);
+        overflow: hidden;
+    }
+    .credits-summary {
+        color: #ff9dfc;
+        font-size: 1.1em;
+        font-weight: 600;
+        padding: 12px 16px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s ease;
+        background: rgba(255,157,252,0.1);
+        border-bottom: 1px solid rgba(255,157,252,0.2);
+    }
+    .credits-summary:hover {
+        background: rgba(255,157,252,0.15);
+    }
+    .credits-summary:before {
+        content: '▶';
+        font-size: 0.8em;
+        transition: transform 0.2s ease;
+    }
+    .credits-details[open] .credits-summary:before {
+        transform: rotate(90deg);
+    }
+    .credits-details[open] .credits-summary {
+        border-bottom-color: rgba(255,157,252,0.3);
+    }
+    .credits-popup-section h3 {
+        color: #ff9dfc;
+        font-size: 1.1em;
+        margin-bottom: 10px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .credits-popup-section h3:before {
+        content: '';
+        width: 4px;
+        height: 16px;
+        background: linear-gradient(135deg, #ff9dfc 0%, #a200ff 100%);
+        border-radius: 2px;
+    }
+    .credits-popup-list {
+        list-style: none;
+        padding: 16px;
+        margin: 0;
+        display: grid;
+        gap: 8px;
+    }
+    .credits-popup-list li {
+        font-size: 0.95em;
+        line-height: 1.4;
+        color: #fff;
+        border-left: 3px solid #ff9dfc;
+        padding: 8px 12px;
+        background: rgba(255,157,252,0.08);
+        border-radius: 6px;
+        transition: all 0.2s ease;
+    }
+    .credits-popup-list li:hover {
+        background: rgba(255,157,252,0.15);
+        transform: translateX(2px);
+    }
+    .credits-popup-list a {
+        color: #a200ff;
+        text-decoration: underline;
+        font-weight: 500;
+        transition: color 0.2s;
+    }
+    .credits-popup-list a:hover {
+        color: #ff9dfc;
+    }
+    .credits-popup-footer {
+        text-align: center;
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid rgba(255,157,252,0.2);
+    }
+    .credits-popup-tip {
+        color: #ff9dfc;
+        font-size: 0.9em;
+        font-style: italic;
+        opacity: 0.85;
+    }
+    @media (max-width: 768px) {
+        .credits-popup {
+            padding: 20px 16px;
+            max-width: 95vw;
+            max-height: 90vh;
+        }
+        .credits-dailies-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        .credits-daily-btn {
+            padding: 10px 6px;
+            min-height: 70px;
+        }
+        .credits-daily-time {
+            font-size: 1em;
+        }
+        .credits-daily-amount {
+            font-size: 1.1em;
+        }
+        .credits-popup-balance-count {
+            font-size: 1.6em;
+        }
+        .credits-popup-header {
+            flex-direction: column;
+            gap: 12px;
+            align-items: stretch;
+        }
+        .credits-popup-balance {
+            align-items: center;
+        }
+        .credits-popup-history-btn {
+            width: 100%;
+            padding: 10px;
+        }
+        .credits-popup-actions {
+            flex-direction: column;
+            gap: 10px;
+        }
+        .credits-popup-buy-btn {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 0.95em;
+        }
+    }
+    @media (max-width: 480px) {
+        .credits-popup {
+            padding: 16px 12px;
+        }
+        .credits-dailies-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+        .credits-daily-btn {
+            padding: 8px 4px;
+            min-height: 60px;
+        }
+        .credits-daily-time {
+            font-size: 0.9em;
+        }
+        .credits-daily-amount {
+            font-size: 1em;
+        }
+        .credits-daily-status {
+            font-size: 0.7em;
+        }
+        .credits-popup-section h3 {
+            font-size: 1em;
+        }
+        .credits-popup-list li {
+            font-size: 0.9em;
+            padding: 6px 10px;
+        }
+        .credits-popup-buy-btn {
+            width: 100%;
+            padding: 10px 14px;
+            font-size: 0.9em;
+        }
     }
 </style>
 
 
 <script>
 
-    // when the creditsNav button is clicked, show the creditsDailyPopup:
+    // Show/hide popup and update credits count
     document.getElementById('creditsNav').addEventListener('click', () => {
-        if (document.getElementById('creditsDailyPopup').style.display == 'none') {
+        const popup = document.getElementById('creditsDailyPopup');
+        const popupDisplay = document.getElementById('creditsPopupDisplay');
+        const mainDisplay = document.getElementById('creditsDisplay');
+        if (popup.style.display === 'none') {
+            if (popupDisplay && mainDisplay) popupDisplay.textContent = mainDisplay.textContent;
             showHideCreditsPopup('show');
+            popup.style.display = 'block';
         } else {
             showHideCreditsPopup('hide');
+            popup.style.display = 'none';
         }
     });
 
+    // Also update popup credits when credits change
+    let creditsDisplay = document.getElementById('creditsDisplay');
+    const observer = new MutationObserver(() => {
+        const popupDisplay = document.getElementById('creditsPopupDisplay');
+        if (popupDisplay) popupDisplay.textContent = creditsDisplay.textContent;
+    });
+    if (creditsDisplay) {
+        observer.observe(creditsDisplay, { childList: true });
+    }
 </script>
 
 <script>
-    const creditsDisplay = document.getElementById('creditsDisplay');
+    creditsDisplay = document.getElementById('creditsDisplay');
+
+    // Helper function to ensure credits are always rounded down when displayed
+    function updateCreditsDisplay(credits) {
+        const roundedCredits = Math.floor(credits);
+        if (creditsDisplay) {
+            creditsDisplay.textContent = roundedCredits.toString();
+        }
+        return roundedCredits;
+    }
 
     // every .1 seconds, check if the creditsDisplay value is higher or lower than the previous value:
     // the credits display is updated by other scripts:
     let previousCredits = 0;
     let currentCredits = 0;
     setInterval(() => {
-        currentCredits = parseInt(creditsDisplay.textContent);
+        currentCredits = Math.floor(parseFloat(creditsDisplay.textContent) || 0);
         if (currentCredits > previousCredits) {
             creditsDisplay.style.color = 'green';
             setTimeout(() => {
@@ -1659,75 +2621,6 @@
 
 
 
-<!-- script to enable darkmode, change how a button looks with emoji on the navigation -->
-<script>
-    const darkModeButton = document.getElementById('darkModeButton');
-    const darkModeIcon = document.getElementById('darkModeIcon');
-    const docuBody = document.body;
-    const savedDarkMode = localStorage.getItem('darkMode') === 'true';
-
-    // Apply saved dark mode preference
-    if (savedDarkMode) {
-        docuBody.classList.add('dark-mode');
-        darkModeIcon.textContent = '☀️';
-    }
-
-    // Toggle dark mode
-    darkModeButton.addEventListener('click', () => {
-        docuBody.classList.toggle('dark-mode');
-        const isDarkMode = docuBody.classList.contains('dark-mode');
-        localStorage.setItem('darkMode', isDarkMode);
-        darkModeIcon.textContent = isDarkMode ? '☀️' : '🌙';
-
-        // send a request to the server to update the dark mode:
-        fetch('/toggle-darkmode', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                isDarkMode: isDarkMode.toString() // Convert boolean to string
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Dark mode updated:', data.darkmode);
-        })
-        .catch(error => {
-            console.error('Error updating dark mode:', error);
-        });
-    });
-    
-    // Function to toggle dark mode based on a boolean value
-    function toggleDarkMode(isDarkMode) {
-        if (isDarkMode === 'true') {
-            docuBody.classList.add('dark-mode');
-            if (darkModeIcon) darkModeIcon.textContent = '☀️';
-        } else {
-            docuBody.classList.remove('dark-mode');
-            if (darkModeIcon) darkModeIcon.textContent = '🌙';
-        }
-    }
-</script>
-
-<span hidden id="isDarkMode"><%= session.darkmode ? 'true' : 'false' %></span>
-
-<script>
-    document.addEventListener('DOMContentLoaded', (event) => {
-        // Temporarily disable transitions
-        document.body.classList.add('no-transition');
-        document.getElementsByClassName('topNavBar')[0].classList.add('no-transition');
-
-        const isDarkMode = document.getElementById('isDarkMode').textContent;
-        toggleDarkMode(isDarkMode);
-
-        // Use setTimeout to delay the removal of 'no-transition'
-        setTimeout(() => {
-            document.body.classList.remove('no-transition');
-            document.getElementsByClassName('topNavBar')[0].classList.remove('no-transition');
-        }, 50);
-    });
-</script>
 
 
 <script>
@@ -1744,6 +2637,16 @@
         if (show == 'show') {
             document.getElementById('creditsDailyPopup').style.display = 'block';
             showHideNavigationOverlay('show');
+            
+            // Ensure the timer is running and update credits display when popup is shown
+            if (userProfileNavigation) {
+                startDailiesTimer();
+                // Update the credits display in the popup
+                const creditsPopupDisplay = document.getElementById('creditsPopupDisplay');
+                if (creditsPopupDisplay) {
+                    creditsPopupDisplay.textContent = Math.floor(userProfileNavigation?.credits ?? 0).toString();
+                }
+            }
         } else if (show == 'hide') {
             document.getElementById('creditsDailyPopup').style.display = 'none';
             showHideNavigationOverlay('hide');
@@ -1957,7 +2860,7 @@
                     } else if (event.key === 'Enter') {
                         buttons.children[buttonIndex].click();
                     }
-                    buttons.children.forEach((button, index) => {
+                    Array.from(buttons.children).forEach((button, index) => {
                         if (index === buttonIndex) {
                             button.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
                         } else {
@@ -1991,25 +2894,84 @@
     }
 
     let intervalIds = [];
+    let notificationsLoaded = false;
+    let profileLoaded = false;
+
+    // Immediate notification loading function
+    function loadNotificationsImmediate() {
+        if (!notificationsLoaded && document.getElementById('loggedIn')?.textContent === 'true') {
+            notificationsLoaded = true;
+            // Only load from server if we don't have preloaded notifications or need updates
+            <% if (typeof preloadedNotifications !== 'undefined' && preloadedNotifications.length > 0) { %>
+                // We have preloaded notifications, just do a quick refresh without clearing
+                setTimeout(() => getNotifications(false, true), 1000);
+            <% } else { %>
+                getNotifications();
+            <% } %>
+        }
+    }
+
+    // Immediate profile loading function
+    function loadProfileImmediate() {
+        if (!profileLoaded) {
+            profileLoaded = true;
+            updateUserProfileAndDisplay();
+        }
+    }
+
     <% if (session.loggedIn) { %> 
-        // Initial load - just once to get started
-        getNotifications();
-        updateUserProfileAndDisplay();
+        // Load notifications and profile immediately - don't wait for DOM
+        (function() {
+            // Try immediate load
+            loadNotificationsImmediate();
+            loadProfileImmediate();
 
-        // once everything else has loaded:
-        document.addEventListener('DOMContentLoaded', () => {
-            // Use less aggressive intervals
-            let notificationsInterval = setInterval(getNotifications, 10000); // 10 seconds
-            let profileUpdateInterval = setInterval(updateUserProfileAndDisplay, 30000); // 30 seconds
-
+            // Backup load after small delay if DOM isn't ready
             setTimeout(() => {
+                loadNotificationsImmediate();
+                loadProfileImmediate();
+            }, 100);
+
+            // Final backup load - use refreshOnly to avoid clearing preloaded notifications
+            setTimeout(() => {
+                getNotifications(false, true); // Use refreshOnly for backup loads
+                updateUserProfileAndDisplay();
+            }, 500);
+        })();
+
+        // Set up intervals once DOM is ready or immediately if already ready
+        function setupIntervals() {
+            // Prevent duplicate interval setup
+            if (window.notificationIntervalsSetup) {
+                return;
+            }
+            window.notificationIntervalsSetup = true;
+            
+            // More frequent initial loading for better UX - use refreshOnly to avoid clearing
+            let notificationsInterval = setInterval(() => getNotifications(false, true), 8000); // 8 seconds
+            let profileUpdateInterval = setInterval(updateUserProfileAndDisplay, 15000); // 15 seconds
+
+            // After 30 seconds, reduce frequency
+            setTimeout(() => {
+                clearInterval(notificationsInterval);
                 clearInterval(profileUpdateInterval);
-                let infrequentProfileUpdate = setInterval(updateUserProfileAndDisplay, 2000);
-                intervalIds.push(infrequentProfileUpdate);
-            }, 2000);
+                
+                // Slower intervals for background updates - use refreshOnly
+                let slowNotificationsInterval = setInterval(() => getNotifications(false, true), 30000); // 30 seconds
+                let slowProfileUpdateInterval = setInterval(updateUserProfileAndDisplay, 60000); // 60 seconds
+                
+                intervalIds.push(slowNotificationsInterval, slowProfileUpdateInterval);
+            }, 30000);
 
             intervalIds.push(notificationsInterval, profileUpdateInterval);
-        });
+        }
+
+        // Setup intervals immediately if DOM is ready, otherwise wait
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setupIntervals);
+        } else {
+            setupIntervals();
+        }
     <% } %>
 
     // Add cleanup function to be called when page unloads
@@ -2023,3 +2985,5 @@
 
 
 <script src="https://www.paypal.com/sdk/js?client-id=AfyjfgbZdN8UH9dTHx2Fn47vKkEt4kJRFo_86DT4Bk_J3uSfXOJtIFamEyRE06V_U0DFRRrPcAgR5mDD"></script>
+
+<script src="/scripts/darkmode.js?v=<%= version %>"></script>

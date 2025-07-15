@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Linking Conflict - JSCammie.com</title>
+    <meta name="description" content="Resolve account linking conflict for JSCammie.com">
+    <meta name="robots" content="noindex, nofollow">
+    
+    <link rel='stylesheet' href='/style.css' />
+    
+    <%- include('../partials/_headerAll') %>
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-K3KJJKS1R4"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-K3KJJKS1R4');
+    </script>
+
+    <style>
+        .conflict-container {
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .conflict-title {
+            text-align: center;
+            margin-bottom: 1rem;
+            font-size: 2rem;
+            font-weight: bold;
+            color: #dc3545;
+        }
+
+        .conflict-subtitle {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: #666;
+            font-size: 1.1rem;
+            line-height: 1.5;
+        }
+
+        .conflict-explanation {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .conflict-explanation h3 {
+            margin-top: 0;
+            color: #856404;
+        }
+
+        .conflict-explanation p {
+            margin-bottom: 0;
+            color: #856404;
+        }
+
+        .account-options {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (min-width: 768px) {
+            .account-options {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .account-option {
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            padding: 1.5rem;
+            background: white;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .account-option:hover {
+            border-color: #007bff;
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .account-option.selected {
+            border-color: #007bff;
+            background: #f8f9ff;
+        }
+
+        .account-option h3 {
+            margin-top: 0;
+            margin-bottom: 1rem;
+            color: #333;
+            font-size: 1.25rem;
+        }
+
+        .account-info {
+            margin-bottom: 1rem;
+        }
+
+        .account-info-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .account-info-label {
+            font-weight: 600;
+            color: #555;
+        }
+
+        .account-info-value {
+            color: #333;
+            font-family: monospace;
+        }
+
+        .provider-badges {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .provider-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .provider-badge.discord {
+            background: #7289DA;
+            color: white;
+        }
+
+        .provider-badge.google {
+            background: #db4437;
+            color: white;
+        }
+
+        .provider-badge-icon {
+            width: 16px;
+            height: 16px;
+            margin-right: 0.5rem;
+        }
+
+        .conflict-actions {
+            text-align: center;
+            margin-top: 2rem;
+        }
+
+        .conflict-button {
+            display: inline-block;
+            padding: 1rem 2rem;
+            margin: 0 0.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .conflict-button.primary {
+            background: #007bff;
+            color: white;
+        }
+
+        .conflict-button.primary:hover {
+            background: #0056b3;
+            transform: translateY(-1px);
+        }
+
+        .conflict-button.secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .conflict-button.secondary:hover {
+            background: #545b62;
+            transform: translateY(-1px);
+        }
+
+        .conflict-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            margin: 2rem 0;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007bff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation -->
+    <%- include('../partials/_navigation') %>
+
+    <div class="center-fully-no-flex" style="margin-bottom: 3rem;">
+        <%- include('../partials/_bannerAdvert') %>
+    </div>
+
+    <!-- Conflict Resolution Section -->
+    <div class="round-frosted page-content">
+        <div class="conflict-container">
+            
+            <h1 class="conflict-title">Account Linking Conflict</h1>
+            <p class="conflict-subtitle">
+                The <%= conflictData.provider %> account you're trying to link is already associated with another JSCammie account.
+                Please choose how you'd like to proceed.
+            </p>
+
+            <div class="conflict-explanation">
+                <h3>What happened?</h3>
+                <p>
+                    You attempted to sign in with <%= conflictData.provider %>, but this account is already linked to a different JSCammie account.
+                    This could happen if you previously created multiple accounts or if someone else has used this <%= conflictData.provider %> account.
+                </p>
+            </div>
+
+            <div class="error-message" id="errorMessage"></div>
+
+            <div class="account-options">
+                
+                <!-- Current Account Option -->
+                <% if (currentAccount) { %>
+                <div class="account-option" data-resolution="keep-current" onclick="selectOption(this)">
+                    <h3>Keep Current Account</h3>
+                    <div class="account-info">
+                        <div class="account-info-item">
+                            <span class="account-info-label">Account ID:</span>
+                            <span class="account-info-value">#<%= currentAccount.accountId %></span>
+                        </div>
+                        <div class="account-info-item">
+                            <span class="account-info-label">Currently signed in as:</span>
+                            <span class="account-info-value">Active Session</span>
+                        </div>
+                    </div>
+                    <div class="provider-badges">
+                        <!-- Current account providers would be shown here -->
+                        <span class="provider-badge discord">
+                            <span class="provider-badge-icon">🎮</span>
+                            Current Account
+                        </span>
+                    </div>
+                    <p><strong>This will:</strong> Link your <%= conflictData.provider %> account to your current JSCammie account and continue your session.</p>
+                </div>
+                <% } %>
+
+                <!-- Existing Account Option -->
+                <div class="account-option" data-resolution="switch-existing" onclick="selectOption(this)">
+                    <h3>Switch to Existing Account</h3>
+                    <div class="account-info">
+                        <div class="account-info-item">
+                            <span class="account-info-label">Account ID:</span>
+                            <span class="account-info-value">#<%= existingAccount.accountId %></span>
+                        </div>
+                        <div class="account-info-item">
+                            <span class="account-info-label">Username:</span>
+                            <span class="account-info-value"><%= existingAccount.username %></span>
+                        </div>
+                        <div class="account-info-item">
+                            <span class="account-info-label">Created:</span>
+                            <span class="account-info-value"><%= new Date(existingAccount.createdAt).toLocaleDateString() %></span>
+                        </div>
+                    </div>
+                    <div class="provider-badges">
+                        <% if (existingAccount.discordId) { %>
+                        <span class="provider-badge discord">
+                            <span class="provider-badge-icon">🎮</span>
+                            Discord
+                        </span>
+                        <% } %>
+                        <% if (existingAccount.googleId) { %>
+                        <span class="provider-badge google">
+                            <span class="provider-badge-icon">🔍</span>
+                            Google
+                        </span>
+                        <% } %>
+                    </div>
+                    <p><strong>This will:</strong> Switch to the existing account that already has your <%= conflictData.provider %> account linked.</p>
+                </div>
+
+            </div>
+
+            <div class="conflict-actions">
+                <button class="conflict-button primary" id="resolveButton" onclick="resolveConflict()" disabled>
+                    Resolve Conflict
+                </button>
+                <a href="/login" class="conflict-button secondary">
+                    Cancel & Return to Login
+                </a>
+            </div>
+
+            <div class="loading-spinner" id="loadingSpinner">
+                <div class="spinner"></div>
+                <p>Resolving conflict...</p>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- get partials/_footer: -->
+    <%- include('../partials/_footer') %>
+
+    <script>
+        let selectedResolution = null;
+
+        function selectOption(element) {
+            // Remove selected class from all options
+            document.querySelectorAll('.account-option').forEach(option => {
+                option.classList.remove('selected');
+            });
+
+            // Add selected class to clicked option
+            element.classList.add('selected');
+            
+            // Store the resolution choice
+            selectedResolution = element.dataset.resolution;
+            
+            // Enable the resolve button
+            document.getElementById('resolveButton').disabled = false;
+        }
+
+        function resolveConflict() {
+            if (!selectedResolution) {
+                showError('Please select an option before proceeding.');
+                return;
+            }
+
+            // Show loading spinner
+            document.getElementById('loadingSpinner').style.display = 'block';
+            document.getElementById('resolveButton').disabled = true;
+
+            // Send resolution to server
+            fetch('/auth/resolve-conflict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    resolution: selectedResolution
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Redirect to success page or home
+                    window.location.href = data.redirectUrl || '/?conflict=resolved';
+                } else {
+                    showError(data.message || 'Failed to resolve conflict. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showError('An error occurred while resolving the conflict. Please try again.');
+            })
+            .finally(() => {
+                // Hide loading spinner
+                document.getElementById('loadingSpinner').style.display = 'none';
+                document.getElementById('resolveButton').disabled = false;
+            });
+        }
+
+        function showError(message) {
+            const errorElement = document.getElementById('errorMessage');
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+            
+            // Scroll to error message
+            errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // Auto-expire conflict session after 30 minutes
+        setTimeout(() => {
+            showError('This conflict resolution session has expired. You will be redirected to the login page.');
+            setTimeout(() => {
+                window.location.href = '/login?error=conflict_expired';
+            }, 3000);
+        }, 30 * 60 * 1000); // 30 minutes
+    </script>
+
+</body>
+</html>

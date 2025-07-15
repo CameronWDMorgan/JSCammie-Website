@@ -1,0 +1,85 @@
+/* Dark Mode General Styles */
+body.dark-mode {
+    --background-colour: #121212;
+    --text-colour: #e0e0e0;
+    --border-colour: #333;
+    --highlight-colour: #2a2a2a;
+    --highlight-colour-hover: #3c3c3c;
+    --highlight-colour-active: #4d4d4d;
+    background-color: var(--background-colour);
+    color: var(--text-colour);
+}
+
+/* Ensure transitions are smooth */
+body, .topNavBar, .profileDropdown {
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Disable transitions during initial load to prevent flicker */
+body.no-transition,
+.topNavBar.no-transition,
+.profileDropdown.no-transition {
+    transition: none !important;
+}
+
+/* Component-specific dark mode overrides */
+body.dark-mode .frosted {
+    background-color: rgba(30, 30, 30, 0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-color: var(--border-colour);
+}
+
+body.dark-mode .navigationLink,
+body.dark-mode #creditsNav,
+body.dark-mode #darkModeButton,
+body.dark-mode #mobileMenuButton {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-colour);
+}
+
+body.dark-mode .navigationLink:hover,
+body.dark-mode #creditsNav:hover,
+body.dark-mode #darkModeButton:hover,
+body.dark-mode #mobileMenuButton:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+body.dark-mode .navigationLinkActive {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+body.dark-mode .mobileMenu {
+    background-color: rgba(18, 18, 18, 0.95);
+    border-color: var(--border-colour);
+}
+
+body.dark-mode .mobileMenu a {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-colour);
+}
+
+body.dark-mode .mobileMenu a:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-mode .globalAlert {
+    background-color: rgba(30, 30, 30, 0.8);
+    border: 1px solid var(--border-colour);
+}
+
+body.dark-mode .creditsHowToSummary {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+body.dark-mode .creditsHowToSummary:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-mode .userProfileUsername {
+    color: var(--text-colour);
+}

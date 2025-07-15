@@ -1,7 +1,28 @@
 <!-- setup basic html template with metadata etc: -->
 <html>
 <head>
-    <title><%=profileProfile.username%> | JSCammie.com</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%=profileProfile.username%> Profile | JSCammie.com</title>
+    <meta name="description" content="View <%=profileProfile.username%>'s profile on JSCammie.com - See their AI generated images, booru posts, and creative content.">
+    <meta name="keywords" content="<%=profileProfile.username%> profile, jscammie user, ai generated images, booru posts, user gallery">
+    <meta name="author" content="JSCammie">
+    
+    <!-- Open Graph meta tags for social media -->
+    <meta property="og:title" content="<%=profileProfile.username%> Profile | JSCammie.com">
+    <meta property="og:description" content="View <%=profileProfile.username%>'s profile on JSCammie.com - See their AI generated images, booru posts, and creative content.">
+    <meta property="og:type" content="profile">
+    <meta property="og:url" content="https://jscammie.com/profile/<%=profileProfile.username%>">
+    <meta property="og:site_name" content="JSCammie.com">
+    
+    <!-- Twitter Card meta tags -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="<%=profileProfile.username%> Profile | JSCammie.com">
+    <meta name="twitter:description" content="View <%=profileProfile.username%>'s profile on JSCammie.com - See their AI generated images, booru posts, and creative content.">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://jscammie.com/profile/<%=profileProfile.username%>">
+    
     <link rel='stylesheet' href='/style.css'/>
     
     <%- include('../partials/_headerAll') %>
@@ -84,7 +105,7 @@
 
         /* Also override any CSS variables that might be used */
         :root {
-            --day-bg-solid: <%= profileProfile.settings?.profile_background_color || '#4875b4' %> !important;
+            --light-bg-solid: <%= profileProfile.settings?.profile_background_color || '#4875b4' %> !important;
             --dark-bg-solid: <%= profileProfile.settings?.profile_background_color || '#4875b4' %> !important;
         }
         
@@ -978,6 +999,7 @@
                             <button onclick="setRating('sfw', '${value.booru_id}')">Set SFW</button>
                             <button onclick="showReportModal('${value.booru_id}')">Report Post</button>
                             <button onclick="showBanModal('${value.account_id}')">Ban User</button>
+                            <button id="favoriteButton${value.booru_id}" onclick="favoritePost('${value.booru_id}')">${userProfile.favoriteBooruPosts.some(post => post.booru_id === value.booru_id) ? "Unfavorite" : "Favorite"}</button>
                         </div>
                     `;
                 } else if (userProfile.accountId) {
@@ -985,6 +1007,7 @@
                         <button class="dropdownButton" onclick="document.getElementById('dropdown${value.booru_id}')?.classList.toggle('show')">ℹ️</button>
                         <div class="dropdown" id="dropdown${value.booru_id}">
                             <button onclick="showReportModal('${value.booru_id}')">Report Post</button>
+                            <button id="favoriteButton${value.booru_id}" onclick="favoritePost('${value.booru_id}')">${userProfile.favoriteBooruPosts.some(post => post.booru_id === value.booru_id) ? "Unfavorite" : "Favorite"}</button>
                         </div>
                     `;
                 }
@@ -1127,6 +1150,7 @@
                             <button onclick="setRating('sfw', '${value.booru_id}')">Set SFW</button>
                             <button onclick="showBanModal('${value.account_id}')">Ban User</button>
                             <button onclick="showReportModal('${value.booru_id}')">Report Post</button>
+                            <button id="favoriteButton${value.booru_id}" onclick="favoritePost('${value.booru_id}')">${userProfile.favoriteBooruPosts.some(post => post.booru_id === value.booru_id) ? "Unfavorite" : "Favorite"}</button>
                         </div>
                     `;
                 } else if (userProfile.accountId) {
@@ -1134,6 +1158,7 @@
                         <button class="dropdownButton" onclick="document.getElementById('dropdown-liked-${value.booru_id}')?.classList.toggle('show')">ℹ️</button>
                         <div class="dropdown" id="dropdown-liked-${value.booru_id}">
                             <button onclick="showReportModal('${value.booru_id}')">Report Post</button>
+                            <button id="favoriteButton${value.booru_id}" onclick="favoritePost('${value.booru_id}')">${userProfile.favoriteBooruPosts.some(post => post.booru_id === value.booru_id) ? "Unfavorite" : "Favorite"}</button>
                         </div>
                     `;
                 }

@@ -1,91 +1,450 @@
+/* Modern Lora Selection Menu - Inspired by Credits Shop/ETA Design */
 .lora-details {
-    background-color: rgba(0, 0, 0, 0.5); /* Original light grey background */
-    border: 1px solid #ddd; /* Light grey border */
-    border-radius: 4px; /* Rounded corners */
-    padding: 10px; /* Padding inside the div */
-    margin-bottom: 10px; /* Space between each lora detail div */
-    font-size: small;
+    background: rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--highlight-colour);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 16px 0;
+    position: relative;
+    overflow: hidden;
+    transform: translateY(0);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(5px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.lora-details p {
-    margin: 1px 0; /* Space between paragraphs */
+.lora-details:hover {
+    transform: translateY(-3px);
+    border-color: var(--highlight-colour-hover);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.lora-details::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, 
+        var(--highlight-colour), 
+        var(--highlight-colour-hover), 
+        var(--highlight-colour)
+    );
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+}
+
+.lora-details:hover::before {
+    transform: translateX(0);
+}
+
+/* Header Section - Name and Category */
+.lora-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--highlight-colour);
 }
 
 .lora-name-label {
-    position: relative;
-    top: -5px;
-    left: 0px; /* Moved the label 20px up as originally intended */
-    display: block; /* Ensure label is on its own line */
-    font-weight: bold; /* Emphasize the label */
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--text-colour);
+    margin: 0;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    line-height: 1.2;
 }
 
 .lora-category {
-    color: rgb(255, 144, 144);
+    font-size: 11px;
+    color: var(--text-colour);
+    opacity: 0.8;
+    background: var(--highlight-colour);
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Content Grid */
+.lora-content {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 16px;
+    align-items: start;
+}
+
+.lora-main-info {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.lora-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    min-width: 120px;
+}
+
+/* Individual Info Sections */
+.lora-info-section {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    padding: 12px;
+    border-left: 3px solid var(--highlight-colour);
+}
+
+.lora-info-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-colour);
+    opacity: 0.8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+    display: block;
 }
 
 .lora-description {
-    color: rgb(255, 216, 144);
-}
-
-.lora-strength {
-    color: rgb(150, 255, 144);
+    color: var(--text-colour);
+    opacity: 0.95;
+    font-style: italic;
+    line-height: 1.5;
+    margin: 0;
+    font-size: 14px;
 }
 
 .lora-words {
-    user-select: text !important; /* Allow text selection */
+    color: var(--text-colour);
+    font-family: inherit;
+    background: none;
+    padding: 0;
+    border-radius: 0;
+    font-size: 14px;
+    user-select: text;
     cursor: text;
-    z-index: 999;
-    color: rgb(144, 225, 255);
+    font-style: italic;
+    line-height: 1.4;
+    margin: 0;
+}
+
+.lora-strength {
+    color: var(--text-colour);
+    font-weight: 600;
+    font-size: 15px;
+    margin: 0;
+}
+
+/* Metadata Section */
+.lora-metadata {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--highlight-colour);
+    opacity: 0.8;
+}
+
+.lora-meta-item {
+    font-size: 11px;
+    color: var(--text-colour);
+    background: var(--darker-background-colour);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
 }
 
 .lora-id {
-    color: rgb(242, 144, 255);
+    color: var(--text-colour);
+    opacity: 0.7;
+    font-size: 11px;
+    font-family: 'Courier New', monospace;
+    background: var(--darker-background-colour);
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: inline-block;
 }
 
-.lora-link {
-    color: #ff9900; /* Orange color for link */
-    text-decoration: none; /* No underline for a clean look */
-}
-
-.lora-link:hover {
-    text-decoration: underline; /* Underline on hover for interactivity */
-}
-
-.lora-grayed-out {
-    color: #60606095; /* Light grey color */
-    font-style: italic; /* Italicized for notes */
-}
-
-/* Additional styles for better layout and readability */
-.lora-details div {
-    margin-bottom: 10px; /* Space between container divs */
+/* Controls Section */
+.lora-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .lora-toggle input[type="checkbox"] {
-    margin-right: 5px; /* Space between checkbox and label */
+    transform: scale(1.3);
+    cursor: pointer;
 }
 
-.lora-note {
-    color: #666; /* Greyed out note text for less emphasis */
-    font-style: italic; /* Italicized for notes */
+.lora-strength-control {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 100px;
 }
 
 .lora-strength-slider {
-    color: rgb(150, 255, 144);
+    width: 100%;
+    margin-bottom: 30px !important;
+    background: var(--highlight-colour);
+    border-radius: 4px;
+    outline: none;
+    -webkit-appearance: none;
+    height: 6px;
+    cursor: pointer;
 }
 
-.lora-words-copy-button {
-    background-color: #4caf4f95; /* Green */
-    border: none;
-    color: white;
-    padding: 4px;
+.lora-strength-value {
+    font-size: 12px;
+    color: var(--text-colour);
     text-align: center;
-    text-decoration: none;
-    display: inline-block;
-    font-size: 16px;
-    margin: 4px 2px;
+    font-weight: 600;
+}
+
+/* Copy Button */
+.lora-words-copy-button {
+    background: var(--highlight-colour);
+    border: 1px solid var(--border-colour);
+    color: var(--text-colour);
+    padding: 6px 12px;
+    border-radius: 6px;
     cursor: pointer;
-    transition: transform 0.7s, background-color 0.3s; /* Adjust time as needed */
-    transform: scale(1) rotate(0deg); /* Default state */
-    transform-origin: center; /* Ensures the scaling happens from the center */
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 8px;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.lora-words-copy-button:hover {
+    background: var(--highlight-colour-hover);
+    border-color: var(--highlight-colour-active);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Link Styling */
+.lora-link {
+    color: var(--highlight-colour-hover);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 13px;
+}
+
+.lora-link:hover {
+    color: var(--highlight-colour-active);
+    text-decoration: underline;
+}
+
+/* Special States */
+.lora-grayed-out {
+    opacity: 0.4;
+    pointer-events: none;
+    filter: grayscale(0.5);
+}
+
+.lora-note {
+    background: var(--highlight-colour);
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 16px;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+/* Legacy compatibility for existing elements */
+.lora-details div {
+    margin: 3px 0;
+}
+
+.lora-details p {
+    margin: 8px 0;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .lora-content {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .lora-controls {
+        align-items: stretch;
+        flex-direction: row;
+        justify-content: space-between;
+    }
+    
+    .lora-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .lora-metadata {
+        justify-content: center;
+    }
+}
+
+/* Dark mode specific adjustments */
+body.dark-mode .lora-details {
+    background: var(--dark-input-bg);
+    border-color: var(--dark-border-colour);
+}
+
+body.dark-mode .lora-details:hover {
+    border-color: var(--dark-highlight-colour);
+}
+
+/* Light mode specific adjustments */
+body:not(.dark-mode) .lora-details {
+    background: transparent;
+    border: 2px solid var(--light-highlight-colour);
+}
+
+body:not(.dark-mode) .lora-details:hover {
+    border-color: var(--light-highlight-colour-hover);
+}
+
+/* Container Styling */
+.lora-container {
+    background: rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--highlight-colour);
+    border-radius: 15px;
+    padding: 20px;
+    margin: 15px 0;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+}
+
+.lora-container:hover {
+    border-color: var(--highlight-colour-hover);
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Search Input Styling */
+.lora-search-input {
+    background: rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--highlight-colour);
+    border-radius: 10px;
+    padding: 12px 16px;
+    width: 100%;
+    color: var(--text-colour);
+    font-size: 16px;
+    transition: all 0.3s ease;
+}
+
+.lora-search-input:focus {
+    border-color: var(--highlight-colour-hover);
+    box-shadow: 0 0 10px var(--highlight-colour);
+    outline: none;
+}
+
+/* Safety Checkbox Container */
+.safety-checkbox-container {
+    background: rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--highlight-colour);
+    border-radius: 10px;
+    padding: 15px;
+    margin: 15px 0;
+    backdrop-filter: blur(5px);
+    transition: all 0.3s ease;
+}
+
+.safety-checkbox-container:hover {
+    border-color: var(--highlight-colour-hover);
+}
+
+/* Sort and Category Buttons */
+.lora-sort-button,
+.lora-category-button {
+    background: linear-gradient(135deg, var(--highlight-colour), var(--highlight-colour-hover));
+    border: 1px solid var(--border-colour);
+    color: var(--text-colour);
+    padding: 10px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    margin: 5px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.lora-sort-button:hover,
+.lora-category-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    border-color: var(--highlight-colour-active);
+}
+
+.lora-sort-button.active,
+.lora-category-button.active {
+    background: linear-gradient(135deg, var(--highlight-colour-active), var(--highlight-colour-hover));
+    box-shadow: 0 3px 10px var(--highlight-colour);
+    transform: scale(1.02);
+}
+
+.lora-sort-button::before,
+.lora-category-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.lora-sort-button:hover::before,
+.lora-category-button:hover::before {
+    left: 100%;
+}
+
+/* Dark mode button adjustments */
+body.dark-mode .lora-sort-button,
+body.dark-mode .lora-category-button {
+    background: linear-gradient(135deg, var(--dark-highlight-colour), var(--dark-background-colour));
+    border-color: var(--dark-border-colour);
+}
+
+body.dark-mode .lora-sort-button:hover,
+body.dark-mode .lora-category-button:hover {
+    border-color: var(--dark-highlight-colour);
+}
+
+body.dark-mode .lora-sort-button.active,
+body.dark-mode .lora-category-button.active {
+    background: linear-gradient(135deg, var(--dark-highlight-colour-active), var(--dark-highlight-colour));
+    box-shadow: 0 3px 10px var(--dark-highlight-colour);
+}
+
+/* Light mode container adjustments */
+body:not(.dark-mode) .lora-container,
+body:not(.dark-mode) .lora-search-input,
+body:not(.dark-mode) .safety-checkbox-container {
+    background: transparent;
+    border: 2px solid var(--light-highlight-colour);
+}
+
+body:not(.dark-mode) .lora-container:hover,
+body:not(.dark-mode) .safety-checkbox-container:hover {
+    border-color: var(--light-highlight-colour-hover);
+}
+
+body:not(.dark-mode) .lora-search-input:focus {
+    border-color: var(--light-highlight-colour-hover);
+    box-shadow: 0 0 10px var(--light-highlight-colour);
 }

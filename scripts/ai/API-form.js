@@ -626,36 +626,117 @@ const createBooruButton = (index, booruData) => {
 };
 
 const showBooruPopup = (booruData) => {
+    const booruPopupContent = funcElementById('booruPopupContent');
     const overlay = funcElementById('overlayBooru');
-    const popupContent = funcElementById('booruPopupContent');
 
-    overlay.style.display = 'block';
-    popupContent.style.display = 'block';
+    // Store imageData globally for use in the button click
+    window.currentBooruImageData = booruData;
 
-    popupContent.innerHTML = `
+    // if they click off the popup, close it:
+    overlay.onclick = function() {
+        closeBooruPopup();
+    }
+
+    booruPopupContent.innerHTML = `
         <button class="closeButton" onclick="closeBooruPopup()">×</button>
-        <h1>Upload to Booru</h1>
-        <p>By uploading to the booru you agree to the following:</p>
-        <ul>
-            <li>Child/Cub/Loli NSFW content are NOT ALLOWED!!!</li>
-            <br>
-            <li>Aged-Up Characters that look over the age of 18 are allowed, if they do not look over 18, the post will be removed!</li>
-            <br>
-            <li>By default, all content is hidden until a moderator approves it and gives it a safety rating (sfw, suggestive, nsfw).</li>
-            <br>
-            <li>ALL SETTINGS used to create an image are visible, if your content shows a word like "loli", even if it's sfw, it will be removed!</li>
-            <br>
-            <li>DO NOT SPAM THE BOORU WITH 1240987 IMAGES OF THE SAME OC IN SAME POSE / LOCATION</li>
-            <br>
-            <li>Realistic Feral are not allowed, only 2d/stylized 3d feral content are allowed</li>
-        </ul>
-        <p>If you agree to these rules/terms, then feel free to click below to upload to the booru, failure to comply with these rules will make you unable to post on the booru.</p>
-        <button id="confirmUploadButton">Upload to Booru</button>
+        <div class="booru-upload-header">
+            <h1><i class="fas fa-upload"></i> Upload to Booru</h1>
+            <p class="booru-subtitle">Share your creation with the community</p>
+        </div>
+        
+        <div class="booru-rules-container">
+            <div class="booru-rules-header">
+                <h2><i class="fas fa-exclamation-triangle"></i> Community Guidelines</h2>
+                <p>Please carefully review these rules before uploading:</p>
+            </div>
+            
+            <div class="booru-rules-sections">
+                <div class="rule-section critical">
+                    <h3><i class="fas fa-ban"></i> Prohibited Content</h3>
+                    <ul>
+                        <li><strong>NO Child/Cub/Loli NSFW content</strong> - Zero tolerance policy</li>
+                        <li><strong>NO Real person references</strong> - All characters must be 100% fictional</li>
+                        <li><strong>NO Inappropriate tags</strong> - Prompts containing banned keywords (e.g., "loli") will be removed even if SFW</li>
+                        <li><strong>NO Low-quality spam</strong> - Avoid uploading excessive variations of the same image</li>
+                    </ul>
+                </div>
+                
+                <div class="rule-section warning">
+                    <h3><i class="fas fa-user-check"></i> Age-Up Guidelines</h3>
+                    <ul>
+                        <li>Aged-up characters must <strong>clearly appear over 18</strong> in proportions and appearance</li>
+                        <li>Characters must look mature in clothing, body type, and facial features</li>
+                        <li>When in doubt, don't upload - moderators will remove questionable content</li>
+                    </ul>
+                </div>
+                
+                <div class="rule-section info">
+                    <h3><i class="fas fa-shield-alt"></i> Moderation Process</h3>
+                    <ul>
+                        <li>All uploads are <strong>hidden by default</strong> until approved</li>
+                        <li>Moderators assign safety ratings: SFW, Suggestive, or NSFW</li>
+                        <li>Generation settings are publicly visible for transparency</li>
+                        <li>Rejected content may be appealed through proper channels</li>
+                    </ul>
+                </div>
+                
+                <div class="rule-section success">
+                    <h3><i class="fas fa-star"></i> Quality Standards</h3>
+                    <ul>
+                        <li>Upload your <strong>best generations</strong> - quality over quantity</li>
+                        <li>Ensure good composition and minimal artifacts</li>
+                        <li>Consider if the image adds value to the community</li>
+                        <li>Unique and creative content is especially welcomed</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="booru-consequences">
+                <h3><i class="fas fa-gavel"></i> Consequences</h3>
+                <p>Violations may result in content removal, warnings, or account restrictions. Repeated violations can lead to permanent bans.</p>
+            </div>
+        </div>
+        
+        <div class="booru-upload-actions">
+            <button class="booru-cancel-btn" onclick="closeBooruPopup()">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+            <button class="booru-upload-btn" onclick="confirmBooruUpload(window.currentBooruImageData)">
+                <i class="fas fa-check"></i> I Agree - Upload to Booru
+            </button>
+        </div>
     `;
 
-    funcElementById('confirmUploadButton').onclick = () => uploadToBooru(booruData);
-    overlay.onclick = closeBooruPopup;
+    funcElementById('overlayBooru').style.display = 'block';
+    funcElementById('booruPopupContent').style.display = 'block';
+
+    // Listen for the ESC key to close the popup
     document.addEventListener('keydown', handleBooruEscapeKey);
+};
+
+const confirmBooruUpload = async (imageData) => {
+    // Hide the booru popup while showing the confirmation dialog
+    funcElementById('booruPopupContent').style.display = 'none';
+    
+    const options = {
+        message: 'Are you sure you want to upload this image to the booru?\\n\\nBy clicking "Yes", you confirm that:\\n• Your image follows all community guidelines\\n• You understand the moderation process\\n• You accept potential consequences for violations',
+        question: true,
+        options: {
+            yes: function() { console.log("Upload confirmed"); },
+            no: function() { console.log("Upload cancelled"); }
+        }
+    };
+    
+    const userResponse = await globalAlert(options);
+    
+    if (userResponse === 'yes') {
+        // Close the popup completely and proceed with upload
+        closeBooruPopup();
+        uploadToBooru(imageData);
+    } else {
+        // If 'no', show the booru popup again
+        funcElementById('booruPopupContent').style.display = 'block';
+    }
 };
 
 const uploadToBooru = async (booruData) => {
@@ -1077,31 +1158,50 @@ const updateQueueETA = async () => {
         };
 
         // Create status message section if we have a status
+        // Helper function to get theme-aware colors
+        const getThemeColors = () => {
+            const isDarkMode = document.body.classList.contains('dark-mode');
+            return {
+                isDarkMode,
+                containerStyle: isDarkMode 
+                    ? "background: linear-gradient(135deg, #0f0f23, #1a1a2e); border: 1px solid #374151; color: #e2e8f0;"
+                    : "background: rgba(0, 0, 0, 0.1); border: 2px solid var(--light-highlight-colour); color: #e2e8f0;",
+                headerColor: isDarkMode ? "#ffd700" : "#f5f5f5",
+                queueTextColor: "#e2e8f0",
+                regularEtaColor: isDarkMode ? "#60a5fa" : "#f0f0f0",
+                fastEtaColor: isDarkMode ? "#00ff88" : "#ffffff",
+                subTextColor: "#94a3b8",
+                footerTextColor: "#64748b"
+            };
+        };
+
         const createStatusSection = () => {
             if (!currentStatusMessage) return '';
             
+            const { isDarkMode } = getThemeColors();
+            
             let statusColor = '#60a5fa'; // default blue
             let statusIcon = 'ℹ️';
-            let statusBgColor = 'rgba(96, 165, 250, 0.1)';
+            let statusBgColor = isDarkMode ? 'rgba(96, 165, 250, 0.1)' : 'rgba(96, 165, 250, 0.2)';
             let statusBorderColor = '#60a5fa';
             
             switch (currentStatusType) {
                 case 'generating':
                     statusColor = '#f59e0b';
                     statusIcon = '🎨';
-                    statusBgColor = 'rgba(245, 158, 11, 0.1)';
+                    statusBgColor = isDarkMode ? 'rgba(245, 158, 11, 0.1)' : 'rgba(245, 158, 11, 0.2)';
                     statusBorderColor = '#f59e0b';
                     break;
                 case 'success':
                     statusColor = '#10b981';
                     statusIcon = '✅';
-                    statusBgColor = 'rgba(16, 185, 129, 0.1)';
+                    statusBgColor = isDarkMode ? 'rgba(16, 185, 129, 0.1)' : 'rgba(16, 185, 129, 0.2)';
                     statusBorderColor = '#10b981';
                     break;
                 case 'error':
                     statusColor = '#ef4444';
                     statusIcon = '❌';
-                    statusBgColor = 'rgba(239, 68, 68, 0.1)';
+                    statusBgColor = isDarkMode ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.2)';
                     statusBorderColor = '#ef4444';
                     break;
             }
@@ -1112,11 +1212,11 @@ const updateQueueETA = async () => {
                     padding: 12px; 
                     border-radius: 8px; 
                     border-left: 3px solid ${statusBorderColor};
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+                    box-shadow: 0 2px 8px rgba(0,0,0,${isDarkMode ? '0.3' : '0.2'});
                     text-align: center;
                     margin-bottom: 15px;
                 ">
-                    <div style="color: ${statusColor}; font-weight: bold; font-size: 16px;">
+                    <div style="color: ${statusColor}; font-weight: bold; font-size: 16px; text-shadow: 0 0 2px black;">
                         ${statusIcon} ${currentStatusMessage}
                     </div>
                 </div>`;
@@ -1163,44 +1263,52 @@ const updateQueueETA = async () => {
                 ((queueLength - position) / queueLength) * maxProgressBeforeGeneration
             );
 
+            const colors = getThemeColors();
+            const sectionBg = colors.isDarkMode 
+                ? "background: linear-gradient(135deg, #1e293b, #334155);" 
+                : "background: transparent; border: 2px solid var(--light-highlight-colour);";
+            
+            const progressBarBg = colors.isDarkMode ? "#374151" : "var(--light-highlight-colour)";
+            const shadowColor = colors.isDarkMode ? "rgba(0,0,0,0.3)" : "rgba(0,0,0,0.1)";
+            
             return `
                 <div id="individualPositionSection" style="
-                    background: linear-gradient(135deg, #1e293b, #334155); 
+                    ${sectionBg}
                     padding: 12px; 
                     border-radius: 8px; 
-                    border-left: 3px solid #fbbf24;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                    border-left: 3px solid ${colors.headerColor};
+                    box-shadow: 0 2px 8px ${shadowColor};
                     text-align: center;
                     margin-top: 10px;
                 ">
-                    <div style="color: #94a3b8; font-size: 12px; margin-bottom: 4px;">
+                    <div style="color: ${colors.subTextColor}; font-size: 12px; margin-bottom: 4px; text-shadow: 0 0 2px black;">
                         ${emoji} Your Position in Queue
                     </div>
-                    <div style="color: #e2e8f0; font-size: 14px; margin-bottom: 6px;">
-                        <span style="color: #fbbf24; font-weight: bold;">#${position}</span> 
-                        <span style="color: #94a3b8;">of ${queueLength} in line</span>
+                    <div style="color: ${colors.queueTextColor}; font-size: 14px; margin-bottom: 6px; text-shadow: 0 0 2px black;">
+                        <span style="color: ${colors.headerColor}; font-weight: bold; text-shadow: 0 0 2px black;">#${position}</span> 
+                        <span style="color: ${colors.subTextColor}; text-shadow: 0 0 2px black;">of ${queueLength} in line</span>
                     </div>
-                    <div style="color: #fbbf24; font-weight: bold; font-size: 16px;">
+                    <div style="color: ${colors.headerColor}; font-weight: bold; font-size: 16px; text-shadow: 0 0 2px black;">
                         ${positionMessage}ETA: ${etaString}
                     </div>
                     <div style="
                         width: 100%; 
                         height: 4px; 
-                        background: #374151; 
+                        background: ${progressBarBg}; 
                         border-radius: 2px; 
                         margin-top: 8px;
                         overflow: hidden;
                     ">
                         <div style="
                             height: 100%; 
-                            background: linear-gradient(90deg, #fbbf24, #f59e0b); 
+                            background: linear-gradient(90deg, ${colors.headerColor}, ${colors.fastEtaColor}); 
                             width: ${Math.round(progressPercentage)}%; 
                             border-radius: 2px;
                             transition: width 0.5s ease;
                             animation: shimmer 2s infinite;
                         "></div>
                     </div>
-                    <div style="color: #64748b; font-size: 11px; margin-top: 4px;">
+                    <div style="color: ${colors.footerTextColor}; font-size: 11px; margin-top: 4px; text-shadow: 0 0 2px black;">
                         ${Math.round(progressPercentage)}% complete
                     </div>
                 </div>
@@ -1228,38 +1336,46 @@ const updateQueueETA = async () => {
             
             console.log("Calculated ETAs - Normal:", formatETA(normalQueueETA), "Fast:", formatETA(fastQueueETA));
 
+            // Get theme colors for messages
+            const messageColors = getThemeColors();
+            
             // Add encouraging messaging based on queue status
             let fastQueueMessage = "";
             if (fastQueueLength <= 2) {
-                fastQueueMessage = " ✨ <span style='color: #00ff88;'>Ready to go!</span>";
+                fastQueueMessage = ` ✨ <span style='color: ${messageColors.fastEtaColor};'>Ready to go!</span>`;
             } else if (fastQueueLength <= 5) {
-                fastQueueMessage = " 🏃‍♂️ <span style='color: #88ff00;'>Moving quickly!</span>";
+                fastQueueMessage = ` 🏃‍♂️ <span style='color: ${messageColors.fastEtaColor};'>Moving quickly!</span>`;
             } else {
-                fastQueueMessage = " ⚡ <span style='color: #ffaa00;'>Faster option</span>";
+                fastQueueMessage = ` ⚡ <span style='color: ${messageColors.headerColor};'>Faster option</span>`;
             }
 
             let regularQueueMessage = "";
             if (normalQueueLength <= 10) {
-                regularQueueMessage = " ✨ <span style='color: #88ff88;'>Pretty quick!</span>";
+                regularQueueMessage = ` ✨ <span style='color: ${messageColors.fastEtaColor};'>Pretty quick!</span>`;
             } else if (normalQueueLength <= 30) {
-                regularQueueMessage = " ⏰ <span style='color: #ffcc44;'>Great for multitasking!</span>";
+                regularQueueMessage = ` ⏰ <span style='color: ${messageColors.headerColor};'>Great for multitasking!</span>`;
             } else {
-                regularQueueMessage = " 📚 <span style='color: #ff8844;'>Time to relax!</span>";
+                regularQueueMessage = ` 📚 <span style='color: ${messageColors.regularEtaColor};'>Time to relax!</span>`;
             }
 
-            // Calculate costs
-            const extras = {
+            // Calculate costs - show actual current total
+            const selectedExtras = {
                 removeWatermark: getCheckboxState('removeWatermarkCheckbox'),
                 upscale: getCheckboxState('upscaleCheckbox'),
                 doubleImages: getCheckboxState('doubleImagesCheckbox'),
                 removeBackground: getCheckboxState('removeBackgroundCheckbox'),
             };
             
-            const extrasObject = window.getExtrasPrice ? window.getExtrasPrice(extras) : {};
-            const extrasPrice = (extrasObject.removeWatermark || 0) + 
-                               (extrasObject.upscale || 0) + 
-                               (extrasObject.doubleImages || 0) + 
-                               (extrasObject.removeBackground || 0);
+            const selectedExtrasObject = window.getExtrasPrice ? window.getExtrasPrice(selectedExtras, getValue('model')) : {};
+            let currentExtrasPrice = (selectedExtrasObject.removeWatermark || 0) + 
+                               (selectedExtrasObject.upscale || 0) + 
+                               (selectedExtrasObject.doubleImages || 0) + 
+                               (selectedExtrasObject.removeBackground || 0);
+            
+            // Add bonuses when both upscale and doubleImages are selected
+            if (selectedExtras.upscale && selectedExtras.doubleImages) {
+                currentExtrasPrice += (selectedExtrasObject.upscaleBonus || 0) + (selectedExtrasObject.doubleImagesBonus || 0);
+            }
             const fastQueuePrice = window.getFastqueuePrice ? window.getFastqueuePrice(Object.keys(masterLoraData).filter(lora => masterLoraData[lora].selected).length, getValue('model')) : 25;
             const isFastQueueSelected = funcElementById('fastqueueButton')?.classList?.contains('active') ?? false;
 
@@ -1270,29 +1386,41 @@ const updateQueueETA = async () => {
                     calculateIndividualETA(individualPosition.position)
                 ) : '';
 
+            // Get theme-aware colors
+            const colors = getThemeColors();
+            
+            // Create queue option styles
+            const regularQueueStyle = colors.isDarkMode
+                ? `background: rgba(255,255,255,0.05); border-left: 3px solid ${colors.regularEtaColor}; ${!isFastQueueSelected ? `border: 2px solid ${colors.regularEtaColor}; box-shadow: 0 0 10px rgba(96, 165, 250, 0.3);` : 'border: 1px solid transparent;'}`
+                : `background: rgba(96, 165, 250, 0.1); border-left: 3px solid ${colors.regularEtaColor}; ${!isFastQueueSelected ? `border: 2px solid ${colors.regularEtaColor}; box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);` : 'border: 1px solid transparent;'}`;
+            
+            const fastQueueStyle = colors.isDarkMode
+                ? `background: rgba(0,255,136,0.05); border-left: 3px solid ${colors.fastEtaColor}; ${isFastQueueSelected ? `border: 2px solid ${colors.fastEtaColor}; box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);` : 'border: 1px solid transparent;'}`
+                : `background: rgba(16, 185, 129, 0.1); border-left: 3px solid ${colors.fastEtaColor}; ${isFastQueueSelected ? `border: 2px solid ${colors.fastEtaColor}; box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);` : 'border: 1px solid transparent;'}`;
+
             // Create the complete display all at once with clickable queue options
             const completeDisplay = `
-                <div style="background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 15px; border-radius: 10px; border: 1px solid #333;">
-                    <div style="color: #ffd700; font-weight: bold; font-size: 16px; text-align: center; margin-bottom: 10px;">
+                <div style="${colors.containerStyle} padding: 15px; border-radius: 10px;">
+                    <div style="color: ${colors.headerColor}; font-weight: bold; font-size: 16px; text-align: center; margin-bottom: 10px; text-shadow: 0 0 2px black;">
                         🎨 Generation Queue Status
                     </div>
                     ${createStatusSection()}
                     <div style="display: flex; flex-direction: column; gap: 8px;">
-                        <div id="regularQueueOption" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 6px; border-left: 3px solid #60a5fa; cursor: pointer; transition: all 0.3s ease; ${!isFastQueueSelected ? 'border: 2px solid #60a5fa; box-shadow: 0 0 10px rgba(96, 165, 250, 0.3);' : 'border: 1px solid transparent;'}">
-                            <span style="color: #e2e8f0;">🔄 Regular Queue:</span><br>
-                            <span style="color: #60a5fa; font-weight: bold;">${formatETA(normalQueueETA)}</span> 
-                            <span style="color: #94a3b8;">(${normalQueueLength} creators ahead)</span>${regularQueueMessage}<br>
-                            <span style="color: #ffd700; font-weight: bold;">💰 ${extrasPrice} Credits</span>
+                        <div id="regularQueueOption" style="${regularQueueStyle} padding: 10px; border-radius: 6px; cursor: pointer; transition: all 0.3s ease;">
+                            <span style="color: ${colors.queueTextColor}; text-shadow: 0 0 2px black;">🔄 Regular Queue:</span><br>
+                            <span style="color: ${colors.regularEtaColor}; font-weight: bold; text-shadow: 0 0 2px black;">${formatETA(normalQueueETA)}</span> 
+                            <span style="color: ${colors.subTextColor}; text-shadow: 0 0 2px black;">(${normalQueueLength} creators ahead)</span>${regularQueueMessage}<br>
+                            <span style="color: ${colors.headerColor}; font-weight: bold; text-shadow: 0 0 2px black;">💰 ${currentExtrasPrice} Credits</span>
                         </div>
-                        <div id="fastQueueOption" style="background: rgba(0,255,136,0.05); padding: 10px; border-radius: 6px; border-left: 3px solid #00ff88; cursor: pointer; transition: all 0.3s ease; ${isFastQueueSelected ? 'border: 2px solid #00ff88; box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);' : 'border: 1px solid transparent;'}">
-                            <span style="color: #e2e8f0;">⚡ Fast Queue:</span><br>
-                            <span style="color: #00ff88; font-weight: bold;">${formatETA(fastQueueETA)}</span> 
-                            <span style="color: #94a3b8;">(${fastQueueLength} creators ahead)</span>${fastQueueMessage}<br>
-                            <span style="color: #ffd700; font-weight: bold;">💰 ${extrasPrice + fastQueuePrice} Credits</span>
+                        <div id="fastQueueOption" style="${fastQueueStyle} padding: 10px; border-radius: 6px; cursor: pointer; transition: all 0.3s ease;">
+                            <span style="color: ${colors.queueTextColor}; text-shadow: 0 0 2px black;">⚡ Fast Queue:</span><br>
+                            <span style="color: ${colors.fastEtaColor}; font-weight: bold; text-shadow: 0 0 2px black;">${formatETA(fastQueueETA)}</span> 
+                            <span style="color: ${colors.subTextColor}; text-shadow: 0 0 2px black;">(${fastQueueLength} creators ahead)</span>${fastQueueMessage}<br>
+                            <span style="color: ${colors.headerColor}; font-weight: bold; text-shadow: 0 0 2px black;">💰 ${currentExtrasPrice + fastQueuePrice} Credits</span>
                         </div>
                     </div>
                     ${individualSection}
-                    <div style="text-align: center; margin-top: 10px; font-size: 12px; color: #64748b;">
+                    <div style="text-align: center; margin-top: 10px; font-size: 12px; color: ${colors.footerTextColor}; text-shadow: 0 0 2px black;">
                         💡 Times are estimated and update in real-time • Click to select queue
                     </div>
                 </div>`;
@@ -1337,38 +1465,46 @@ const updateQueueETA = async () => {
             const normalQueueETA = calculateQueueETA(normalQueueLength);
             const fastQueueETA = calculateQueueETA(fastQueueLength);
 
+            // Get theme colors for messages (alternative format)
+            const messageColors2 = getThemeColors();
+            
             // Add encouraging messaging based on queue status
             let fastQueueMessage = "";
             if (fastQueueLength <= 2) {
-                fastQueueMessage = " ✨ <span style='color: #00ff88;'>Ready to go!</span>";
+                fastQueueMessage = ` ✨ <span style='color: ${messageColors2.fastEtaColor};'>Ready to go!</span>`;
             } else if (fastQueueLength <= 5) {
-                fastQueueMessage = " 🏃‍♂️ <span style='color: #88ff00;'>Moving quickly!</span>";
+                fastQueueMessage = ` 🏃‍♂️ <span style='color: ${messageColors2.fastEtaColor};'>Moving quickly!</span>`;
             } else {
-                fastQueueMessage = " ⚡ <span style='color: #ffaa00;'>Faster option</span>";
+                fastQueueMessage = ` ⚡ <span style='color: ${messageColors2.headerColor};'>Faster option</span>`;
             }
 
             let regularQueueMessage = "";
             if (normalQueueLength <= 10) {
-                regularQueueMessage = " ✨ <span style='color: #88ff88;'>Pretty quick!</span>";
+                regularQueueMessage = ` ✨ <span style='color: ${messageColors2.fastEtaColor};'>Pretty quick!</span>`;
             } else if (normalQueueLength <= 30) {
-                regularQueueMessage = " ⏰ <span style='color: #ffcc44;'>Great for multitasking!</span>";
+                regularQueueMessage = ` ⏰ <span style='color: ${messageColors2.headerColor};'>Great for multitasking!</span>`;
             } else {
-                regularQueueMessage = " 📚 <span style='color: #ff8844;'>Time to relax!</span>";
+                regularQueueMessage = ` 📚 <span style='color: ${messageColors2.regularEtaColor};'>Time to relax!</span>`;
             }
 
-            // Calculate costs
-            const extras = {
+            // Calculate costs - show actual current total
+            const selectedExtras2 = {
                 removeWatermark: getCheckboxState('removeWatermarkCheckbox'),
                 upscale: getCheckboxState('upscaleCheckbox'),
                 doubleImages: getCheckboxState('doubleImagesCheckbox'),
                 removeBackground: getCheckboxState('removeBackgroundCheckbox'),
             };
             
-            const extrasObject = window.getExtrasPrice ? window.getExtrasPrice(extras) : {};
-            const extrasPrice = (extrasObject.removeWatermark || 0) + 
-                               (extrasObject.upscale || 0) + 
-                               (extrasObject.doubleImages || 0) + 
-                               (extrasObject.removeBackground || 0);
+            const selectedExtrasObject2 = window.getExtrasPrice ? window.getExtrasPrice(selectedExtras2, getValue('model')) : {};
+            let currentExtrasPrice2 = (selectedExtrasObject2.removeWatermark || 0) + 
+                               (selectedExtrasObject2.upscale || 0) + 
+                               (selectedExtrasObject2.doubleImages || 0) + 
+                               (selectedExtrasObject2.removeBackground || 0);
+            
+            // Add bonuses when both upscale and doubleImages are selected
+            if (selectedExtras2.upscale && selectedExtras2.doubleImages) {
+                currentExtrasPrice2 += (selectedExtrasObject2.upscaleBonus || 0) + (selectedExtrasObject2.doubleImagesBonus || 0);
+            }
             const fastQueuePrice = window.getFastqueuePrice ? window.getFastqueuePrice(Object.keys(masterLoraData).filter(lora => masterLoraData[lora].selected).length, getValue('model')) : 25;
             const isFastQueueSelected = funcElementById('fastqueueButton')?.classList?.contains('active') ?? false;
 
@@ -1379,29 +1515,41 @@ const updateQueueETA = async () => {
                     calculateIndividualETA(individualPosition.position)
                 ) : '';
 
+            // Get theme-aware colors for alternative format
+            const colors2 = getThemeColors();
+            
+            // Create queue option styles for alternative format
+            const regularQueueStyle2 = colors2.isDarkMode
+                ? `background: rgba(255,255,255,0.05); border-left: 3px solid ${colors2.regularEtaColor}; ${!isFastQueueSelected ? `border: 2px solid ${colors2.regularEtaColor}; box-shadow: 0 0 10px rgba(96, 165, 250, 0.3);` : 'border: 1px solid transparent;'}`
+                : `background: rgba(96, 165, 250, 0.1); border-left: 3px solid ${colors2.regularEtaColor}; ${!isFastQueueSelected ? `border: 2px solid ${colors2.regularEtaColor}; box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);` : 'border: 1px solid transparent;'}`;
+            
+            const fastQueueStyle2 = colors2.isDarkMode
+                ? `background: rgba(0,255,136,0.05); border-left: 3px solid ${colors2.fastEtaColor}; ${isFastQueueSelected ? `border: 2px solid ${colors2.fastEtaColor}; box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);` : 'border: 1px solid transparent;'}`
+                : `background: rgba(16, 185, 129, 0.1); border-left: 3px solid ${colors2.fastEtaColor}; ${isFastQueueSelected ? `border: 2px solid ${colors2.fastEtaColor}; box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);` : 'border: 1px solid transparent;'}`;
+
             // Create the complete display all at once with clickable queue options
             const completeDisplay = `
-                <div style="background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 15px; border-radius: 10px; border: 1px solid #333;">
-                    <div style="color: #ffd700; font-weight: bold; font-size: 16px; text-align: center; margin-bottom: 10px;">
+                <div style="${colors2.containerStyle} padding: 15px; border-radius: 10px;">
+                    <div style="color: ${colors2.headerColor}; font-weight: bold; font-size: 16px; text-align: center; margin-bottom: 10px; text-shadow: 0 0 2px black;">
                         🎨 Generation Queue Status
                     </div>
                     ${createStatusSection()}
                     <div style="display: flex; flex-direction: column; gap: 8px;">
-                        <div id="regularQueueOption" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 6px; border-left: 3px solid #60a5fa; cursor: pointer; transition: all 0.3s ease; ${!isFastQueueSelected ? 'border: 2px solid #60a5fa; box-shadow: 0 0 10px rgba(96, 165, 250, 0.3);' : 'border: 1px solid transparent;'}">
-                            <span style="color: #e2e8f0;">🔄 Regular Queue:</span><br>
-                            <span style="color: #60a5fa; font-weight: bold;">${formatETA(normalQueueETA)}</span> 
-                            <span style="color: #94a3b8;">(${normalQueueLength} creators ahead)</span>${regularQueueMessage}<br>
-                            <span style="color: #ffd700; font-weight: bold;">💰 ${extrasPrice} Credits</span>
+                        <div id="regularQueueOption" style="${regularQueueStyle2} padding: 10px; border-radius: 6px; cursor: pointer; transition: all 0.3s ease;">
+                            <span style="color: ${colors2.queueTextColor}; text-shadow: 0 0 2px black;">🔄 Regular Queue:</span><br>
+                            <span style="color: ${colors2.regularEtaColor}; font-weight: bold; text-shadow: 0 0 2px black;">${formatETA(normalQueueETA)}</span> 
+                            <span style="color: ${colors2.subTextColor}; text-shadow: 0 0 2px black;">(${normalQueueLength} creators ahead)</span>${regularQueueMessage}<br>
+                            <span style="color: ${colors2.headerColor}; font-weight: bold; text-shadow: 0 0 2px black;">💰 ${currentExtrasPrice2} Credits</span>
                         </div>
-                        <div id="fastQueueOption" style="background: rgba(0,255,136,0.05); padding: 10px; border-radius: 6px; border-left: 3px solid #00ff88; cursor: pointer; transition: all 0.3s ease; ${isFastQueueSelected ? 'border: 2px solid #00ff88; box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);' : 'border: 1px solid transparent;'}">
-                            <span style="color: #e2e8f0;">⚡ Fast Queue:</span><br>
-                            <span style="color: #00ff88; font-weight: bold;">${formatETA(fastQueueETA)}</span> 
-                            <span style="color: #94a3b8;">(${fastQueueLength} creators ahead)</span>${fastQueueMessage}<br>
-                            <span style="color: #ffd700; font-weight: bold;">💰 ${extrasPrice + fastQueuePrice} Credits</span>
+                        <div id="fastQueueOption" style="${fastQueueStyle2} padding: 10px; border-radius: 6px; cursor: pointer; transition: all 0.3s ease;">
+                            <span style="color: ${colors2.queueTextColor}; text-shadow: 0 0 2px black;">⚡ Fast Queue:</span><br>
+                            <span style="color: ${colors2.fastEtaColor}; font-weight: bold; text-shadow: 0 0 2px black;">${formatETA(fastQueueETA)}</span> 
+                            <span style="color: ${colors2.subTextColor}; text-shadow: 0 0 2px black;">(${fastQueueLength} creators ahead)</span>${fastQueueMessage}<br>
+                            <span style="color: ${colors2.headerColor}; font-weight: bold; text-shadow: 0 0 2px black;">💰 ${currentExtrasPrice2 + fastQueuePrice} Credits</span>
                         </div>
                     </div>
                     ${individualSection}
-                    <div style="text-align: center; margin-top: 10px; font-size: 12px; color: #64748b;">
+                    <div style="text-align: center; margin-top: 10px; font-size: 12px; color: ${colors2.footerTextColor}; text-shadow: 0 0 2px black;">
                         💡 Times are estimated and update in real-time • Click to select queue
                     </div>
                 </div>`;
@@ -1438,25 +1586,27 @@ const updateQueueETA = async () => {
             
         } else {
             // Fallback for other formats or errors - still show status if available
+            const fallbackColors = getThemeColors();
             const statusSection = createStatusSection();
             if (statusSection) {
                 bothQueueETAElement.innerHTML = `
-                    <div style="background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 15px; border-radius: 10px; border: 1px solid #333;">
-                        <div style="color: #ffd700; font-weight: bold; font-size: 16px; text-align: center; margin-bottom: 10px;">
+                    <div style="${fallbackColors.containerStyle} padding: 15px; border-radius: 10px;">
+                        <div style="color: ${fallbackColors.headerColor}; font-weight: bold; font-size: 16px; text-align: center; margin-bottom: 10px; text-shadow: 0 0 2px black;">
                             🎨 Generation Status
                         </div>
                         ${statusSection}
-                        <div style="text-align: center; margin-top: 10px; font-size: 12px; color: #64748b;">
+                        <div style="text-align: center; margin-top: 10px; font-size: 12px; color: ${fallbackColors.footerTextColor}; text-shadow: 0 0 2px black;">
                             💡 Checking queue status...
                         </div>
                     </div>`;
             } else if (!bothQueueETAElement.innerHTML.includes('Generation')) {
+                const errorColor = fallbackColors.isDarkMode ? "#ff8844" : "#dc2626";
                 bothQueueETAElement.innerHTML = `
-                    <div style="background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 15px; border-radius: 10px; border: 1px solid #333;">
-                        <div style="color: #ffd700; font-weight: bold; font-size: 16px; text-align: center; margin-bottom: 10px;">
+                    <div style="${fallbackColors.containerStyle} padding: 15px; border-radius: 10px;">
+                        <div style="color: ${fallbackColors.headerColor}; font-weight: bold; font-size: 16px; text-align: center; margin-bottom: 10px; text-shadow: 0 0 2px black;">
                             🎨 Queue Status
                         </div>
-                        <div style="text-align: center; color: #ff8844;">
+                        <div style="text-align: center; color: ${errorColor}; text-shadow: 0 0 2px black;">
                             Queue information temporarily unavailable
                         </div>
                     </div>`;
@@ -1474,6 +1624,9 @@ const updateQueueETA = async () => {
         }
     }
 };
+
+// Make updateQueueETA globally available for theme changes
+window.updateQueueETA = updateQueueETA;
 
 // Run queue ETA update immediately on page load
 updateQueueETA();

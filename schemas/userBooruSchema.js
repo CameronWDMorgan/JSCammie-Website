@@ -4,7 +4,7 @@ const { Schema } = mongoose
 const userBooruCommentSchema = new Schema({
     commentId: { type: String, required: true, unique: true },
     booruId: { type: String, required: true },
-    accountId: { type: String, required: true },
+    account_id: { type: String, required: true },
     timestamp: { type: String, required: true },
     comment: { type: String, required: true },
     upvotes: { type: Array, default: [] },
@@ -35,6 +35,10 @@ const userBooruSchema = new Schema({
     comments: { type: [userBooruCommentSchema], default: [] },
     title: { type: String, default: "" },
 })
+
+// Add indexes for performance
+userBooruSchema.index({ account_id: 1 });
+// Note: booru_id already has unique index from field definition
 
 const name = 'userBooru'
 

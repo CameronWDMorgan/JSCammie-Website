@@ -45,14 +45,36 @@
           if (accessToken) {
             // Send the access token to the server, when it finishes redirect to the homepage
             fetch('/receive-token', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({ accessToken: accessToken })
-            }).then(() => {
-                window.location.href = '/';
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ accessToken: accessToken })
             })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Redirect based on whether this was account linking or new login
+                    if (data.isLinked) {
+                        console.log('Discord account successfully linked');
+                        window.location.href = '/?linked=discord';
+                    } else {
+                        console.log('User logged in via Discord');
+                        window.location.href = '/?login=success';
+                    }
+                } else if (data.status === 'conflict' && data.redirectUrl) {
+                    window.location.href = data.redirectUrl;
+                } else {
+                    // Display error message to the user
+                    const messageElement = document.querySelector('h1');
+                    messageElement.textContent = `Error: ${data.message || 'An unknown error occurred.'}`;
+                }
+            })
+            .catch(error => {
+                console.error('Error during token exchange:', error);
+                const messageElement = document.querySelector('h1');
+                messageElement.textContent = 'An error occurred during login. Please try again.';
+            });
           }
         }
       </script>

@@ -42,7 +42,9 @@ function checkForBlacklistedWords(prompt) {
 	const lowerPrompt = prompt.toLowerCase();
 	
 	for (const word of BLACKLISTED_WORDS) {
-		if (lowerPrompt.includes(word.toLowerCase())) {
+		// Use regex with word boundaries to match whole words only
+		const regex = new RegExp(`\\b${word.toLowerCase()}\\b`);
+		if (regex.test(lowerPrompt)) {
 			return word;
 		}
 	}
@@ -435,19 +437,20 @@ router.get('/', async function(req, res) {
         if (sort === "trending") {
             const now = Date.now();
             
-            // Dynamic decay parameters
-            const voteDecayRate = 0.1;      // How fast vote weight decays (higher = faster decay)
-            const commentDecayRate = 0.08;  // How fast comment weight decays
+            // Updated decay parameters for quicker decay with minimal first-day decay
+            const voteDecayRate = 0.03;     // Decay rate per hour after first day
+            const commentDecayRate = 0.025; // Decay rate per hour for comments after first day
             const maxVoteWeight = 20;       // Maximum weight for brand new votes
             const maxCommentWeight = 15;    // Maximum weight for brand new comments
-            const baseVoteWeight = 0.1;     // Minimum weight for very old votes
-            const baseCommentWeight = 0.05; // Minimum weight for very old comments
+            const baseVoteWeight = 0.05;    // Minimum weight for very old votes
+            const baseCommentWeight = 0.03; // Minimum weight for very old comments
             const newPostBoost = 3;         // Boost for posts from last 24h
             const noVotesBoost = 1000;       // High boost for posts with 0 upvotes to give them visibility
+            const gracePeriodHours = 24;    // Hours of minimal decay (first day)
             
             pipeline.push({
                 $addFields: {
-                    // Calculate dynamic weighted scores for votes and comments
+                    // Calculate dynamic weighted scores for votes and comments with hourly decay
                     dynamicVoteScore: {
                         $reduce: {
                             input: { $ifNull: ["$upvotes", []] },
@@ -456,27 +459,60 @@ router.get('/', async function(req, res) {
                                 $add: [
                                     "$$value",
                                     {
-                                        $max: [
-                                            baseVoteWeight,
-                                            {
-                                                $multiply: [
-                                                    maxVoteWeight,
+                                        $let: {
+                                            vars: {
+                                                hoursElapsed: {
+                                                    $divide: [
+                                                        { $subtract: [now, { $toLong: "$$this.timestamp" }] },
+                                                        3600000 // Convert to hours
+                                                    ]
+                                                }
+                                            },
+                                            in: {
+                                                $max: [
+                                                    baseVoteWeight,
                                                     {
-                                                        $exp: {
-                                                            $multiply: [
-                                                                -voteDecayRate,
-                                                                {
-                                                                    $divide: [
-                                                                        { $subtract: [now, { $toLong: "$$this.timestamp" }] },
-                                                                        86400000 // Convert to days
-                                                                    ]
-                                                                }
-                                                            ]
+                                                        $cond: {
+                                                            if: { $lte: ["$$hoursElapsed", gracePeriodHours] },
+                                                            // Minimal decay in first 24 hours (only lose 10% max)
+                                                            then: {
+                                                                $multiply: [
+                                                                    maxVoteWeight,
+                                                                    {
+                                                                        $subtract: [
+                                                                            1,
+                                                                            {
+                                                                                $multiply: [
+                                                                                    0.1,
+                                                                                    {
+                                                                                        $divide: ["$$hoursElapsed", gracePeriodHours]
+                                                                                    }
+                                                                                ]
+                                                                            }
+                                                                        ]
+                                                                    }
+                                                                ]
+                                                            },
+                                                            // Exponential decay after first day
+                                                            else: {
+                                                                $multiply: [
+                                                                    maxVoteWeight,
+                                                                    0.9, // Start at 90% after grace period
+                                                                    {
+                                                                        $exp: {
+                                                                            $multiply: [
+                                                                                -voteDecayRate,
+                                                                                { $subtract: ["$$hoursElapsed", gracePeriodHours] }
+                                                                            ]
+                                                                        }
+                                                                    }
+                                                                ]
+                                                            }
                                                         }
                                                     }
                                                 ]
                                             }
-                                        ]
+                                        }
                                     }
                                 ]
                             }
@@ -490,27 +526,60 @@ router.get('/', async function(req, res) {
                                 $add: [
                                     "$$value",
                                     {
-                                        $max: [
-                                            baseCommentWeight,
-                                            {
-                                                $multiply: [
-                                                    maxCommentWeight,
+                                        $let: {
+                                            vars: {
+                                                hoursElapsed: {
+                                                    $divide: [
+                                                        { $subtract: [now, { $toLong: "$$this.timestamp" }] },
+                                                        3600000 // Convert to hours
+                                                    ]
+                                                }
+                                            },
+                                            in: {
+                                                $max: [
+                                                    baseCommentWeight,
                                                     {
-                                                        $exp: {
-                                                            $multiply: [
-                                                                -commentDecayRate,
-                                                                {
-                                                                    $divide: [
-                                                                        { $subtract: [now, { $toLong: "$$this.timestamp" }] },
-                                                                        86400000 // Convert to days
-                                                                    ]
-                                                                }
-                                                            ]
+                                                        $cond: {
+                                                            if: { $lte: ["$$hoursElapsed", gracePeriodHours] },
+                                                            // Minimal decay in first 24 hours (only lose 10% max)
+                                                            then: {
+                                                                $multiply: [
+                                                                    maxCommentWeight,
+                                                                    {
+                                                                        $subtract: [
+                                                                            1,
+                                                                            {
+                                                                                $multiply: [
+                                                                                    0.1,
+                                                                                    {
+                                                                                        $divide: ["$$hoursElapsed", gracePeriodHours]
+                                                                                    }
+                                                                                ]
+                                                                            }
+                                                                        ]
+                                                                    }
+                                                                ]
+                                                            },
+                                                            // Exponential decay after first day
+                                                            else: {
+                                                                $multiply: [
+                                                                    maxCommentWeight,
+                                                                    0.9, // Start at 90% after grace period
+                                                                    {
+                                                                        $exp: {
+                                                                            $multiply: [
+                                                                                -commentDecayRate,
+                                                                                { $subtract: ["$$hoursElapsed", gracePeriodHours] }
+                                                                            ]
+                                                                        }
+                                                                    }
+                                                                ]
+                                                            }
                                                         }
                                                     }
                                                 ]
                                             }
-                                        ]
+                                        }
                                     }
                                 ]
                             }
@@ -1014,10 +1083,94 @@ router.post('/vote', async function(req, res) {
             });
         }
 
-        // Process voting logic here...
+        // Get creator profile for notifications and rewards
+        let creatorProfile = await mongolib.getSchemaDocumentOnce("userProfile", {
+            accountId: foundBooruImage.account_id
+        });
+
+        // Initialize vote arrays if they don't exist
+        if (!foundBooruImage.upvotes) foundBooruImage.upvotes = [];
+        if (!foundBooruImage.downvotes) foundBooruImage.downvotes = [];
+
+        let userVoted = foundBooruImage.upvotes.some(upvote => upvote.accountId === account_id);
+        let userDownvoted = foundBooruImage.downvotes.some(downvote => downvote.accountId === account_id);
+
+        // Credit and experience rewards
+        const creatorCreditsToGain = 1.75;
+        const creatorExpToGain = 2;
+        const userCreditsToGain = 0.5;
+        const userExpToGain = 0.5;
+
+        if (vote === 'upvote') {
+            if (userVoted) {
+                // User is removing their upvote - charge 5 credits if removeUpvote flag is set
+                if (data.removeUpvote) {
+                    if (userProfile.credits < 5) {
+                        return res.send({
+                            status: "error",
+                            message: "You need at least 5 credits to remove your upvote"
+                        });
+                    }
+                    
+                    // Deduct credits
+                    await mongolib.modifyUserCredits(account_id, 5, '-', `You paid 5 credits to remove your upvote on a <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a>`);
+                }
+                
+                // Remove upvote
+                await mongolib.updateSchemaDocumentOnce("userBooru",
+                    { booru_id: booru_id },
+                    { $pull: { upvotes: { accountId: account_id } } }
+                );
+                
+                userVoted = false;
+            } else {
+                // Add upvote and remove any existing downvote
+                await mongolib.updateSchemaDocumentOnce("userBooru",
+                    { booru_id: booru_id },
+                    { 
+                        $push: { upvotes: { accountId: account_id, timestamp: Date.now().toString() } },
+                        $pull: { downvotes: { accountId: account_id } }
+                    }
+                );
+
+                // Add credits and exp for new upvote
+                await mongolib.modifyUserCredits(account_id, userCreditsToGain, '+', `You Upvoted a <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a>`);
+                await mongolib.modifyUserExp(account_id, userExpToGain, '+');
+
+                // Reward creator
+                if (creatorProfile != null) {
+                    await mongolib.modifyUserCredits(creatorProfile.accountId, creatorCreditsToGain, '+', `Someone upvoted your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a>`);
+                    await mongolib.modifyUserExp(creatorProfile.accountId, creatorExpToGain, '+');
+                    
+                    // Send notification if enabled
+                    if (creatorProfile.settings?.notification_booruVote == true || creatorProfile.settings?.notification_booruVote == undefined) {
+                        await mongolib.createUserNotification(creatorProfile.accountId, `Someone upvoted your <a href="https://www.jscammie.com/booru/post/${booru_id}">Booru Post</a>`, 'booru');
+                    }
+                }
+                
+                userVoted = true;
+                userDownvoted = false;
+            }
+        } else if (vote === 'downvote') {
+            // Disable downvotes for now
+            return res.send({
+                status: "error",
+                message: "Downvotes are disabled"
+            });
+        }
+
+        // Get updated vote counts
+        const updatedPost = await mongolib.getSchemaDocumentOnce("userBooru", { booru_id: booru_id });
+        
         res.send({
             status: "success",
-            message: "Vote processed successfully"
+            message: "Vote processed successfully",
+            upvotes: updatedPost.upvotes?.length || 0,
+            downvotes: updatedPost.downvotes?.length || 0,
+            userVoted: userVoted,
+            userDownvoted: userDownvoted,
+            upvotesList: updatedPost.upvotes || [],
+            creditsDeducted: data.removeUpvote && userVoted === false ? 5 : 0
         });
 
     } catch (error) {
@@ -1047,7 +1200,7 @@ router.post('/setRating/', async function(req, res) {
         }
 
         // Update booru post rating
-        await mongolib.updateSchemaDocument("userBooru", 
+        await mongolib.updateSchemaDocumentOnce("userBooru", 
             { booru_id: booru_id },
             { safety: parseInt(rating) }
         );
@@ -1137,7 +1290,7 @@ router.post('/ban/:accountId', async function(req, res) {
         }
 
         // Ban the user
-        await mongolib.updateSchemaDocument("userProfile",
+        await mongolib.updateSchemaDocumentOnce("userProfile",
             { accountId: accountId },
             { 
                 booruPostBanned: true,
@@ -1268,14 +1421,35 @@ router.get('/creator-stats', async function(req, res) {
             const previousStats = { posts: 0, upvotes: 0, comments: 0 };
             
             posts.forEach(post => {
+                // Count posts based on when they were created
                 if (post.timestamp >= currentPeriodStart && post.timestamp < currentPeriodEnd) {
                     currentStats.posts++;
-                    currentStats.upvotes += (post.upvotes?.length || 0);
-                    currentStats.comments += (post.comments?.length || 0);
                 } else if (post.timestamp >= previousPeriodStart && post.timestamp < currentPeriodStart) {
                     previousStats.posts++;
-                    previousStats.upvotes += (post.upvotes?.length || 0);
-                    previousStats.comments += (post.comments?.length || 0);
+                }
+                
+                // Count upvotes based on when they actually occurred
+                if (post.upvotes) {
+                    post.upvotes.forEach(vote => {
+                        const voteTimestamp = parseInt(vote.timestamp);
+                        if (voteTimestamp >= currentPeriodStart && voteTimestamp < currentPeriodEnd) {
+                            currentStats.upvotes++;
+                        } else if (voteTimestamp >= previousPeriodStart && voteTimestamp < currentPeriodStart) {
+                            previousStats.upvotes++;
+                        }
+                    });
+                }
+                
+                // Count comments based on when they actually occurred
+                if (post.comments) {
+                    post.comments.forEach(comment => {
+                        const commentTimestamp = parseInt(comment.timestamp);
+                        if (commentTimestamp >= currentPeriodStart && commentTimestamp < currentPeriodEnd) {
+                            currentStats.comments++;
+                        } else if (commentTimestamp >= previousPeriodStart && commentTimestamp < currentPeriodStart) {
+                            previousStats.comments++;
+                        }
+                    });
                 }
             });
             
@@ -1351,13 +1525,36 @@ router.get('/creator-stats', async function(req, res) {
         
         // Process each post for daily chart data
         userBooruPosts.forEach(post => {
+            // Count posts based on when they were created
             const postDate = new Date(parseInt(post.timestamp));
-            const dateKey = postDate.toISOString().split('T')[0];
+            const postDateKey = postDate.toISOString().split('T')[0];
             
-            if (dailyData[dateKey]) {
-                dailyData[dateKey].posts++;
-                dailyData[dateKey].upvotes += (post.upvotes?.length || 0);
-                dailyData[dateKey].comments += (post.comments?.length || 0);
+            if (dailyData[postDateKey]) {
+                dailyData[postDateKey].posts++;
+            }
+            
+            // Count upvotes based on when they actually occurred
+            if (post.upvotes) {
+                post.upvotes.forEach(vote => {
+                    const voteDate = new Date(parseInt(vote.timestamp));
+                    const voteDateKey = voteDate.toISOString().split('T')[0];
+                    
+                    if (dailyData[voteDateKey]) {
+                        dailyData[voteDateKey].upvotes++;
+                    }
+                });
+            }
+            
+            // Count comments based on when they actually occurred
+            if (post.comments) {
+                post.comments.forEach(comment => {
+                    const commentDate = new Date(parseInt(comment.timestamp));
+                    const commentDateKey = commentDate.toISOString().split('T')[0];
+                    
+                    if (dailyData[commentDateKey]) {
+                        dailyData[commentDateKey].comments++;
+                    }
+                });
             }
         });
         
@@ -1374,30 +1571,32 @@ router.get('/creator-stats', async function(req, res) {
         
         // Process posts from the last 24 hours with actual timestamps
         userBooruPosts.forEach(post => {
+            // Count posts that were created in the last 24 hours
             if (post.timestamp >= last24HoursTimestamp) {
                 const postHour = new Date(parseInt(post.timestamp)).getHours();
-                
                 hourlyData[postHour].posts++;
-                
-                // Count upvotes that happened in the last 24 hours
-                if (post.upvotes) {
-                    post.upvotes.forEach(vote => {
-                        if (vote.timestamp && vote.timestamp >= last24HoursTimestamp) {
-                            const voteHour = new Date(parseInt(vote.timestamp)).getHours();
-                            hourlyData[voteHour].upvotes++;
-                        }
-                    });
-                }
-                
-                // Count comments that happened in the last 24 hours
-                if (post.comments) {
-                    post.comments.forEach(comment => {
-                        if (comment.timestamp && comment.timestamp >= last24HoursTimestamp) {
-                            const commentHour = new Date(parseInt(comment.timestamp)).getHours();
-                            hourlyData[commentHour].comments++;
-                        }
-                    });
-                }
+            }
+            
+            // Count upvotes that happened in the last 24 hours (regardless of when post was created)
+            if (post.upvotes) {
+                post.upvotes.forEach(vote => {
+                    const voteTimestamp = parseInt(vote.timestamp);
+                    if (voteTimestamp >= last24HoursTimestamp) {
+                        const voteHour = new Date(voteTimestamp).getHours();
+                        hourlyData[voteHour].upvotes++;
+                    }
+                });
+            }
+            
+            // Count comments that happened in the last 24 hours (regardless of when post was created)
+            if (post.comments) {
+                post.comments.forEach(comment => {
+                    const commentTimestamp = parseInt(comment.timestamp);
+                    if (commentTimestamp >= last24HoursTimestamp) {
+                        const commentHour = new Date(commentTimestamp).getHours();
+                        hourlyData[commentHour].comments++;
+                    }
+                });
             }
         });
 

@@ -3,14 +3,14 @@
     --frosted-background: rgba(0, 0, 0, 0.246);
     --frosted-blur: blur(5px);
     
-    /* Day mode colors */
-    --day-background-colour: #5c83ac;
-    --day-darker-background-colour: #4a6a8a;
-    --day-highlight-colour: rgba(0, 208, 255, 0.3);
-    --day-text-colour: #ffffff;
-    --day-border-colour: rgba(255, 255, 255, 0.2);
-    --day-highlight-colour-hover: rgba(0, 208, 255, 0.5);
-    --day-highlight-colour-active: rgba(0, 208, 255, 0.7);
+    /* Light mode colors */
+    --light-background-colour: #5c83ac;
+    --light-darker-background-colour: #4a6a8a;
+    --light-highlight-colour: rgba(0, 208, 255, 0.3);
+    --light-text-colour: #ffffff;
+    --light-border-colour: rgba(255, 255, 255, 0.2);
+    --light-highlight-colour-hover: rgba(0, 208, 255, 0.5);
+    --light-highlight-colour-active: rgba(0, 208, 255, 0.7);
 
     /* Dark mode colors */
     --dark-background-colour: #1a1a2e;
@@ -26,8 +26,8 @@
     --dark-scrollbar-thumb-hover: rgba(74, 74, 94, 0.8);
     --dark-scrollbar-thumb-active: rgba(90, 90, 110, 0.8);
 
-    /* Day mode solid color */
-    --day-bg-solid: #4875b4;
+    /* Light mode solid color */
+    --light-bg-solid: #4875b4;
 
     /* Dark mode solid color */
     --dark-bg-solid: #2a2a3e;
@@ -35,16 +35,16 @@
     --mode-transition: all 1s ease;
 }
 
-/* Default mode (day) */
+/* Default mode (light) */
 body {
-    --background-colour: var(--day-background-colour);
-    --darker-background-colour: var(--day-darker-background-colour);
-    --highlight-colour: var(--day-highlight-colour);
-    --text-colour: var(--day-text-colour);
-    --border-colour: var(--day-border-colour);
-    --highlight-colour-hover: var(--day-highlight-colour-hover);
-    --highlight-colour-active: var(--day-highlight-colour-active);
-    background-color: var(--day-bg-solid) !important;
+    --background-colour: var(--light-background-colour);
+    --darker-background-colour: var(--light-darker-background-colour);
+    --highlight-colour: var(--light-highlight-colour);
+    --text-colour: var(--light-text-colour);
+    --border-colour: var(--light-border-colour);
+    --highlight-colour-hover: var(--light-highlight-colour-hover);
+    --highlight-colour-active: var(--light-highlight-colour-active);
+    background-color: var(--light-bg-solid) !important;
     margin: 0px;
     min-height: 100vh !important;
     position: relative;

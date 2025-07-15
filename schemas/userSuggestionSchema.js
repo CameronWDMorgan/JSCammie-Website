@@ -17,6 +17,9 @@ const userSuggestionSchema = new Schema({
     promoted: { type: Boolean, default: false },
 })
 
+// Add index for performance
+userSuggestionSchema.index({ accountId: 1 });
+
 const name = 'userSuggestion'
 
 module.exports = mongoose.models[name] || mongoose.model(name, userSuggestionSchema, name)

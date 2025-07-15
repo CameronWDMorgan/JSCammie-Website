@@ -10,6 +10,9 @@ const creditsHistorySchema = new Schema({
 	message: { type: String, default: "" }
 })
 
+// Add index for performance
+creditsHistorySchema.index({ accountId: 1 });
+
 const name = 'creditsHistory'
 
 module.exports = mongoose.models[name] || mongoose.model(name, creditsHistorySchema, name)
