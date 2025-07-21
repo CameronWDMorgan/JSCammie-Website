@@ -268,6 +268,15 @@ class AuthenticationHandler {
             req.session.google = true;
         }
 
+        // Trigger sitemap regeneration for new user registration
+        try {
+            const sitemapTrigger = require('../utils/sitemap/sitemapTrigger');
+            sitemapTrigger.onUserRegistered();
+        } catch (error) {
+            console.log('Error triggering sitemap regeneration for new user:', error);
+            // Don't let sitemap errors affect the main functionality
+        }
+
         return {
             status: 'success',
             message: 'New user account created',

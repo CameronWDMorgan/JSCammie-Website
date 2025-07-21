@@ -6808,6 +6808,7 @@
                                 <li><strong>NO Child/Cub/Loli NSFW content</strong> - Zero tolerance policy</li>
                                 <li><strong>NO Scat or Vore</strong> - Not allowed under any circumstances</li>
                                 <li><strong>NO Inappropriate tags</strong> - Prompts containing banned keywords (e.g., "loli") will be removed even if SFW</li>
+                                <li><strong>NO Non Consensual Images/Prompts</strong> - Prompts or images that depict non consensual actions/scenes are not allowed!</li>
                                 <li><strong>NO Low-quality spam</strong> - Avoid uploading excessive variations of the same image</li>
                             </ul>
                         </div>
@@ -6873,28 +6874,9 @@
         }
 
         async function confirmBooruUpload(imageData) {
-            // Hide the booru popup while showing the confirmation dialog
-            document.getElementById('booruPopupContent').style.display = 'none';
-            
-            const options = {
-                message: 'Are you sure you want to upload this image to the booru?\\n\\nBy clicking "Yes", you confirm that:\\n• Your image follows all community guidelines\\n• You understand the moderation process\\n• You accept potential consequences for violations',
-                question: true,
-                options: {
-                    yes: function() { console.log("Upload confirmed"); },
-                    no: function() { console.log("Upload cancelled"); }
-                }
-            };
-            
-            const userResponse = await globalAlert(options);
-            
-            if (userResponse === 'yes') {
-                // Close the popup completely and proceed with upload
-                closeBooruPopup();
-                uploadToBooruFromAI(imageData);
-            } else {
-                // If 'no', show the booru popup again
-                document.getElementById('booruPopupContent').style.display = 'block';
-            }
+            // Close the popup and proceed with upload
+            closeBooruPopup();
+            uploadToBooruFromAI(imageData);
         }
 
         async function uploadToBooruFromAI(imageData) {

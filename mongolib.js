@@ -15,6 +15,7 @@ const userBooruCommentsSchema = require('./schemas/userBooruCommentsSchema.js');
 const userNotificationSchema = require('./schemas/userNotificationSchema.js');
 const userRedeemSchema = require('./schemas/userRedeemSchema.js');
 const generatorLoraPreviewSubmissionSchema = require('./schemas/generatorLoraPreviewSubmissionSchema.js');
+const searchStatSchema = require('./schemas/searchStatSchema.js');
 
 const { Decimal128 } = mongoose.Types;
 
@@ -333,6 +334,9 @@ async function getSchemaDocumentOnce(schema, query) {
 			case 'generatorLoraPreviewSubmission':
 				document = await generatorLoraPreviewSubmissionSchema.findOne(query);
 				break;
+			case 'searchStat':
+				document = await searchStatSchema.findOne(query);
+				break;
 			default:
 				document = null;
 		}
@@ -429,6 +433,13 @@ async function getSchemaDocuments(schema, query) {
 					document = await generatorLoraPreviewSubmissionSchema.find(query)
 				}
 				break;
+			case 'searchStat':
+				if (query == {}) {
+					document = await searchStatSchema.find({})
+				} else {
+					document = await searchStatSchema.find(query)
+				}
+				break;
 			default:
 				document = null
 		}
@@ -481,6 +492,9 @@ async function aggregateSchemaDocuments(schema, query) {
 			case 'generatorLoraPreviewSubmission':
 				documents = await generatorLoraPreviewSubmissionSchema.aggregate(query)
 				break;
+			case 'searchStat':
+				documents = await searchStatSchema.aggregate(query)
+				break;
 			default:
 				documents = null
 		}
@@ -532,6 +546,9 @@ async function updateSchemaDocumentOnce(schema, query, update) {
 				break;
 			case 'generatorLoraPreviewSubmission':
 				await generatorLoraPreviewSubmissionSchema.findOneAndUpdate(query, update)
+				break;
+			case 'searchStat':
+				await searchStatSchema.findOneAndUpdate(query, update)
 				break;
 			default:
 				return null
@@ -590,6 +607,9 @@ async function createSchemaDocument(schema, document) {
 			case 'generatorLoraPreviewSubmission':
 				await generatorLoraPreviewSubmissionSchema.create(document);
 				break;
+			case 'searchStat':
+				await searchStatSchema.create(document);
+				break;
 			default:
 				console.error(`Invalid schema: ${schema}`);
 				return null
@@ -638,6 +658,9 @@ async function deleteSchemaDocument(schema, query) {
 			case 'generatorLoraPreviewSubmission':
 				await generatorLoraPreviewSubmissionSchema.findOneAndDelete(query)
 				break;
+			case 'searchStat':
+				await searchStatSchema.findOneAndDelete(query)
+				break;
 			default:
 				return {status: 'error', message: 'Invalid schema'}
 		}
@@ -649,6 +672,41 @@ async function deleteSchemaDocument(schema, query) {
 		return {status: 'error', message: 'Error deleting schema'}
 	}
 
+}
+
+// Function to track search statistics for sitemap generation
+async function trackSearch(searchTerm, resultCount, safetyLevel = 'sfw') {
+	try {
+		if (!searchTerm || searchTerm.trim() === '') {
+			return;
+		}
+
+		const cleanTerm = searchTerm.trim().toLowerCase();
+		
+		// Find existing search stat or create new one
+		const existingStat = await searchStatSchema.findOne({ searchTerm: cleanTerm });
+		
+		if (existingStat) {
+			// Update existing record
+			existingStat.searchCount += 1;
+			existingStat.lastSearched = new Date();
+			existingStat.resultCount = resultCount;
+			existingStat.safetyLevel = safetyLevel;
+			await existingStat.save();
+		} else {
+			// Create new record
+			await searchStatSchema.create({
+				searchTerm: cleanTerm,
+				searchCount: 1,
+				lastSearched: new Date(),
+				resultCount: resultCount,
+				safetyLevel: safetyLevel
+			});
+		}
+	} catch (error) {
+		console.log(`Error tracking search: ${error}`);
+		// Don't throw error as this is not critical functionality
+	}
 }
 
 // export all functions
@@ -665,5 +723,6 @@ module.exports = {
 	updateSchemaDocumentOnce,
 	createSchemaDocument,
 	deleteSchemaDocument,
-	connectToDatabase
+	connectToDatabase,
+	trackSearch
 }

@@ -5997,72 +5997,72 @@ app.post('/profile-upgrades/purchase', async function(req, res) {
 const fsp = require('fs/promises');
 
 
-app.get('/fix-user-history', async function (req, res) {
-	try {
-		const dryRun = false
-		const baseDir = './imagesHistory/';
+// app.get('/fix-user-history', async function (req, res) {
+// 	try {
+// 		const dryRun = false
+// 		const baseDir = './imagesHistory/';
 
-		const dir = await fsp.opendir(baseDir);
-		let totalRemoved = 0;
-		let totalDeletedAccounts = 0;
+// 		const dir = await fsp.opendir(baseDir);
+// 		let totalRemoved = 0;
+// 		let totalDeletedAccounts = 0;
 
-		for await (const dirent of dir) {
-			if (!dirent.isDirectory()) continue;
-			const accountId = dirent.name;
-			const accountPath = path.join(baseDir, accountId);
+// 		for await (const dirent of dir) {
+// 			if (!dirent.isDirectory()) continue;
+// 			const accountId = dirent.name;
+// 			const accountPath = path.join(baseDir, accountId);
 
-			const userHistory = await mongolib.getSchemaDocuments('userHistory', { account_id: accountId });
-			if (!userHistory.length) {
-				// No history > delete entire folder
-				if (dryRun) {
-					console.log(`[DryRun] Would delete folder: ${accountId}`);
-				} else {
-					fs.rmSync(accountPath, { recursive: true, force: true });
-					console.log(`Deleted folder: ${accountId}`);
-				}
-				totalDeletedAccounts++;
-				continue;
-			}
+// 			const userHistory = await mongolib.getSchemaDocuments('userHistory', { account_id: accountId });
+// 			if (!userHistory.length) {
+// 				// No history > delete entire folder
+// 				if (dryRun) {
+// 					console.log(`[DryRun] Would delete folder: ${accountId}`);
+// 				} else {
+// 					fs.rmSync(accountPath, { recursive: true, force: true });
+// 					console.log(`Deleted folder: ${accountId}`);
+// 				}
+// 				totalDeletedAccounts++;
+// 				continue;
+// 			}
 
-			// Keep only valid image IDs
-			const imageIDsToKeep = userHistory.map((image) => image.image_id.toString());
-			const files = fs.readdirSync(accountPath);
-			let removedCount = 0;
+// 			// Keep only valid image IDs
+// 			const imageIDsToKeep = userHistory.map((image) => image.image_id.toString());
+// 			const files = fs.readdirSync(accountPath);
+// 			let removedCount = 0;
 
-			for (const file of files) {
-				const base = file.split('.')[0].split('-')[0];
-				if (!imageIDsToKeep.includes(base)) {
-					const imagePath = path.join(accountPath, file);
-					if (dryRun) {
-						// console.log(`[DryRun] Would delete: ${accountId}/${file}`);
-					} else {
-						fs.unlinkSync(imagePath);
-						// console.log(`Deleted: ${accountId}/${file}`);
-					}
-					removedCount++;
-					totalRemoved++;
-				}
-			}
+// 			for (const file of files) {
+// 				const base = file.split('.')[0].split('-')[0];
+// 				if (!imageIDsToKeep.includes(base)) {
+// 					const imagePath = path.join(accountPath, file);
+// 					if (dryRun) {
+// 						// console.log(`[DryRun] Would delete: ${accountId}/${file}`);
+// 					} else {
+// 						fs.unlinkSync(imagePath);
+// 						// console.log(`Deleted: ${accountId}/${file}`);
+// 					}
+// 					removedCount++;
+// 					totalRemoved++;
+// 				}
+// 			}
 
-			if (removedCount > 0) {
-				console.log(`Cleaned ${removedCount} files from ${accountId}`);
-			}
-			// Free memory
-			imageIDsToKeep.length = 0;
-		}
+// 			if (removedCount > 0) {
+// 				console.log(`Cleaned ${removedCount} files from ${accountId}`);
+// 			}
+// 			// Free memory
+// 			imageIDsToKeep.length = 0;
+// 		}
 
-		res.send({
-			status: 'success',
-			message: `Cleanup ${dryRun ? '[Dry Run]' : ''} done. Removed ${totalRemoved} files. Deleted ${totalDeletedAccounts} folders.`,
-		});
-	} catch (err) {
-		console.error(err);
-		res.status(500).send({
-			status: 'error',
-			message: err.message,
-		});
-	}
-});
+// 		res.send({
+// 			status: 'success',
+// 			message: `Cleanup ${dryRun ? '[Dry Run]' : ''} done. Removed ${totalRemoved} files. Deleted ${totalDeletedAccounts} folders.`,
+// 		});
+// 	} catch (err) {
+// 		console.error(err);
+// 		res.status(500).send({
+// 			status: 'error',
+// 			message: err.message,
+// 		});
+// 	}
+// });
 	
 
 // // Prune older images, keeping only the most recent 5000
@@ -6207,6 +6207,103 @@ app.get('/fix-user-history', async function (req, res) {
 
 
 
+
+// Sitemap routes
+const SitemapGenerator = require('./utils/sitemap/sitemapGenerator');
+const sitemapGenerator = new SitemapGenerator();
+
+// Serve individual sitemaps
+app.get('/sitemap-static.xml', (req, res) => {
+	const filePath = path.join(__dirname, 'sitemap-static.xml');
+	if (fs.existsSync(filePath)) {
+		res.set('Content-Type', 'application/xml');
+		res.sendFile(filePath);
+	} else {
+		res.status(404).send('Sitemap not found');
+	}
+});
+
+app.get('/sitemap-posts.xml', (req, res) => {
+	const filePath = path.join(__dirname, 'sitemap-posts.xml');
+	if (fs.existsSync(filePath)) {
+		res.set('Content-Type', 'application/xml');
+		res.sendFile(filePath);
+	} else {
+		res.status(404).send('Sitemap not found');
+	}
+});
+
+app.get('/sitemap-users.xml', (req, res) => {
+	const filePath = path.join(__dirname, 'sitemap-users.xml');
+	if (fs.existsSync(filePath)) {
+		res.set('Content-Type', 'application/xml');
+		res.sendFile(filePath);
+	} else {
+		res.status(404).send('Sitemap not found');
+	}
+});
+
+app.get('/sitemap-searches.xml', (req, res) => {
+	const filePath = path.join(__dirname, 'sitemap-searches.xml');
+	if (fs.existsSync(filePath)) {
+		res.set('Content-Type', 'application/xml');
+		res.sendFile(filePath);
+	} else {
+		res.status(404).send('Sitemap not found');
+	}
+});
+
+// Admin route to manually regenerate sitemaps
+app.get('/admin/regenerate-sitemaps', async function(req, res) {
+	// Only allow admin users to regenerate sitemaps
+	if (!req.session.loggedIn) {
+		return res.status(401).send({ status: 'error', message: 'Not logged in' });
+	}
+
+	// Check if user is admin (you may need to adjust this check based on your admin system)
+	const userProfile = await mongolib.getSchemaDocumentOnce('userProfile', { accountId: req.session.accountId });
+	if (!userProfile || !userProfile.badges?.owner) {
+		return res.status(403).send({ status: 'error', message: 'Insufficient permissions' });
+	}
+
+	try {
+		const result = await sitemapGenerator.generateAllSitemaps();
+		res.send(result);
+	} catch (error) {
+		console.error('Error regenerating sitemaps:', error);
+		res.status(500).send({ status: 'error', message: 'Failed to generate sitemaps' });
+	}
+});
+
+// Auto-regenerate sitemaps daily at 3 AM
+setInterval(async () => {
+	const now = new Date();
+	if (now.getHours() === 3 && now.getMinutes() === 0) {
+		console.log('Daily sitemap regeneration starting...');
+		try {
+			const result = await sitemapGenerator.generateAllSitemaps();
+			console.log('Daily sitemap regeneration completed:', result);
+		} catch (error) {
+			console.error('Daily sitemap regeneration failed:', error);
+		}
+	}
+}, 60000); // Check every minute
+
+// Generate initial sitemaps on startup (after a delay to ensure database is ready)
+setTimeout(async () => {
+	console.log('Generating initial sitemaps...');
+	try {
+		const shouldRegenerate = await sitemapGenerator.shouldRegenerateSitemaps();
+		if (shouldRegenerate) {
+			const result = await sitemapGenerator.generateAllSitemaps();
+			console.log('Initial sitemap generation completed:', result);
+		} else {
+			console.log('Sitemaps are up to date, skipping initial generation');
+		}
+	} catch (error) {
+		console.error('Initial sitemap generation failed:', error);
+	}
+}, 10000); // Wait 10 seconds after startup
 
 app.get('/.well-known/pki-validation/BD4ADEC68E8CA80AB663C847A5D5990E.txt', async function(req, res) {
 	// send the BD4ADEC68E8CA80AB663C847A5D5990E.txt file:

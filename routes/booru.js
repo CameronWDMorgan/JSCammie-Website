@@ -636,6 +636,23 @@ router.get('/', async function(req, res) {
         // Execute query
         const booruImages = await mongolib.aggregateSchemaDocuments("userBooru", pipeline);
         
+        // Track search for sitemap generation (only for non-empty searches)
+        if (tags && tags.trim() !== '' && safetyParam === 'sfw') {
+            // Only track SFW searches for sitemap (AI-friendly content)
+            try {
+                await mongolib.trackSearch(tags.trim(), booruImages.length, 'sfw');
+                
+                // Trigger sitemap regeneration for popular search updates (but only occasionally)
+                if (Math.random() < 0.05) { // 5% chance to trigger update
+                    const sitemapTrigger = require('../utils/sitemap/sitemapTrigger');
+                    sitemapTrigger.onPopularSearchesChanged();
+                }
+            } catch (error) {
+                console.log('Error tracking search:', error);
+                // Don't let search tracking errors affect the main functionality
+            }
+        }
+        
         // Debug logging
         console.log(`Pipeline stages: ${pipeline.length}`);
         console.log(`Results found: ${booruImages.length}`);
@@ -1022,6 +1039,15 @@ router.post('/create-booru-image', async function(req, res) {
 
 		// Insert the new booru image document into the database
 		await userBooruSchema.create(newBooruImage);
+
+		// Trigger sitemap regeneration for new booru post
+		try {
+			const sitemapTrigger = require('../utils/sitemap/sitemapTrigger');
+			sitemapTrigger.onBooruPostCreated();
+		} catch (error) {
+			console.log('Error triggering sitemap regeneration:', error);
+			// Don't let sitemap errors affect the main functionality
+		}
 
 		// set the userHistorySchema to have uploadedToBooru as true, use image_url without the .png as the image_id and the account_id:
 		await userHistorySchema.findOneAndUpdate({
